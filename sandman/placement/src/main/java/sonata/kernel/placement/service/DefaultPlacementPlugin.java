@@ -20,8 +20,8 @@ public class DefaultPlacementPlugin implements PlacementPlugin {
 
         instance_manager = new ServiceInstanceManager();
         return instance_manager.initialize_service_instance(serviceData);
+        /*return instance_manager.update_functions_list("loadbalancer-vnf", "loadbalancer-vnf", ServiceInstanceManager.ACTION_TYPE.ADD_INSTANCE);*/
 
-        //return instance_manager.update_functions_list("firewall-vnf", ServiceInstanceManager.ACTION_TYPE.ADD_INSTANCE);
 
     }
 
@@ -30,12 +30,12 @@ public class DefaultPlacementPlugin implements PlacementPlugin {
         logger.info("Update Scaling");
 
         //TODO
-
+/*
         if (trigger.type == ScaleMessage.SCALE_TYPE.SCALE_OUT) {
-            return instance_manager.update_functions_list("firewall-vnf", ServiceInstanceManager.ACTION_TYPE.ADD_INSTANCE);
+            return instance_manager.update_functions_list("loadbalancer-vnf", ServiceInstanceManager.ACTION_TYPE.ADD_INSTANCE);
         } else if (trigger.type == ScaleMessage.SCALE_TYPE.SCALE_IN) {
-            return instance_manager.update_functions_list("firewall-vnf", ServiceInstanceManager.ACTION_TYPE.DELETE_INSTANCE);
-        }
+            return instance_manager.update_functions_list("loadbalancer-vnf", ServiceInstanceManager.ACTION_TYPE.DELETE_INSTANCE);
+        }*/
         return null;
     }
 

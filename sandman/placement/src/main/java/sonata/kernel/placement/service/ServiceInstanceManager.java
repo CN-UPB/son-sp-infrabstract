@@ -18,6 +18,7 @@ import org.apache.log4j.Logger;
 import sonata.kernel.VimAdaptor.commons.vnfd.Network;
 import sonata.kernel.VimAdaptor.commons.vnfd.VnfDescriptor;
 import sonata.kernel.VimAdaptor.commons.vnfd.VnfVirtualLink;
+import sonata.kernel.placement.Catalogue;
 
 /*
 ServiceInstanceManager enables addition/deletion/updation of resources
@@ -71,7 +72,7 @@ public class ServiceInstanceManager {
         for (NetworkFunction function : network_functions) {
 
 
-            network_functions_db.put(function.getVnfName(), function);
+            network_functions_db.put(function.getVnfId(), function);
             VnfDescriptor descriptor = nw_function_desc_map.get(function.getVnfName());
             assert descriptor != null : "Virtual Network Function " + function.getVnfName() + " not found";
 
@@ -99,7 +100,6 @@ public class ServiceInstanceManager {
             function_instance.setName(function.getVnfName().split("-")[0] + id);
 
             initialize_vnfvlink_list(function_instance, descriptor);
-
         }
     }
 
@@ -165,42 +165,74 @@ public class ServiceInstanceManager {
     }
 
     /*
-       Handle addition of function instance as part of scale out
-       Handle deletion of function instance as part of scale in
-
+    Note:
+    In case of vnf instance addition, vnf_name = null
+    In case of vnf instance deletion, vnf_name must be the name associated with the vnf instance.
      */
-
     public ServiceInstance update_functions_list(String vnf_id, ACTION_TYPE action) {
-        if (instance.function_list.get(vnf_id) != null && 0 == instance.function_list.get(vnf_id).size()) {
 
+        if(action == ACTION_TYPE.ADD_INSTANCE) {
+
+            if (instance.function_list.get(vnf_id) == null) {
             /*
-            Also update the service_data with the new entry for the vnf_descriptor.
+            Special network functions: Load balancers etc.
              */
-            /*
-            Map<String, FunctionInstance> map = new HashMap<String, FunctionInstance>();
-            map.put(function.getVnfId() + System.currentTimeMillis(), function_instance);
-            instance.function_list.put(function.getVnfId(), map);
-            */
+                Catalogue.loadInternalFunctions();
+                VnfDescriptor descriptor = Catalogue.internalFunctions.get(vnf_id);
+                assert descriptor != null : "Virtual Network Function " + vnf_id + " not found";
 
-        } else {
-            VnfDescriptor descriptor = nw_function_desc_map.get(vnf_id);
-            assert descriptor != null : "Virtual Network Function " + vnf_id + " not found";
+                nw_function_desc_map.put(vnf_id, descriptor);
+                NetworkFunction n_function = new NetworkFunction();
+                n_function.setVnfId(vnf_id);
+                n_function.setVnfName(descriptor.getName());
+                n_function.setVnfVersion(descriptor.getVersion());
+                n_function.setVnfVendor(descriptor.getVendor());
+                n_function.setDescription(descriptor.getDescription());
 
-            NetworkFunction n_function = network_functions_db.get(vnf_id);
+                network_functions_db.put(vnf_id, n_function);
+
+                AtomicInteger vnf_uid = new AtomicInteger(0);
+                int id = vnf_uid.addAndGet(1);
+                vnf_uid.set(id);
+                instance.vnf_uid.put(n_function.getVnfId(), vnf_uid);
+
+                FunctionInstance function_instance = new FunctionInstance(n_function, descriptor,
+                        n_function.getVnfName().split("-")[0] + id);
+
+                initialize_vnfvlink_list(function_instance, descriptor);
+
+                Map<String, FunctionInstance> map = new HashMap<String, FunctionInstance>();
+                map.put(n_function.getVnfId() + id, function_instance);
+                instance.function_list.put(n_function.getVnfId(), map);
+
+            } else {
+
+                VnfDescriptor descriptor = nw_function_desc_map.get(vnf_id);
+                assert descriptor != null : "Virtual Network Function " + vnf_id + " not found";
+
+                NetworkFunction n_function = network_functions_db.get(vnf_id);
 
 
-            int id = instance.vnf_uid.get(n_function.getVnfId()).addAndGet(1);
-            instance.vnf_uid.get(n_function.getVnfId()).set(id);
-            FunctionInstance function_instance = new FunctionInstance(n_function, descriptor, n_function.getVnfName().split("-")[0] + id);
+                int id = instance.vnf_uid.get(n_function.getVnfId()).addAndGet(1);
+                instance.vnf_uid.get(n_function.getVnfId()).set(id);
+                FunctionInstance function_instance = new FunctionInstance(n_function, descriptor,
+                        n_function.getVnfName().split("-")[0] + id);
 
-            initialize_vnfvlink_list(function_instance, descriptor);
+                initialize_vnfvlink_list(function_instance, descriptor);
 
-            instance.function_list.get(n_function.getVnfId()).put(n_function.getVnfId() +
-                    id, function_instance);
+                instance.function_list.get(n_function.getVnfId()).put(n_function.getVnfId() +
+                        id, function_instance);
 
+            }
+        } else if (action == ACTION_TYPE.DELETE_INSTANCE) {
+            if (instance.function_list.get(vnf_id) == null) {
+                logger.error("Virtual Network Function " + vnf_id + " not found");
+            } else {
+
+                //TODO
+            }
 
         }
-
 
         return instance;
 
@@ -210,6 +242,14 @@ public class ServiceInstanceManager {
     Handle addition of link between function instance.
     Handle deletion of link between function instance.
     Handle update of link as delete followed by add.
+
+
+                 __________          |
+                |          ||--------|
+     ----------||  LB      |
+                |__________||---------
+
+
      */
     public void update_vlink_list(String endpoint_src, String endpoint_target, ACTION_TYPE action) {
         //Find the link instance on the service instance.

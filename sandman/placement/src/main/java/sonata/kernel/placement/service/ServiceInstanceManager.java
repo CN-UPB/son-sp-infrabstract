@@ -169,7 +169,7 @@ public class ServiceInstanceManager {
     In case of vnf instance addition, vnf_name = null
     In case of vnf instance deletion, vnf_name must be the name associated with the vnf instance.
      */
-    public ServiceInstance update_functions_list(String vnf_id, String vnf_name, ACTION_TYPE action) {
+    public ServiceInstance update_functions_list(String vnf_id, ACTION_TYPE action) {
 
         if(action == ACTION_TYPE.ADD_INSTANCE) {
 

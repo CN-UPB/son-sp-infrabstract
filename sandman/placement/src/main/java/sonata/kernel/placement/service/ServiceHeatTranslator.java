@@ -260,9 +260,13 @@ public class ServiceHeatTranslator {
                 routerInterface.setType("OS::Neutron::RouterInterface");
                 routerInterface.setName(entry.getKey().getName() + ":" + link.getLinkId() + ":" + instance.service.getInstanceUuid());
 
+
                 HashMap<String, Object> subnetMap = new HashMap<String, Object>();
-                subnetMap.put("get_resource", entry.getKey().getName() + ":" + link.getLinkId() + ":subnet:" + instance.service.getInstanceUuid());
+                //subnetMap.put("get_resource", entry.getKey().getName() + ":"  +link.getLinkId() + ":subnet:" + instance.service.getInstanceUuid());
+                subnetMap.put("get_resource", entry.getKey().getName() + ":"  + entry.getValue().split(":")[1] + ":subnet:" + instance.service.getInstanceUuid());
                 routerInterface.putProperty("subnet", subnetMap);
+
+
 
                 // Attach to the virtual router
                 HashMap<String, Object> routerMap = new HashMap<String, Object>();
@@ -272,7 +276,7 @@ public class ServiceHeatTranslator {
                 model.addResource(routerInterface);
                 logger.debug("Neutron::RouterInterface \t" + routerInterface.getResourceName());
 
-                break;
+                //break;
 
 
             }

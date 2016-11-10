@@ -12,7 +12,7 @@ import org.apache.log4j.Logger;
 public class DefaultPlacementPlugin implements PlacementPlugin {
     final static Logger logger = Logger.getLogger(DefaultPlacementPlugin.class);
 
-    private ServiceInstanceManager instance_manager;
+    ServiceInstanceManager instance_manager;
 
     @Override
     public ServiceInstance initialScaling(DeployServiceData serviceData) {
@@ -20,8 +20,6 @@ public class DefaultPlacementPlugin implements PlacementPlugin {
 
         instance_manager = new ServiceInstanceManager();
         return instance_manager.initialize_service_instance(serviceData);
-        /*return instance_manager.update_functions_list("loadbalancer-vnf", "loadbalancer-vnf", ServiceInstanceManager.ACTION_TYPE.ADD_INSTANCE);*/
-
 
     }
 
@@ -29,13 +27,39 @@ public class DefaultPlacementPlugin implements PlacementPlugin {
     public ServiceInstance updateScaling(DeployServiceData serviceData, ServiceInstance instance, ScaleMessage trigger) {
         logger.info("Update Scaling");
 
-        //TODO
-/*
+        //SAMPLE 1
+        instance_manager.set_instance(instance);
+        /*
+        Sample Scale-out scheme
+        Add an additiontional tcpdump vnf.
+        Add a loadbalancer vnf between the firewall vnf and the tcpdump vnfs
+
+                                                           ___________ tcpdump1
+                 __________            ___________        |
+                |          |          |           ||------|
+        - - ---||  FW1     ||--------||   LB1     |
+                |__________|          |___________||------|
+                                                          |___________ tcpdump2
+
+
+         */
         if (trigger.type == ScaleMessage.SCALE_TYPE.SCALE_OUT) {
-            return instance_manager.update_functions_list("loadbalancer-vnf", ServiceInstanceManager.ACTION_TYPE.ADD_INSTANCE);
+            instance_manager.update_functions_list("vnf_loadbalancer", null, ServiceInstanceManager.ACTION_TYPE.ADD_INSTANCE);
+            instance_manager.update_functions_list("vnf_tcpdump", null, ServiceInstanceManager.ACTION_TYPE.ADD_INSTANCE);
+
+            instance_manager.update_vlink_list("vnf_firewall", "vnf_tcpdump","vnf_firewall1", "vnf_tcpdump1",
+                                                         ServiceInstanceManager.ACTION_TYPE.DELETE_INSTANCE);
+            instance_manager.update_vlink_list("vnf_firewall", "vnf_loadbalancer","vnf_firewall1", "vnf_loadbalancer1",
+                    ServiceInstanceManager.ACTION_TYPE.ADD_INSTANCE);
+            instance_manager.update_vlink_list("vnf_loadbalancer", "vnf_tcpdump","vnf_loadbalancer1", "vnf_tcpdump1",
+                    ServiceInstanceManager.ACTION_TYPE.ADD_INSTANCE);
+            return instance_manager.update_vlink_list("vnf_loadbalancer", "vnf_tcpdump","vnf_loadbalancer1", "vnf_tcpdump2",
+                    ServiceInstanceManager.ACTION_TYPE.ADD_INSTANCE);
+
+
         } else if (trigger.type == ScaleMessage.SCALE_TYPE.SCALE_IN) {
-            return instance_manager.update_functions_list("loadbalancer-vnf", ServiceInstanceManager.ACTION_TYPE.DELETE_INSTANCE);
-        }*/
+            return instance_manager.update_functions_list("loadbalancer-vnf", "loadbalancer-vnf1", ServiceInstanceManager.ACTION_TYPE.ADD_INSTANCE);
+        }
         return null;
     }
 

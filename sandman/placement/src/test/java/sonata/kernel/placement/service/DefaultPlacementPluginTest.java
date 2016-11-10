@@ -33,6 +33,60 @@ import static org.junit.Assert.*;
 public class DefaultPlacementPluginTest {
 
     @Test
+    public void testTwo()
+    {
+        System.out.println(new File("").getAbsolutePath());
+
+        PlacementConfig config = PlacementConfigLoader.loadPlacementConfig();
+
+        DeployServiceData data = PackageLoader.loadPackageFromDisk(Paths.get("YAML", "test.son").toString());
+
+        PlacementPlugin plugin = new DefaultPlacementPlugin();
+
+        ServiceInstance instance = plugin.initialScaling(data);
+
+        PlacementMapping mapping = plugin.initialPlacement(data, instance, config.getResources());
+
+        List<Object> nodeList = new ArrayList<Object>();
+        // add first node as example
+        nodeList.add(mapping.mapping.keySet().iterator().next());
+        ScaleMessage trigger = new ScaleMessage(ScaleMessage.SCALE_TYPE.SCALE_OUT, nodeList);
+
+        instance = plugin.updateScaling(data, instance, trigger);
+
+        mapping = plugin.initialPlacement(data, instance, config.getResources());
+        //Add additional tcpdump vnfs
+
+
+
+        List<HeatTemplate> templates = ServiceHeatTranslator.translatePlacementMappingToHeat(instance, config.getResources(), mapping);
+
+        assert templates.size()==1;
+
+        for(HeatTemplate template: templates) {
+            HeatStackCreate createStack = new HeatStackCreate();
+            createStack.stackName = "MyLittleStack";
+            createStack.template = template;
+            ObjectMapper mapper2 = new ObjectMapper(new JsonFactory());
+            mapper2.disable(SerializationFeature.WRITE_EMPTY_JSON_ARRAYS);
+            mapper2.enable(SerializationFeature.WRITE_ENUMS_USING_TO_STRING);
+            mapper2.disable(SerializationFeature.WRITE_NULL_MAP_VALUES);
+            mapper2.enable(SerializationFeature.ORDER_MAP_ENTRIES_BY_KEYS);
+            mapper2.setSerializationInclusion(JsonInclude.Include.NON_NULL);
+            SimpleModule module = new SimpleModule();
+            module.addDeserializer(Unit.class, new UnitDeserializer());
+            mapper2.registerModule(module);
+            mapper2.enable(DeserializationFeature.READ_ENUMS_USING_TO_STRING);
+            try {
+                String body = mapper2.writeValueAsString(template);
+                System.out.println(body);
+            } catch (JsonProcessingException e) {
+                e.printStackTrace();
+            }
+        }
+    }
+
+    @Test
     public void testOne() {
 
         System.out.println(new File("").getAbsolutePath());
@@ -106,7 +160,7 @@ public class DefaultPlacementPluginTest {
         */
 
 
-
+/*
 
         List<Object> nodeList = new ArrayList<Object>();
         // add first node as example
@@ -117,7 +171,7 @@ public class DefaultPlacementPluginTest {
         ServiceInstance updatedInstance = plugin.updateScaling(data, instance, trigger);
 
         PlacementMapping updatedMapping = plugin.updatePlacement(data, updatedInstance, config.getResources(), mapping);
-
+*/
         // Remove Stacks
         /*
         for(int i=0; i<resources.size(); i++) {

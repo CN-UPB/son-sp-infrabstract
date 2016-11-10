@@ -3,7 +3,9 @@ package sonata.kernel.placement.service;
 import com.google.common.collect.Lists;
 import com.google.common.util.concurrent.Service;
 import org.apache.commons.chain.web.MapEntry;
+import org.apache.commons.lang3.tuple.Pair;
 import org.jaxen.Function;
+import org.openstack4j.model.identity.v2.ServiceEndpoint;
 import sonata.kernel.VimAdaptor.commons.DeployServiceData;
 import sonata.kernel.VimAdaptor.commons.nsd.*;
 
@@ -32,6 +34,14 @@ public class ServiceInstanceManager {
     public enum ACTION_TYPE {
         ADD_INSTANCE,
         DELETE_INSTANCE
+    }
+
+    public ServiceInstance get_instance() {
+        return instance;
+    }
+
+    public void set_instance(ServiceInstance instance) {
+        this.instance = instance;
     }
 
     private ServiceInstance instance;
@@ -115,6 +125,7 @@ public class ServiceInstanceManager {
                     is_outerlink = true;
                     continue;
                 }
+                //linkInstance.interfaceList.put(f_instance, ref);
                 linkInstance.interfaceList.put(f_instance, ref);
             }
             if (is_outerlink)
@@ -156,12 +167,56 @@ public class ServiceInstanceManager {
                 }
 
             }
+
+            int id;
             if (is_nslink) {
+                if (instance.outerlink_list.get(link.getId()) == null) {
+                    AtomicInteger vnf_vlinkid = new AtomicInteger(0);
+                    id = vnf_vlinkid.addAndGet(1);
+                    vnf_vlinkid.set(id);
+                    instance.vnf_vlinkid.put(link.getId(), vnf_vlinkid);
+                    Map<String, LinkInstance> map = new HashMap<String, LinkInstance>();
+                    map.put(link.getId() + id, linkInstance);
+                    instance.outerlink_list.put(link.getId(), map);
+                } else {
+                    id = instance.vnf_vlinkid.get(link.getId()).addAndGet(1);
+                    instance.vnf_vlinkid.get(link.getId()).set(id);
+                    instance.outerlink_list.get(link.getId()).put(link.getId() + id, linkInstance);
+                }
                 instance.outerLinks.put(link.getId(), linkInstance);
-            } else
+
+            } else {
+                if (instance.innerlink_list.get(link.getId()) == null) {
+                    AtomicInteger vnf_vlinkid = new AtomicInteger(0);
+                    id = vnf_vlinkid.addAndGet(1);
+                    vnf_vlinkid.set(id);
+                    instance.vnf_vlinkid.put(link.getId(), vnf_vlinkid);
+                    Map<String, LinkInstance> map = new HashMap<String, LinkInstance>();
+                    map.put(link.getId() + id, linkInstance);
+                    instance.innerlink_list.put(link.getId(), map);
+                } else {
+                    id = instance.vnf_vlinkid.get(link.getId()).addAndGet(1);
+                    instance.vnf_vlinkid.get(link.getId()).set(id);
+                    instance.innerlink_list.get(link.getId()).put(link.getId() + id, linkInstance);
+                }
                 instance.innerLinks.put(link.getId(), linkInstance);
+            }
         }
 
+    }
+
+    public void update_vnfdescriptor(String vnf_id, boolean new_addition) {
+        if (instance.function_list.get(vnf_id) == null && !new_addition) {
+            logger.info("ServiceInstanceManager:update_vnfdescriptor ingored for " + vnf_id + ".");
+            return;
+        } else {
+            VnfDescriptor descriptor = Catalogue.internalFunctions.get(vnf_id);
+            nw_function_desc_map.put(network_functions_db.get(vnf_id).getVnfName(), descriptor);
+
+            logger.info("ServiceInstanceManager:update_vnfdescriptor updated for " + vnf_id + ". "
+                    + "VnfDescriptor: " + descriptor.getName() + " Version: " + descriptor.getVendor());
+            return;
+        }
     }
 
     /*
@@ -169,9 +224,9 @@ public class ServiceInstanceManager {
     In case of vnf instance addition, vnf_name = null
     In case of vnf instance deletion, vnf_name must be the name associated with the vnf instance.
      */
-    public ServiceInstance update_functions_list(String vnf_id, ACTION_TYPE action) {
+    public ServiceInstance update_functions_list(String vnf_id, String vnf_name, ACTION_TYPE action) {
 
-        if(action == ACTION_TYPE.ADD_INSTANCE) {
+        if (action == ACTION_TYPE.ADD_INSTANCE) {
 
             if (instance.function_list.get(vnf_id) == null) {
             /*
@@ -181,7 +236,7 @@ public class ServiceInstanceManager {
                 VnfDescriptor descriptor = Catalogue.internalFunctions.get(vnf_id);
                 assert descriptor != null : "Virtual Network Function " + vnf_id + " not found";
 
-                nw_function_desc_map.put(vnf_id, descriptor);
+
                 NetworkFunction n_function = new NetworkFunction();
                 n_function.setVnfId(vnf_id);
                 n_function.setVnfName(descriptor.getName());
@@ -189,7 +244,12 @@ public class ServiceInstanceManager {
                 n_function.setVnfVendor(descriptor.getVendor());
                 n_function.setDescription(descriptor.getDescription());
 
+
                 network_functions_db.put(vnf_id, n_function);
+
+                String ss = network_functions_db.get(vnf_id).getVnfName();
+                //nw_function_desc_map.put(descriptor.getName(), descriptor);
+                nw_function_desc_map.put(ss, descriptor);
 
                 AtomicInteger vnf_uid = new AtomicInteger(0);
                 int id = vnf_uid.addAndGet(1);
@@ -207,7 +267,7 @@ public class ServiceInstanceManager {
 
             } else {
 
-                VnfDescriptor descriptor = nw_function_desc_map.get(vnf_id);
+                VnfDescriptor descriptor = nw_function_desc_map.get(network_functions_db.get(vnf_id).getVnfName());
                 assert descriptor != null : "Virtual Network Function " + vnf_id + " not found";
 
                 NetworkFunction n_function = network_functions_db.get(vnf_id);
@@ -228,32 +288,73 @@ public class ServiceInstanceManager {
             if (instance.function_list.get(vnf_id) == null) {
                 logger.error("Virtual Network Function " + vnf_id + " not found");
             } else {
-
-                //TODO
+                int id = instance.vnf_uid.get(vnf_id).decrementAndGet();
+                instance.vnf_uid.get(vnf_id).set(id);
+                instance.function_list.get(vnf_id).remove(vnf_name);
             }
-
         }
-
         return instance;
 
     }
 
-    /*
-    Handle addition of link between function instance.
-    Handle deletion of link between function instance.
-    Handle update of link as delete followed by add.
+    public ServiceInstance update_vlink_list(String s_vnfid, String d_vnfid, String endpoint_src, String endpoint_target, ACTION_TYPE action) {
+
+        assert instance.function_list.get(s_vnfid) != null : "Virtual Network Function " + s_vnfid + " not found";
+        assert instance.function_list.get(s_vnfid).get(endpoint_src) != null : "Virtual Network Function instance "
+                + endpoint_src + " not found";
+        assert instance.function_list.get(d_vnfid) != null : "Virtual Network Function" + d_vnfid + " not found";
+        assert instance.function_list.get(d_vnfid).get(endpoint_target) != null : "Virtual Network Function instance "
+                + endpoint_target + " not found";
+
+        if (action == ACTION_TYPE.ADD_INSTANCE) {
 
 
-                 __________          |
-                |          ||--------|
-     ----------||  LB      |
-                |__________||---------
+            logger.error("ServiceInstanceManager::update_vlink_list: " + action.toString()
+                    + " link between " + endpoint_src + " and " + endpoint_target + " failed");
 
 
-     */
-    public void update_vlink_list(String endpoint_src, String endpoint_target, ACTION_TYPE action) {
-        //Find the link instance on the service instance.
-        //perform the necessary action on it.
+        } else if (action == ACTION_TYPE.DELETE_INSTANCE) {
+
+            String link_name = null;
+            for (Map.Entry<String, LinkInstance> link : instance.innerLinks.entrySet()) {
+
+                Object[] listt = link.getValue().interfaceList.entrySet().toArray();
+
+                if ((((HashMap.Entry<FunctionInstance, String>) listt[0]).getKey().name.equals(endpoint_src.split("_")[1]) &&
+                        ((HashMap.Entry<FunctionInstance, String>) listt[1]).getKey().name.equals(endpoint_target.split("_")[1])) ||
+                        (((HashMap.Entry<FunctionInstance, String>) listt[1]).getKey().name.equals(endpoint_src.split("_")[1]) &&
+                                ((HashMap.Entry<FunctionInstance, String>) listt[0]).getKey().name.equals(endpoint_target.split("_")[1]))) {
+                    FunctionInstance src;
+                    FunctionInstance target;
+
+                    if (((HashMap.Entry<FunctionInstance, String>) listt[0]).getValue().contains("output") &&
+                            ((HashMap.Entry<FunctionInstance, String>) listt[1]).getValue().contains("input")) {
+                        src = ((HashMap.Entry<FunctionInstance, String>) listt[0]).getKey();
+                        target = ((HashMap.Entry<FunctionInstance, String>) listt[1]).getKey();
+                    } else {
+                        src = ((HashMap.Entry<FunctionInstance, String>) listt[1]).getKey();
+                        target = ((HashMap.Entry<FunctionInstance, String>) listt[0]).getKey();
+                    }
+
+                    link_name = link.getValue().name.split(":")[1];
+                    break;
+
+                }
+            }
+
+            if (link_name == null) {
+                logger.error("ServiceInstanceManager::update_vlink_list: " + action.toString()
+                        + " link between " + endpoint_src + " and " + endpoint_target + " failed");
+            } else {
+                instance.innerLinks.remove(link_name);
+            }
+
+        }
+
+        logger.info("ServiceInstanceManager::update_vlink_list: " + action.toString()
+                + " link between " + endpoint_src + " and " + endpoint_target + " successful");
+
+        return this.instance;
     }
 
 

@@ -157,7 +157,9 @@ public class Catalogue {
                 String vnfdName = vnfd.getName();
                 if(vnfdName==null)
                     continue;
-                internalFunctions.put(vnfdName,vnfd);
+                //internalFunctions.put(vnfdName,vnfd);
+                internalFunctions.put("vnf_" + vnfdName.split("-")[0], vnfd);
+
                 logger.debug("Add internal function "+vnfdName+" "+f);
             }
             logger.debug("Loaded "+internalFunctions.size()+" functions");

@@ -27,7 +27,10 @@ public class ServiceInstance {
 
     public final Map<String, Map<String, FunctionInstance>> function_list;
     public final Map<String, AtomicInteger> vnf_uid;
+    public final Map<String, AtomicInteger> vnf_vlinkid;
 
+    public final Map<String, Map<String, LinkInstance>> outerlink_list;
+    public final Map<String, Map<String, LinkInstance>> innerlink_list;
 
     //public final List<UnitInstance> units;
 
@@ -43,6 +46,9 @@ public class ServiceInstance {
         //functions = new HashMap<String,FunctionInstance>();
         function_list = new HashMap<String, Map<String,FunctionInstance>>();
         vnf_uid = new HashMap<String, AtomicInteger>();
+        vnf_vlinkid = new HashMap<String, AtomicInteger>();
+        outerlink_list = new HashMap<String, Map<String, LinkInstance>>();
+        innerlink_list = new HashMap<String, Map<String, LinkInstance>>();
         //units = new ArrayList<UnitInstance>();
         outerLinks = new HashMap<String, LinkInstance>();
         innerLinks = new HashMap<String, LinkInstance>();

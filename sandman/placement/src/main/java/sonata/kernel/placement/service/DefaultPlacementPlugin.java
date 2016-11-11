@@ -47,13 +47,16 @@ public class DefaultPlacementPlugin implements PlacementPlugin {
             instance_manager.update_functions_list("vnf_loadbalancer", null, ServiceInstanceManager.ACTION_TYPE.ADD_INSTANCE);
             instance_manager.update_functions_list("vnf_tcpdump", null, ServiceInstanceManager.ACTION_TYPE.ADD_INSTANCE);
 
-            instance_manager.update_vlink_list("vnf_firewall", "vnf_tcpdump","vnf_firewall1", "vnf_tcpdump1",
-                                                         ServiceInstanceManager.ACTION_TYPE.DELETE_INSTANCE);
-            instance_manager.update_vlink_list("vnf_firewall", "vnf_loadbalancer","vnf_firewall1", "vnf_loadbalancer1",
+            instance_manager.update_vlink_list("vnf_firewall", "vnf_tcpdump", "vnf_firewall1", "vnf_tcpdump1",
+                    ServiceInstanceManager.ACTION_TYPE.DELETE_INSTANCE);
+
+            instance_manager.update_vlink_list("vnf_firewall", "vnf_loadbalancer", "vnf_firewall1", "vnf_loadbalancer1",
                     ServiceInstanceManager.ACTION_TYPE.ADD_INSTANCE);
-            instance_manager.update_vlink_list("vnf_loadbalancer", "vnf_tcpdump","vnf_loadbalancer1", "vnf_tcpdump1",
+
+            instance_manager.update_vlink_list("vnf_loadbalancer", "vnf_tcpdump", "vnf_loadbalancer1", "vnf_tcpdump1",
                     ServiceInstanceManager.ACTION_TYPE.ADD_INSTANCE);
-            return instance_manager.update_vlink_list("vnf_loadbalancer", "vnf_tcpdump","vnf_loadbalancer1", "vnf_tcpdump2",
+
+            return instance_manager.update_vlink_list("vnf_loadbalancer", "vnf_tcpdump", "vnf_loadbalancer1", "vnf_tcpdump2",
                     ServiceInstanceManager.ACTION_TYPE.ADD_INSTANCE);
 
 

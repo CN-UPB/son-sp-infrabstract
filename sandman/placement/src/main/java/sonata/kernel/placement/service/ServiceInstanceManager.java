@@ -134,6 +134,131 @@ public class ServiceInstanceManager {
         }
     }
 
+    protected void add_link(VirtualLink link, LinkInstance linkInstance, String src, String target, boolean build_in, boolean build_out) {
+        boolean is_nslink = false;
+
+        for (String cp_ref : link.getConnectionPointsReference()) {
+
+            String[] cp_ref_str = cp_ref.split(":");
+            assert cp_ref_str != null && cp_ref_str.length == 2 : "Virtual Link " + link.getId() + " uses odd vnf reference " + cp_ref;
+            String vnfid = cp_ref_str[0];
+            String connectionPointName = cp_ref_str[1];
+
+            if ("ns".equals(vnfid)) {
+                is_nslink = true;
+                continue;
+            }
+            if (src.contains(cp_ref.split(":")[0]))
+                linkInstance.interfaceList.put(instance.function_list.get(cp_ref.split(":")[0]).get(src), cp_ref);
+            else
+                linkInstance.interfaceList.put(instance.function_list.get(cp_ref.split(":")[0]).get(target), cp_ref);
+
+        }
+
+        linkInstance.setBuild_in(build_in);
+        linkInstance.setBuild_out(build_out);
+
+        int id;
+        if (is_nslink) {
+            if (instance.outerlink_list.get(link.getId()) == null) {
+                AtomicInteger vnf_vlinkid = new AtomicInteger(0);
+                id = vnf_vlinkid.addAndGet(1);
+                vnf_vlinkid.set(id);
+                instance.vnf_vlinkid.put(link.getId(), vnf_vlinkid);
+                Map<String, LinkInstance> map = new HashMap<String, LinkInstance>();
+                map.put(link.getId() + ":" + id, linkInstance);
+                instance.outerlink_list.put(link.getId(), map);
+            } else {
+                id = instance.vnf_vlinkid.get(link.getId()).addAndGet(1);
+                instance.vnf_vlinkid.get(link.getId()).set(id);
+                instance.outerlink_list.get(link.getId()).put(link.getId() + ":" + id, linkInstance);
+            }
+            instance.outerLinks.put(link.getId(), linkInstance);
+
+        } else {
+            if (instance.innerlink_list.get(link.getId()) == null) {
+                AtomicInteger vnf_vlinkid = new AtomicInteger(0);
+                id = vnf_vlinkid.addAndGet(1);
+                vnf_vlinkid.set(id);
+                instance.vnf_vlinkid.put(link.getId(), vnf_vlinkid);
+                Map<String, LinkInstance> map = new HashMap<String, LinkInstance>();
+                map.put(link.getId() + ":" + id, linkInstance);
+                instance.innerlink_list.put(link.getId(), map);
+            } else {
+                id = instance.vnf_vlinkid.get(link.getId()).addAndGet(1);
+                instance.vnf_vlinkid.get(link.getId()).set(id);
+                instance.innerlink_list.get(link.getId()).put(link.getId() + ":" + id, linkInstance);
+            }
+
+        }
+        return;
+    }
+
+    protected void initialize_link(VirtualLink link, LinkInstance linkInstance) {
+        boolean is_nslink = false;
+
+        for (String cp_ref : link.getConnectionPointsReference()) {
+
+            String[] cp_ref_str = cp_ref.split(":");
+            assert cp_ref_str != null && cp_ref_str.length == 2 : "Virtual Link " + link.getId() + " uses odd vnf reference " + cp_ref;
+            String vnfid = cp_ref_str[0];
+            String connectionPointName = cp_ref_str[1];
+
+            if ("ns".equals(vnfid)) {
+                is_nslink = true;
+                continue;
+            }
+
+            Map<String, FunctionInstance> vnf_instances = instance.function_list.get(vnfid);
+            assert vnf_instances.size() != 0 : "In Service " + instance.service.getName() + " Virtual Link " + link.getId() + " references unknown vnf with id " + vnfid;
+
+            for (Map.Entry<String, FunctionInstance> finst : vnf_instances.entrySet()) {
+                LinkInstance vnfLinkInstance = finst.getValue().links.get(connectionPointName);
+                assert vnfLinkInstance != null : "In Service " + instance.service.getName() + " Virtual Link "
+                        + link.getId() + " connects to function " + finst.getValue().name
+                        + " that does not contain link for connection point " + connectionPointName;
+
+                linkInstance.interfaceList.put(finst.getValue(), cp_ref);
+            }
+
+        }
+
+        int id;
+        if (is_nslink) {
+            if (instance.outerlink_list.get(link.getId()) == null) {
+                AtomicInteger vnf_vlinkid = new AtomicInteger(0);
+                id = vnf_vlinkid.addAndGet(1);
+                vnf_vlinkid.set(id);
+                instance.vnf_vlinkid.put(link.getId(), vnf_vlinkid);
+                Map<String, LinkInstance> map = new HashMap<String, LinkInstance>();
+                map.put(link.getId() + ":" + id, linkInstance);
+                instance.outerlink_list.put(link.getId(), map);
+            } else {
+                id = instance.vnf_vlinkid.get(link.getId()).addAndGet(1);
+                instance.vnf_vlinkid.get(link.getId()).set(id);
+                instance.outerlink_list.get(link.getId()).put(link.getId() + ":" + id, linkInstance);
+            }
+            instance.outerLinks.put(link.getId(), linkInstance);
+
+        } else {
+            if (instance.innerlink_list.get(link.getId()) == null) {
+                AtomicInteger vnf_vlinkid = new AtomicInteger(0);
+                id = vnf_vlinkid.addAndGet(1);
+                vnf_vlinkid.set(id);
+                instance.vnf_vlinkid.put(link.getId(), vnf_vlinkid);
+                Map<String, LinkInstance> map = new HashMap<String, LinkInstance>();
+                map.put(link.getId() + ":" + id, linkInstance);
+                instance.innerlink_list.put(link.getId(), map);
+            } else {
+                id = instance.vnf_vlinkid.get(link.getId()).addAndGet(1);
+                instance.vnf_vlinkid.get(link.getId()).set(id);
+                instance.innerlink_list.get(link.getId()).put(link.getId() + ":" + id, linkInstance);
+            }
+
+        }
+        return;
+    }
+
     protected void initialize_vlinks_list(DeployServiceData service_data) {
         ArrayList<VirtualLink> virtual_links = Lists.newArrayList(instance.service.getVirtualLinks());
 
@@ -142,65 +267,7 @@ public class ServiceInstanceManager {
 
             boolean is_nslink = false;
 
-            for (String cp_ref : link.getConnectionPointsReference()) {
-
-                String[] cp_ref_str = cp_ref.split(":");
-                assert cp_ref_str != null && cp_ref_str.length == 2 : "Virtual Link " + link.getId() + " uses odd vnf reference " + cp_ref;
-                String vnfid = cp_ref_str[0];
-                String connectionPointName = cp_ref_str[1];
-
-                if ("ns".equals(vnfid)) {
-                    is_nslink = true;
-                    continue;
-                }
-
-                Map<String, FunctionInstance> vnf_instances = instance.function_list.get(vnfid);
-                assert vnf_instances.size() != 0 : "In Service " + instance.service.getName() + " Virtual Link " + link.getId() + " references unknown vnf with id " + vnfid;
-
-                for (Map.Entry<String, FunctionInstance> finst : vnf_instances.entrySet()) {
-                    LinkInstance vnfLinkInstance = finst.getValue().links.get(connectionPointName);
-                    assert vnfLinkInstance != null : "In Service " + instance.service.getName() + " Virtual Link "
-                            + link.getId() + " connects to function " + finst.getValue().name
-                            + " that does not contain link for connection point " + connectionPointName;
-
-                    linkInstance.interfaceList.put(finst.getValue(), cp_ref);
-                }
-
-            }
-
-            int id;
-            if (is_nslink) {
-                if (instance.outerlink_list.get(link.getId()) == null) {
-                    AtomicInteger vnf_vlinkid = new AtomicInteger(0);
-                    id = vnf_vlinkid.addAndGet(1);
-                    vnf_vlinkid.set(id);
-                    instance.vnf_vlinkid.put(link.getId(), vnf_vlinkid);
-                    Map<String, LinkInstance> map = new HashMap<String, LinkInstance>();
-                    map.put(link.getId() + id, linkInstance);
-                    instance.outerlink_list.put(link.getId(), map);
-                } else {
-                    id = instance.vnf_vlinkid.get(link.getId()).addAndGet(1);
-                    instance.vnf_vlinkid.get(link.getId()).set(id);
-                    instance.outerlink_list.get(link.getId()).put(link.getId() + id, linkInstance);
-                }
-                instance.outerLinks.put(link.getId(), linkInstance);
-
-            } else {
-                if (instance.innerlink_list.get(link.getId()) == null) {
-                    AtomicInteger vnf_vlinkid = new AtomicInteger(0);
-                    id = vnf_vlinkid.addAndGet(1);
-                    vnf_vlinkid.set(id);
-                    instance.vnf_vlinkid.put(link.getId(), vnf_vlinkid);
-                    Map<String, LinkInstance> map = new HashMap<String, LinkInstance>();
-                    map.put(link.getId() + id, linkInstance);
-                    instance.innerlink_list.put(link.getId(), map);
-                } else {
-                    id = instance.vnf_vlinkid.get(link.getId()).addAndGet(1);
-                    instance.vnf_vlinkid.get(link.getId()).set(id);
-                    instance.innerlink_list.get(link.getId()).put(link.getId() + id, linkInstance);
-                }
-                instance.innerLinks.put(link.getId(), linkInstance);
-            }
+            initialize_link(link, linkInstance);
         }
 
     }
@@ -308,6 +375,27 @@ public class ServiceInstanceManager {
 
         if (action == ACTION_TYPE.ADD_INSTANCE) {
 
+            String link_name = null;
+            String link_id = null;
+
+            VirtualLink link = new VirtualLink();
+            link.setId(s_vnfid.split("_")[1] + "-2-" + d_vnfid.split("_")[1]);
+            link.setConnectivityType(VirtualLink.ConnectivityType.E_LINE);
+            ArrayList<String> cp = new ArrayList<String>();
+            cp.add(s_vnfid + ":output");
+            cp.add(d_vnfid + ":input");
+            link.setConnectionPointsReference(cp);
+            link.setAccess(false);
+            link.setExternalAccess(false);
+            link.setDhcp(false);
+
+            LinkInstance linkInstance = new LinkInstance(link, "nslink:" + link.getId());
+
+            if (instance.innerlink_list.get(link.getId()) != null)
+                add_link(link, linkInstance, endpoint_src, endpoint_target, true, false);
+            else
+                add_link(link, linkInstance, endpoint_src, endpoint_target, true, true);
+
 
             logger.error("ServiceInstanceManager::update_vlink_list: " + action.toString()
                     + " link between " + endpoint_src + " and " + endpoint_target + " failed");
@@ -316,6 +404,69 @@ public class ServiceInstanceManager {
         } else if (action == ACTION_TYPE.DELETE_INSTANCE) {
 
             String link_name = null;
+            String link_id = null;
+
+            for (Map.Entry<String, Map<String, LinkInstance>> link_m : instance.innerlink_list.entrySet()) {
+                for (Map.Entry<String, LinkInstance> link : link_m.getValue().entrySet()) {
+
+                    Object[] listt = link.getValue().interfaceList.entrySet().toArray();
+
+                    if ((((HashMap.Entry<FunctionInstance, String>) listt[0]).getKey().name.equals(endpoint_src.split("_")[1]) &&
+                            ((HashMap.Entry<FunctionInstance, String>) listt[1]).getKey().name.equals(endpoint_target.split("_")[1])) ||
+                            (((HashMap.Entry<FunctionInstance, String>) listt[1]).getKey().name.equals(endpoint_src.split("_")[1]) &&
+                                    ((HashMap.Entry<FunctionInstance, String>) listt[0]).getKey().name.equals(endpoint_target.split("_")[1]))) {
+                        FunctionInstance src;
+                        FunctionInstance target;
+
+                        if (((HashMap.Entry<FunctionInstance, String>) listt[0]).getValue().contains("output") &&
+                                ((HashMap.Entry<FunctionInstance, String>) listt[1]).getValue().contains("input")) {
+                            src = ((HashMap.Entry<FunctionInstance, String>) listt[0]).getKey();
+                            target = ((HashMap.Entry<FunctionInstance, String>) listt[1]).getKey();
+                        } else {
+                            src = ((HashMap.Entry<FunctionInstance, String>) listt[1]).getKey();
+                            target = ((HashMap.Entry<FunctionInstance, String>) listt[0]).getKey();
+                        }
+
+                        link_name = link.getKey();
+                        break;
+
+                    }
+                }
+                if (link_name != null) {
+                    link_id = link_m.getKey();
+                    instance.innerlink_list.get(link_id).remove(link_name);
+                    break;
+                }
+            }
+            if (link_id == null) {
+                for (Map.Entry<String, Map<String, LinkInstance>> link_m : instance.outerlink_list.entrySet()) {
+                    for (Map.Entry<String, LinkInstance> link : link_m.getValue().entrySet()) {
+
+                        Object[] listt = link.getValue().interfaceList.entrySet().toArray();
+
+                        if ((((HashMap.Entry<FunctionInstance, String>) listt[0]).getKey().name.equals(endpoint_src.split("_")[1]) &&
+                                ((HashMap.Entry<FunctionInstance, String>) listt[1]).getKey().name.equals(endpoint_target.split("_")[1])) ||
+                                (((HashMap.Entry<FunctionInstance, String>) listt[1]).getKey().name.equals(endpoint_src.split("_")[1]) &&
+                                        ((HashMap.Entry<FunctionInstance, String>) listt[0]).getKey().name.equals(endpoint_target.split("_")[1]))) {
+
+                            link_name = link.getKey();
+                            break;
+
+                        }
+                    }
+                    if (link_name != null) {
+                        link_id = link_m.getKey();
+                        instance.outerlink_list.get(link_id).remove(link_name);
+                        break;
+                    }
+                }
+            }
+
+            if (link_name == null) {
+                logger.error("ServiceInstanceManager::update_vlink_list: " + action.toString()
+                        + " link between " + endpoint_src + " and " + endpoint_target + " failed");
+            }
+            /*
             for (Map.Entry<String, LinkInstance> link : instance.innerLinks.entrySet()) {
 
                 Object[] listt = link.getValue().interfaceList.entrySet().toArray();
@@ -340,14 +491,8 @@ public class ServiceInstanceManager {
                     break;
 
                 }
-            }
+            }*/
 
-            if (link_name == null) {
-                logger.error("ServiceInstanceManager::update_vlink_list: " + action.toString()
-                        + " link between " + endpoint_src + " and " + endpoint_target + " failed");
-            } else {
-                instance.innerLinks.remove(link_name);
-            }
 
         }
 

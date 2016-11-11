@@ -26,6 +26,27 @@ public class LinkInstance {
 
     public Map<FunctionInstance, String> interfaceList;
 
+
+    public boolean isBuild_out() {
+        return build_out;
+    }
+
+    public void setBuild_out(boolean build_out) {
+        this.build_out = build_out;
+    }
+
+    public boolean build_out;
+
+    public boolean isBuild_in() {
+        return build_in;
+    }
+
+    public void setBuild_in(boolean build_in) {
+        this.build_in = build_in;
+    }
+
+    public boolean build_in;
+
     public LinkInstance(Object link, String name){
     	logger.info("Link Instance");
         this.link = link;
@@ -33,6 +54,9 @@ public class LinkInstance {
         assert link instanceof VirtualLink || link instanceof VnfVirtualLink : "LinkInstance is based on a VirtualLink or a VnfVirtualLink";
         //nodeList = new HashMap<UnitInstance, String>();
         interfaceList = new HashMap<FunctionInstance, String>();
+        setBuild_in(true);
+        setBuild_out(true);
+
     }
 
     public String getLinkId(){

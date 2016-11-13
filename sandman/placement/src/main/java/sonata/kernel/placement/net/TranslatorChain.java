@@ -16,12 +16,17 @@ public class TranslatorChain {
 
     public static void chain(LinkChain chain){
 
-        String chainPath = chain.popResource.getChainingEndpoint();
+        // Same chaining port for both datacenters
+        String chainPath = chain.srcDc.getChainingEndpoint();
         if(!chainPath.endsWith("/"))
             chainPath += "/";
         String requestUri;
 
-        requestUri = chainPath+"/v1/chain/"+chain.srcNode+"/"+chain.srcInterface+"/"+chain.dstNode+"/"+chain.srcInterface;
+        String srcDcName = chain.srcDc.getPopName();
+        String dstDcName = chain.dstDc.getPopName();
+
+        requestUri = chainPath+"/v1/chain/"+srcDcName+"/"+chain.srcStack+"/"+chain.srcServer+"/"+chain.srcPort+"/"
+                +dstDcName+"/"+chain.dstStack+"/"+chain.dstNode+"/"+chain.srcInterface;
 
         CloseableHttpClient client = HttpClients.createDefault();
         HttpPut getRequest = new HttpPut(requestUri);
@@ -44,13 +49,19 @@ public class TranslatorChain {
 
     public static void unchain(LinkChain chain){
 
-        String chainPath = chain.popResource.getChainingEndpoint();
+        // Same chaining port for both datacenters
+        String chainPath = chain.srcDc.getChainingEndpoint();
         if(!chainPath.endsWith("/"))
             chainPath += "/";
+        String requestUri;
+
+        String srcDcName = chain.srcDc.getPopName();
+        String dstDcName = chain.dstDc.getPopName();
+
+        requestUri = chainPath+"/v1/chain/"+srcDcName+"/"+chain.srcStack+"/"+chain.srcServer+"/"+chain.srcPort+"/"
+                +dstDcName+"/"+chain.dstStack+"/"+chain.dstNode+"/"+chain.srcInterface;
 
         CloseableHttpClient client = HttpClients.createDefault();
-        String requestUri = chainPath+"/v1/unchain/"+chain.srcNode+"/"+chain.srcNode;
-
         HttpDelete getRequest = new HttpDelete(requestUri);
         CloseableHttpResponse response = null;
 

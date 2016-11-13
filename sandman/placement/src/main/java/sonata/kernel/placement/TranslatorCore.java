@@ -8,7 +8,7 @@ import sonata.kernel.placement.config.PlacementConfig;
 import java.io.File;
 
 import sonata.kernel.placement.service.PlacementPluginLoader;
-//import org.apache.log4j.Logger;
+
 
 
 
@@ -16,11 +16,15 @@ import java.io.IOException;
 
 public class TranslatorCore {
 
-    private DescriptorTranslator desc_translator;
+
+    static DeploymentManager deployment;
+    static Thread deploymentThread;
 
     public TranslatorCore() {
     }
+
     final static Logger logger = LoggerFactory.getLogger(TranslatorCore.class);
+
     public static void main(String[] args) throws InterruptedException {
 
         // Load configuration
@@ -34,41 +38,48 @@ public class TranslatorCore {
         PlacementPluginLoader.loadPlacementPlugin(config.pluginPath,config.placementPlugin);
         logger.info("Loaded placement-plugin: "+PlacementPluginLoader.placementPlugin.getClass().getName());
 
+        // Start servers
         try {
-            new Thread(new RestInterfaceClientApi()).start();
+
+            logger.debug("Starting Gatekeeper Server");
             new RestInterfaceServerApi(config.restApi.getServerIp(), config.restApi.getPort()).start();
 
+            logger.debug("Starting DeploymentManager");
+            deployment = new DeploymentManager();
+            deploymentThread = new Thread(deployment);
+            deploymentThread.start();
+
+            Runtime.getRuntime().addShutdownHook(new Thread(new Cleanup()));
+
+            deploymentThread.join();
+
           } catch (IOException ioe) {
-            System.err.println("TranslatorCore::main() : Encountered exception" + ioe);
+            logger.error("Encountered exception", ioe);
         }
 
-        DescriptorTranslator desc_translator = new DescriptorTranslator();
-        while(true)
-        {
-            MessageQueueData q_data = MessageQueue.get_rest_serverQ().take();
-
-            if(q_data.data == null)
-                continue;
-
-            if(q_data.message_type == MessageType.TRANSLATE_DESC){
-                try{
-                	logger.debug("Message_type is "+ q_data.message_type);
-                    DescriptorTranslator.process_descriptor(q_data.data);
-                    /*
-                    MessageQueueData c_data = new MessageQueueData(MessageType.POST_MESSAGE, out, "http://131.234.31.45:8080");
-                    MessageQueue.get_rest_clientQ().put(c_data);
-                    */
-
-                } catch (IOException e)
-                {
-                    e.printStackTrace();
-                    System.err.println("TranslatorCore::main() : Encountered exception whilte translating");
-                }
-
-            }
-
-        }
     }
 
+    /**
+     * Cleanup on shutdown
+     */
+    public static class Cleanup implements Runnable{
+        public void run(){
 
+            logger.info("Cleaning up for shutdown");
+            logger.info("Terminating DeploymentManager");
+            MessageQueue.get_deploymentQ().add(new MessageQueueData(MessageType.TERMINATE_MESSAGE));
+
+            try {
+                deploymentThread.join(5000);
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+            }
+            if(deploymentThread.isAlive())
+                logger.info("Deployment still running");
+            else
+                logger.info("Deployment stopped");
+
+            logger.info("Cleaning up finished");
+        }
+    }
 }

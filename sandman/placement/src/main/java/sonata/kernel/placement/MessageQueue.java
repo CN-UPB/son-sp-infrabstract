@@ -10,44 +10,35 @@ import org.apache.log4j.Logger;
 
 //Modify them as requrired.
 enum MessageType {
-    POST_MESSAGE, GET_MESSAGE, TERMINATE_MESSAGE, TRANSLATE_DESC
+    DEPLOY_MESSAGE, UNDEPLOY_MESSAGE, TERMINATE_MESSAGE
 }
 class MessageQueueData
 {
 	final static Logger logger = Logger.getLogger(MessageQueueData.class);
     MessageType message_type;
-    String data;
-    String uri;
 
-    public MessageQueueData(MessageType message_type, String data) {
+    public MessageQueueData(MessageType message_type) {
         this.message_type = message_type;
-        this.data = data;
-        logger.debug("Message Queue Data: "+ data);
     }
 
-    public MessageQueueData(MessageType message_type, String data, String uri) {
-        this.message_type = message_type;
-        this.data = data;
-        this.uri = uri;
-        logger.debug("Message Queue Data: "+ data);
-        logger.debug("Message Queue uri: "+ uri);
+}
+class MessageQueueDeployData extends MessageQueueData{
+
+    final public String deploy_path;
+
+    public MessageQueueDeployData(String deploy_path){
+        super(MessageType.DEPLOY_MESSAGE);
+        this.deploy_path = deploy_path;
     }
 }
+
 class MessageQueue
 {
 	final static Logger logger = Logger.getLogger(MessageQueue.class);
-    private static BlockingQueue<MessageQueueData> rest_serverQ = new LinkedBlockingDeque<MessageQueueData>();
-    private static BlockingQueue<MessageQueueData> rest_clientQ = new LinkedBlockingDeque<MessageQueueData>();
+    private static BlockingQueue<MessageQueueData> deploymentQ = new LinkedBlockingDeque<MessageQueueData>();
 
-    static public BlockingQueue<MessageQueueData> get_rest_serverQ()
+    static public BlockingQueue<MessageQueueData> get_deploymentQ()
     {
-    	logger.info("Rest Server");
-        return rest_serverQ;
-    }
-
-    static public BlockingQueue<MessageQueueData> get_rest_clientQ()
-    {
-    	logger.info("Rest Client");
-        return rest_clientQ;
+        return deploymentQ;
     }
 }

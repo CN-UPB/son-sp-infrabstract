@@ -41,6 +41,7 @@ public class DeploymentManager implements Runnable{
         while (true) {
 
             try {
+                logger.debug("Waiting for message");
                 MessageQueueData message = MessageQueue.get_deploymentQ().take();
                 if(message.message_type == MessageType.TERMINATE_MESSAGE) {
 
@@ -50,9 +51,9 @@ public class DeploymentManager implements Runnable{
 
                 } else if (message.message_type == MessageType.DEPLOY_MESSAGE) {
 
-                    MessageQueueDeployData deployData = (MessageQueueDeployData) message;
-                    logger.info("Deploy Message - deploy path "+deployData.index);
-                    deploy(deployData.index);
+                    MessageQueueDeployData deployMessage = (MessageQueueDeployData) message;
+                    logger.info("Deploy Message - deploy index "+deployMessage.index);
+                    deploy(deployMessage);
 
                 } else if (message.message_type == MessageType.UNDEPLOY_MESSAGE) {
 
@@ -65,14 +66,16 @@ public class DeploymentManager implements Runnable{
         }
     }
 
-    public static void deploy(int index){
+    public static void deploy(MessageQueueDeployData message){
+
+        message.responseId = 500;
+        message.responseMessage = "Something went terribly wrong";
 
         try {
             PlacementConfig config = PlacementConfigLoader.loadPlacementConfig();
             PlacementPlugin plugin = PlacementPluginLoader.placementPlugin;
 
-            //DeployServiceData data = DescriptorTranslator.process_descriptor(index);
-            DeployServiceData data = Catalogue.getPackagetoDeploy(index);
+            DeployServiceData data = Catalogue.getPackagetoDeploy(message.index);
             String serviceName = data.getNsd().getName();
 
             ServiceInstance instance = plugin.initialScaling(data);
@@ -107,10 +110,17 @@ public class DeploymentManager implements Runnable{
 
             currentInstance = instance;
             currentMapping = mapping;
+
+            message.responseId = 201;
+            message.responseMessage = "Created";
         } catch(Exception e) {
             logger.error("Deployment failed",e);
         }
-
+        finally{
+            synchronized(message) {
+                message.notify();
+            }
+        }
     }
 
     public static void deployStack(PopResource pop, String stackName, String templateJsonString){

@@ -109,11 +109,12 @@ class RestInterfaceServerApi extends NanoHTTPD implements Runnable {
             }
             else
             if("/packages".equals(uri) && session.getMethod().equals(Method.GET)) {
+            	System.out.println("RestInterface :: List of packages");
                 String jsonPackageList = Catalogue.getJsonPackageList();
                 if(jsonPackageList == null)
                     return newFixedLengthResponse(Response.Status.INTERNAL_ERROR, null, null);
                 else
-                    return newFixedLengthResponse(Response.Status.OK, "application/json", jsonPackageList);
+                	return newFixedLengthResponse(Response.Status.OK, "application/json", jsonPackageList);
             }
             else
             if(req_uri.equals(uri) && session.getMethod().equals(Method.POST)) {

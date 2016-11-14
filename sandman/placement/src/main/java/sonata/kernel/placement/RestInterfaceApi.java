@@ -94,18 +94,17 @@ class RestInterfaceServerApi extends NanoHTTPD implements Runnable {
 
                 String base_dir = PackageLoader.processZipFile(buffer);
 
-                //MessageQueueData q_data = new MessageQueueData(MessageType.TRANSLATE_DESC, base_dir);
-               // MessageQueue.get_rest_serverQ().put(q_data);
-
                 String jsonPackage = "OK";
                 SonataPackage pack = PackageLoader.zipByteArrayToSonataPackage(buffer);
-                
-                if(pack != null) {
-                    int newIndex = Catalogue.addPackage(pack);
-                    jsonPackage = Catalogue.getJsonPackageDescriptor(newIndex);
-                    
-                    logger.info("Json Package is "+jsonPackage);
-                }
+
+                if(pack == null)
+                    return newFixedLengthResponse(Response.Status.BAD_REQUEST, null, null);
+
+                int newIndex = Catalogue.addPackage(pack);
+                jsonPackage = Catalogue.getJsonPackageDescriptor(newIndex);
+
+                logger.info("Json Package is "+jsonPackage);
+
                 return newFixedLengthResponse(Response.Status.CREATED, "application/json", jsonPackage);
             }
             else
@@ -119,44 +118,35 @@ class RestInterfaceServerApi extends NanoHTTPD implements Runnable {
             else
             if(req_uri.equals(uri) && session.getMethod().equals(Method.POST)) {
             	int newIndex;
-                /*Integer contentLength = Integer.parseInt(session.getHeaders().get("content-length"));
-                byte[] buffer = new byte[contentLength];
-                session.getInputStream().read(buffer, 0, contentLength);
-                List<MultiPartFormDataPart> parts = parseMultiPartFormData(session, buffer);
-                if(parts.size()!=1)
-                    return newFixedLengthResponse(Response.Status.BAD_REQUEST, null, null);
-                String requestIndexStr = new String(parts.get(0).data);
-                if(requestIndexStr.startsWith(":"))
-                    requestIndexStr = requestIndexStr.substring(1);
-                int requestIndex = Integer.valueOf(requestIndexStr);
-                // TODO: add deploy code
-                return newFixedLengthResponse(Response.Status.CREATED, null, null);*/
+
             	if (req_index.length() > 0) {
                 	newIndex = Integer.parseInt(req_index);
                 	try {
-                		//String package_dir = Catalogue.getJsonPackageDescriptor(newIndex);
-                		//DescriptorTranslator.process_descriptor(newIndex);
-                		DeploymentManager.deploy(newIndex);
-                    	/*if (package_dir.length() != 0) {
-                    		MessageQueueDeployData q_data = new MessageQueueDeployData(package_dir);
-                            MessageQueue.get_deploymentQ().put(q_data);
-                            return newFixedLengthResponse(Response.Status.CREATED, "application/json", package_dir);
-                    	}
-                    	else {
-                    		logger.debug("package not found in the catalogue");
-                    	}*/
+
+                        MessageQueueDeployData message = new MessageQueueDeployData(newIndex);
+                        MessageQueue.get_deploymentQ().put(message);
+                        synchronized(message) {
+                            message.wait(10000);
+                        }
+
+                        String packageJson = Catalogue.getJsonPackageDescriptor(newIndex);
+
+                        if(message.responseId == -1) {
+                            logger.debug("Deployment timed out.");
+                            return newFixedLengthResponse(new Status(504, "Deployment is pending"), "application/json", packageJson);
+                        }
+                        else
+
+                            return newFixedLengthResponse(new Status(message.responseId, message.responseMessage), "application/json", packageJson);
+
                 	}
                 	catch(Exception e){
                 		e.printStackTrace();
                 	}	
-                	
-                	
-                	//System.out.println("New_index "+new_index);
                 }
             	else {
             		return newFixedLengthResponse(Response.Status.NOT_IMPLEMENTED, null, null);
             	}
-            	//String package_descriptor = DescriptorTranslator.process_descriptor(newIndex);
             }
             else
                 return newFixedLengthResponse(Response.Status.NOT_IMPLEMENTED, null, null);
@@ -171,7 +161,6 @@ class RestInterfaceServerApi extends NanoHTTPD implements Runnable {
     }
 
     public static byte[] stripMultiPartFormDataHeader(IHTTPSession session, byte[] buffer) {
-        // TODO: Maybe add a real multipart/form-data parser
         // Check if POST request contains multipart/form-data
         if (session.getMethod().compareTo(Method.POST) == 0 && session.getHeaders().containsKey("content-type") &&
                 session.getHeaders().get("content-type").startsWith("multipart/form-data")) {
@@ -398,6 +387,28 @@ class RestInterfaceServerApi extends NanoHTTPD implements Runnable {
 
         public List<String> header = new ArrayList<String>();
         public byte[] data = null;
+    }
+
+    public static class Status implements Response.IStatus {
+
+        private final int requestStatus;
+
+        private final String description;
+
+        public Status(int requestStatus, String description) {
+            this.requestStatus = requestStatus;
+            this.description = description;
+        }
+
+        @Override
+        public String getDescription() {
+            return "" + this.requestStatus + " " + this.description;
+        }
+
+        @Override
+        public int getRequestStatus() {
+            return this.requestStatus;
+        }
     }
 }
 

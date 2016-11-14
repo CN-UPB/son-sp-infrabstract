@@ -25,6 +25,8 @@ class MessageQueueData
 class MessageQueueDeployData extends MessageQueueData{
 
     final public int index;
+    public volatile String responseMessage = null;
+    public volatile int responseId = -1;
 
     public MessageQueueDeployData(int index){
         super(MessageType.DEPLOY_MESSAGE);

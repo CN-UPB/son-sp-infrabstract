@@ -101,10 +101,10 @@ public class Catalogue {
     }
 
     static public String getJsonPackageList(){
-       /* String jsonList = null;
+        String jsonList = null;
 
         List<PackageDescriptor> packageList = new ArrayList<PackageDescriptor>();
-        for(String p:packages)
+        for(SonataPackage p:packages)
             packageList.add(p.descriptor);
 
         ObjectMapper mapper  = getJsonMapper();
@@ -112,9 +112,9 @@ public class Catalogue {
             jsonList = mapper.writeValueAsString(packageList);
         } catch (JsonProcessingException e) {
             e.printStackTrace();
-        }*/
+        }
 		
-        return null;
+        return jsonList;
     }
     static protected ObjectMapper getJsonMapper(){
         ObjectMapper mapper = new ObjectMapper(new JsonFactory());

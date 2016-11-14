@@ -10,7 +10,7 @@ import java.util.ArrayList;
 import org.apache.log4j.Logger;
 
 public class PackageDescriptor {
-	final static Logger logger = Logger.getLogger(TranslatorCore.class);
+	final static Logger logger = Logger.getLogger(PackageDescriptor.class);
 
     @JsonProperty("descriptor_version")
     private String descriptorVersion;
@@ -43,7 +43,6 @@ public class PackageDescriptor {
 
 
     public String getDescriptorVersion() {
-    	logger.info("Descriptor version "+ descriptorVersion);
         return descriptorVersion;
     }
 
@@ -52,7 +51,6 @@ public class PackageDescriptor {
     }
 
     public String getSchema() {
-    	logger.info("Schema "+ schema);
         return schema;
     }
 
@@ -61,7 +59,6 @@ public class PackageDescriptor {
     }
 
     public String getName() {
-    	logger.info("Name "+ name);
         return name;
     }
 
@@ -70,7 +67,6 @@ public class PackageDescriptor {
     }
 
     public String getVersion() {
-    	logger.info("Version "+ version);
         return version;
     }
 
@@ -79,7 +75,6 @@ public class PackageDescriptor {
     }
 
     public String getVendor() {
-    	logger.info("Vendor "+ vendor);
         return vendor;
     }
 
@@ -88,7 +83,6 @@ public class PackageDescriptor {
     }
 
     public String getMaintainer() {
-    	logger.info("Maintainer "+ maintainer);
         return maintainer;
     }
 
@@ -97,7 +91,6 @@ public class PackageDescriptor {
     }
 
     public String getDescription() {
-    	logger.info("Description "+ description);
         return description;
     }
 
@@ -106,7 +99,6 @@ public class PackageDescriptor {
     }
 
     public String getMd5() {
-    	logger.info("MD5 hash "+ md5);
         return md5;
     }
 
@@ -115,7 +107,6 @@ public class PackageDescriptor {
     }
 
     public String getSignature() {
-    	logger.info("Signature "+ signature);
         return signature;
     }
 
@@ -124,7 +115,6 @@ public class PackageDescriptor {
     }
 
     public String getSealed() {
-    	logger.info("Sealed "+ sealed);
         return sealed;
     }
 
@@ -133,7 +123,6 @@ public class PackageDescriptor {
     }
 
     public String getEntryServiceTemplate() {
-    	logger.info("Entry service template "+ entryServiceTemplate);
         return entryServiceTemplate;
     }
 

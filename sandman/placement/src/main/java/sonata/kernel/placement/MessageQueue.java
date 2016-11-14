@@ -24,11 +24,11 @@ class MessageQueueData
 }
 class MessageQueueDeployData extends MessageQueueData{
 
-    final public String deploy_path;
+    final public int index;
 
-    public MessageQueueDeployData(String deploy_path){
+    public MessageQueueDeployData(int index){
         super(MessageType.DEPLOY_MESSAGE);
-        this.deploy_path = deploy_path;
+        this.index = index;
     }
 }
 

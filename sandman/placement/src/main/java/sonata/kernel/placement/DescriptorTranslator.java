@@ -39,18 +39,16 @@ import sonata.kernel.placement.service.*;
 class DescriptorTranslator		
 {
 	final static Logger logger = Logger.getLogger(DescriptorTranslator.class);
-    public static DeployServiceData process_descriptor(String base_dir) {
+    public static DeployServiceData process_descriptor(int index) {
 
-        logger.debug("Base Directory is : " + base_dir);
+        logger.debug("Base Directory is : " + index);
         ServiceDescriptor sd = null;
         List<VnfDescriptor> vnfd_list = new ArrayList<VnfDescriptor>();
-        try
-        {
+        ObjectMapper mapper = new ObjectMapper(new YAMLFactory());
+        SimpleModule module = new SimpleModule();
+        DeployServiceData data = Catalogue.getPackagetoDeploy(index);
 
-            ObjectMapper mapper = new ObjectMapper(new YAMLFactory());
-            SimpleModule module = new SimpleModule();
-
-            File dir_sd = new File(base_dir + "/sd/");
+            /*File dir_sd = new File(base_dir + "/sd/");
             if (dir_sd.isDirectory()) {
                 File[] sd_files = new File(base_dir + "/sd/").listFiles();
                 if (sd_files[0].isFile() && sd_files[0].canRead()) {
@@ -112,7 +110,7 @@ class DescriptorTranslator
 
         for( VnfDescriptor vnfd : vnfd_list){
             data.addVnfDescriptor(vnfd);
-        }
+        }*/
         return data;
     }
 }

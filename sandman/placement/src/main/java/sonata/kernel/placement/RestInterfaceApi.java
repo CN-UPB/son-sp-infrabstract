@@ -101,7 +101,7 @@ class RestInterfaceServerApi extends NanoHTTPD implements Runnable {
                 SonataPackage pack = PackageLoader.zipByteArrayToSonataPackage(buffer);
                 
                 if(pack != null) {
-                    int newIndex = Catalogue.addPackage(base_dir);
+                    int newIndex = Catalogue.addPackage(pack);
                     jsonPackage = Catalogue.getJsonPackageDescriptor(newIndex);
                     
                     logger.info("Json Package is "+jsonPackage);
@@ -134,15 +134,17 @@ class RestInterfaceServerApi extends NanoHTTPD implements Runnable {
             	if (req_index.length() > 0) {
                 	newIndex = Integer.parseInt(req_index);
                 	try {
-                		String package_dir = Catalogue.getJsonPackageDescriptor(newIndex);
-                    	if (package_dir.length() != 0) {
+                		//String package_dir = Catalogue.getJsonPackageDescriptor(newIndex);
+                		//DescriptorTranslator.process_descriptor(newIndex);
+                		DeploymentManager.deploy(newIndex);
+                    	/*if (package_dir.length() != 0) {
                     		MessageQueueDeployData q_data = new MessageQueueDeployData(package_dir);
                             MessageQueue.get_deploymentQ().put(q_data);
                             return newFixedLengthResponse(Response.Status.CREATED, "application/json", package_dir);
                     	}
                     	else {
                     		logger.debug("package not found in the catalogue");
-                    	}
+                    	}*/
                 	}
                 	catch(Exception e){
                 		e.printStackTrace();

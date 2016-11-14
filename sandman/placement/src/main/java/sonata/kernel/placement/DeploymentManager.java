@@ -32,10 +32,10 @@ public class DeploymentManager implements Runnable{
     final static Logger logger = Logger.getLogger(DeploymentManager.class);
 
     // Maps datacenter name to stack name
-    Map<String, String> dcStackMap = new HashMap<String, String>();
+    static Map<String, String> dcStackMap = new HashMap<String, String>();
 
-    ServiceInstance currentInstance;
-    PlacementMapping currentMapping;
+   static ServiceInstance currentInstance;
+   static PlacementMapping currentMapping;
 
     public void run(){
         while (true) {
@@ -51,8 +51,8 @@ public class DeploymentManager implements Runnable{
                 } else if (message.message_type == MessageType.DEPLOY_MESSAGE) {
 
                     MessageQueueDeployData deployData = (MessageQueueDeployData) message;
-                    logger.info("Deploy Message - deploy path "+deployData.deploy_path);
-                    deploy(deployData.deploy_path);
+                    logger.info("Deploy Message - deploy path "+deployData.index);
+                    deploy(deployData.index);
 
                 } else if (message.message_type == MessageType.UNDEPLOY_MESSAGE) {
 
@@ -65,14 +65,14 @@ public class DeploymentManager implements Runnable{
         }
     }
 
-    public void deploy(String deploy_path){
+    public static void deploy(int index){
 
         try {
             PlacementConfig config = PlacementConfigLoader.loadPlacementConfig();
             PlacementPlugin plugin = PlacementPluginLoader.placementPlugin;
 
-            DeployServiceData data = DescriptorTranslator.process_descriptor(deploy_path);
-
+            //DeployServiceData data = DescriptorTranslator.process_descriptor(index);
+            DeployServiceData data = Catalogue.getPackagetoDeploy(index);
             String serviceName = data.getNsd().getName();
 
             ServiceInstance instance = plugin.initialScaling(data);
@@ -113,7 +113,7 @@ public class DeploymentManager implements Runnable{
 
     }
 
-    public void deployStack(PopResource pop, String stackName, String templateJsonString){
+    public static void deployStack(PopResource pop, String stackName, String templateJsonString){
         OSClient.OSClientV2 os = OSFactory.builderV2()
                 .endpoint( pop.getEndpoint())
                 .credentials(pop.getUserName(),pop.getPassword())
@@ -126,7 +126,7 @@ public class DeploymentManager implements Runnable{
                 .timeoutMins(5L).build());
     }
 
-    public void tearDown(){
+    public static void tearDown(){
         MonitorManager.stopAndRemoveAllMonitors();
 
         // TODO: unchain
@@ -144,7 +144,7 @@ public class DeploymentManager implements Runnable{
         dcStackMap.clear();
     }
 
-    public void undeployStack(PopResource pop, String stackName) {
+    public static void undeployStack(PopResource pop, String stackName) {
         OSClient.OSClientV2 os = OSFactory.builderV2()
                 .endpoint(pop.getEndpoint())
                 .credentials(pop.getUserName(), pop.getPassword())
@@ -161,7 +161,7 @@ public class DeploymentManager implements Runnable{
         }
     }
 
-    public void monitorMessage(){
+    public static void monitorMessage(){
         // TODO: update running service here
     }
 

@@ -13,11 +13,13 @@ import org.openstack4j.api.OSClient;
 import org.openstack4j.model.heat.Stack;
 import org.openstack4j.openstack.OSFactory;
 import sonata.kernel.VimAdaptor.commons.DeployServiceData;
+import sonata.kernel.VimAdaptor.commons.heat.HeatResource;
 import sonata.kernel.VimAdaptor.commons.heat.HeatTemplate;
 import sonata.kernel.VimAdaptor.commons.vnfd.Unit;
 import sonata.kernel.VimAdaptor.commons.vnfd.UnitDeserializer;
 import sonata.kernel.placement.config.PlacementConfig;
 import sonata.kernel.placement.config.PopResource;
+import sonata.kernel.placement.monitor.FunctionMonitor;
 import sonata.kernel.placement.monitor.MonitorManager;
 import sonata.kernel.placement.service.*;
 import java.text.SimpleDateFormat;
@@ -58,7 +60,7 @@ public class DeploymentManager implements Runnable{
                 } else if (message.message_type == MessageType.UNDEPLOY_MESSAGE) {
 
                     logger.info("Undeploy Message");
-                    tearDown();
+                    undeploy();
                 }
             } catch (InterruptedException e) {
                 e.printStackTrace();
@@ -85,6 +87,8 @@ public class DeploymentManager implements Runnable{
             SimpleDateFormat format = new SimpleDateFormat("yymmddHHmmss");
             String timestamp = format.format(new Date());
 
+            List<FunctionMonitor> vnfMonitors = new ArrayList<FunctionMonitor>();
+
             List<PopResource> popList = new ArrayList<PopResource>();
             popList.addAll(mapping.popMapping.values());
             for (int i = 0; i < popList.size(); i++) {
@@ -102,11 +106,17 @@ public class DeploymentManager implements Runnable{
                 deployStack(pop, stackName, templateStr);
 
                 dcStackMap.put(popName, stackName);
+                Collection<HeatResource> col = (Collection)template.getResources().values();
+                for(HeatResource h: col){
+                    if(h.getType().equals("OS::Nova::Server"))
+                        vnfMonitors.add(new FunctionMonitor(pop, stackName, h.getResourceName()));
+                }
             }
 
             // TODO: deploy LinkChains
 
-            // TODO: start monitoring
+            // Monitoring
+            MonitorManager.addAndStartMonitor(vnfMonitors);
 
             currentInstance = instance;
             currentMapping = mapping;
@@ -136,7 +146,7 @@ public class DeploymentManager implements Runnable{
                 .timeoutMins(5L).build());
     }
 
-    public static void tearDown(){
+    public static void undeploy(){
         MonitorManager.stopAndRemoveAllMonitors();
 
         // TODO: unchain
@@ -152,6 +162,11 @@ public class DeploymentManager implements Runnable{
         currentInstance = null;
         currentMapping = null;
         dcStackMap.clear();
+    }
+
+    public static void tearDown(){
+        undeploy();
+        MonitorManager.closeConnectionPool();
     }
 
     public static void undeployStack(PopResource pop, String stackName) {

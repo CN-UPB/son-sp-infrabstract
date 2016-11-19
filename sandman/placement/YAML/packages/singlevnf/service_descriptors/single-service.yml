@@ -1,0 +1,28 @@
+---
+author: John Doe
+connection_points:
+- id: ns:mgmt
+  type: interface
+created_at: '2016-04-28T14:25:47.309+00:00'
+description: |
+  "Test service with one dummy vnf."
+descriptor_version: '1.0'
+name: sonata-demo
+forwarding_graphs: []
+network_functions:
+- vnf_id: vnf_single
+  vnf_vendor: ed.bpu.namdnas
+  vnf_name: single-vnf
+  vnf_version: '0.1'
+status: Inactive
+updated_at: '2016-04-28T14:25:47.309+00:00'
+vendor: ed.bpu.namdnas
+version: '0.1'
+virtual_links:
+- id: mgmt
+  connectivity_type: E-LAN
+  connection_points_reference:
+  - vnf_single:mgmt
+  - ns:mgmt
+uuid: 9df6a98f-9e11-4cb7-b3c0-b1375e7cb0b0
+instance_uuid: 9df6a98f-9e11-4cb7-b3c0-InAdUnitTest

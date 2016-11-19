@@ -2,6 +2,7 @@ package sonata.kernel.placement.service;
 
 import org.apache.commons.collections.MultiHashMap;
 import org.apache.commons.collections.MultiMap;
+import org.apache.commons.lang3.tuple.Pair;
 import sonata.kernel.VimAdaptor.commons.nsd.ServiceDescriptor;
 
 import java.util.ArrayList;
@@ -32,6 +33,9 @@ public class ServiceInstance {
     public final Map<String, Map<String, LinkInstance>> outerlink_list;
     public final Map<String, Map<String, LinkInstance>> innerlink_list;
 
+    public final List<Pair<String, String>> create_chain;
+    public final List<Pair<String, String>> delete_chain;
+
     //public final List<UnitInstance> units;
 
     // Maps virtual link id to LinkInstance
@@ -40,6 +44,7 @@ public class ServiceInstance {
 
     // Maps virtual link id to LinkInstance
     public final Map<String, LinkInstance> innerLinks;
+
 
     public ServiceInstance(){
     	logger.info("Service Instance");
@@ -53,6 +58,9 @@ public class ServiceInstance {
         outerLinks = new HashMap<String, LinkInstance>();
         innerLinks = new HashMap<String, LinkInstance>();
         this.connectionPoints = new HashMap<String, String>();
+
+        create_chain = new ArrayList<Pair<String, String>>();
+        delete_chain = new ArrayList<Pair<String, String>>();
 
     }
 

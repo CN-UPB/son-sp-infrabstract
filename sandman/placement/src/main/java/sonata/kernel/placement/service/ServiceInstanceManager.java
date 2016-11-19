@@ -3,6 +3,7 @@ package sonata.kernel.placement.service;
 import com.google.common.collect.Lists;
 import com.google.common.util.concurrent.Service;
 import org.apache.commons.chain.web.MapEntry;
+import org.apache.commons.lang3.tuple.ImmutablePair;
 import org.apache.commons.lang3.tuple.Pair;
 import org.jaxen.Function;
 import org.openstack4j.model.identity.v2.ServiceEndpoint;
@@ -219,6 +220,13 @@ public class ServiceInstanceManager {
                         + " that does not contain link for connection point " + connectionPointName;
 
                 linkInstance.interfaceList.put(finst.getValue(), cp_ref);
+
+                instance.create_chain.add(new ImmutablePair<String, String>("x", "y"));
+
+                /*
+                port.setName(finst.getValue().getName() + ":" + conPointParts[1]
+                        + ":" + link1.getLinkId() + ":" + instance.service.getInstanceUuid());
+                 */
             }
 
         }

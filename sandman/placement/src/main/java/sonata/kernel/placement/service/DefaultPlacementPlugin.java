@@ -56,12 +56,20 @@ public class DefaultPlacementPlugin implements PlacementPlugin {
             instance_manager.update_vlink_list("vnf_loadbalancer", "vnf_tcpdump", "vnf_loadbalancer1", "vnf_tcpdump1",
                     ServiceInstanceManager.ACTION_TYPE.ADD_INSTANCE);
 
-            return instance_manager.update_vlink_list("vnf_loadbalancer", "vnf_tcpdump", "vnf_loadbalancer1", "vnf_tcpdump2",
+            instance_manager.update_vlink_list("vnf_loadbalancer", "vnf_tcpdump", "vnf_loadbalancer1", "vnf_tcpdump2",
+                    ServiceInstanceManager.ACTION_TYPE.ADD_INSTANCE);
+
+            instance_manager.update_functions_list("vnf_tcpdump", null, ServiceInstanceManager.ACTION_TYPE.ADD_INSTANCE);
+            return instance_manager.update_vlink_list("vnf_loadbalancer", "vnf_tcpdump", "vnf_loadbalancer1", "vnf_tcpdump3",
                     ServiceInstanceManager.ACTION_TYPE.ADD_INSTANCE);
 
 
+
         } else if (trigger.type == ScaleMessage.SCALE_TYPE.SCALE_IN) {
-            return instance_manager.update_functions_list("loadbalancer-vnf", "loadbalancer-vnf1", ServiceInstanceManager.ACTION_TYPE.ADD_INSTANCE);
+            instance_manager.update_vlink_list("vnf_loadbalancer", "vnf_tcpdump", "vnf_loadbalancer1", "vnf_tcpdump1",
+                    ServiceInstanceManager.ACTION_TYPE.DELETE_INSTANCE);
+
+            return instance_manager.update_functions_list("vnf_tcpdump", "vnf_tcpdump1", ServiceInstanceManager.ACTION_TYPE.DELETE_INSTANCE);
         }
         return null;
     }

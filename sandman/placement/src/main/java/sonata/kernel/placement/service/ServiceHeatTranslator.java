@@ -114,8 +114,11 @@ public class ServiceHeatTranslator {
                     if (mgmtPort)
                         netMap.put("get_resource", instance.service.getName() + ":mgmt:net:" + instance.service.getInstanceUuid());
                     else
+                        /*netMap.put("get_resource",
+                                finst.getValue().getName() + ":" + link1.getLinkId() + ":net:" + instance.service.getInstanceUuid());*/
                         netMap.put("get_resource",
-                                finst.getValue().getName() + ":" + link1.getLinkId() + ":net:" + instance.service.getInstanceUuid());
+                                finst.getValue().function.getVnfName().split("-")[0] + ":" + link1.getLinkId() + ":net:" + instance.service.getInstanceUuid());
+
                     port.putProperty("network", netMap);
                     model.addResource(port);
 
@@ -155,48 +158,53 @@ public class ServiceHeatTranslator {
 
         for (Map.Entry<String, Map<String, FunctionInstance>> finst_list : instance.function_list.entrySet()) {
 
-            for (Map.Entry<String, FunctionInstance> finst : finst_list.getValue().entrySet()) {
+            Object[] finst_t = finst_list.getValue().entrySet().toArray();
 
-                for (LinkInstance link : finst.getValue().links.values()) {
-                    if (link.isMgmtLink())
-                        continue;
+            /*for (Map.Entry<String, FunctionInstance> finst : finst_list.getValue().entrySet()) {*/
 
+            for (LinkInstance link : ((HashMap.Entry<String, FunctionInstance>) finst_t[0]).getValue().links.values()) {
+                //for (LinkInstance link : finst.getValue().links.values()) {
 
-                    for (Map.Entry<FunctionInstance, String> entry : link.interfaceList.entrySet()) {
-                        FunctionInstance entryUnit = entry.getKey();
-                        String portName = entry.getValue();
-
-                        HeatResource network = new HeatResource();
-                        network.setType("OS::Neutron::Net");
-                        //network.setName(entryUnit.function.getVnfName() + ":" + link.getLinkId() + ":net:" + instance.service.getInstanceUuid());
-                        network.setName(entryUnit.getName() + ":" + link.getLinkId() + ":net:" + instance.service.getInstanceUuid());
-                        network.putProperty("name", network.getResourceName());
-                        model.addResource(network);
-
-                        HeatResource subnet = new HeatResource();
-                        subnet.setType("OS::Neutron::Subnet");
-                        //subnet.setName(entryUnit.function.getVnfName() + ":" + link.getLinkId() + ":subnet:" + instance.service.getInstanceUuid());
-                        subnet.setName(entryUnit.getName() + ":" + link.getLinkId() + ":subnet:" + instance.service.getInstanceUuid());
-                        subnet.putProperty("name", subnet.getResourceName());
-                        NetworkResourceUnit nru = networkResources.get(subnetIndex);
-                        subnet.putProperty("cidr", nru.subnetCidr);
-                        if (nru.gateway != null)
-                            subnet.putProperty("gateway_ip", nru.gateway);
-                        subnetIndex++;
-
-                        HashMap<String, Object> netMap = new HashMap<String, Object>();
-                        netMap.put("get_resource", network.getResourceName());
-                        subnet.putProperty("network", netMap);
-                        model.addResource(subnet);
+                if (link.isMgmtLink())
+                    continue;
 
 
-                        logger.debug("Neutron::Net \t\t\t\t" + network.getResourceName());
-                        logger.debug("Neutron::Subnet \t\t\t" + subnet.getResourceName());
+                for (Map.Entry<FunctionInstance, String> entry : link.interfaceList.entrySet()) {
+                    FunctionInstance entryUnit = entry.getKey();
+                    String portName = entry.getValue();
+
+                    HeatResource network = new HeatResource();
+                    network.setType("OS::Neutron::Net");
+                    network.setName(entryUnit.function.getVnfName().split("-")[0] + ":" + link.getLinkId() + ":net:" + instance.service.getInstanceUuid());
+                    //network.setName(entryUnit.getName() + ":" + link.getLinkId() + ":net:" + instance.service.getInstanceUuid());
+                    network.putProperty("name", network.getResourceName());
+                    model.addResource(network);
+
+                    HeatResource subnet = new HeatResource();
+                    subnet.setType("OS::Neutron::Subnet");
+                    subnet.setName(entryUnit.function.getVnfName().split("-")[0] + ":" + link.getLinkId() + ":subnet:" + instance.service.getInstanceUuid());
+                    //subnet.setName(entryUnit.getName() + ":" + link.getLinkId() + ":subnet:" + instance.service.getInstanceUuid());
+                    subnet.putProperty("name", subnet.getResourceName());
+                    NetworkResourceUnit nru = networkResources.get(subnetIndex);
+                    subnet.putProperty("cidr", nru.subnetCidr);
+                    if (nru.gateway != null)
+                        subnet.putProperty("gateway_ip", nru.gateway);
+                    subnetIndex++;
+
+                    HashMap<String, Object> netMap = new HashMap<String, Object>();
+                    netMap.put("get_resource", network.getResourceName());
+                    subnet.putProperty("network", netMap);
+                    model.addResource(subnet);
 
 
-                    }
+                    logger.debug("Neutron::Net \t\t\t\t" + network.getResourceName());
+                    logger.debug("Neutron::Subnet \t\t\t" + subnet.getResourceName());
+
                 }
-            }
+            }/*
+                //TODO. Refactor. This loop is redundant.
+                break;
+            }*/
         }
 
         return subnetIndex;
@@ -275,7 +283,7 @@ public class ServiceHeatTranslator {
 
                     HashMap<String, Object> subnetMap = new HashMap<String, Object>();
                     //subnetMap.put("get_resource", entry.getKey().getName() + ":"  +link.getLinkId() + ":subnet:" + instance.service.getInstanceUuid());
-                    subnetMap.put("get_resource", entry.getKey().getName() + ":" + entry.getValue().split(":")[1] + ":subnet:" + instance.service.getInstanceUuid());
+                    subnetMap.put("get_resource", entry.getKey().function.getVnfName().split("-")[0] + ":" + entry.getValue().split(":")[1] + ":subnet:" + instance.service.getInstanceUuid());
                     routerInterface.putProperty("subnet", subnetMap);
 
 
@@ -381,7 +389,7 @@ public class ServiceHeatTranslator {
 
             int newIndex = populate_neutron_routers_E_LINE(instance, model, networkResources, subnetIndex);
 
-            populate_neutron_routers_E_LAN(instance, model, networkResources, newIndex);
+            //populate_neutron_routers_E_LAN(instance, model, networkResources, newIndex);
 
             populate_neutron_floatingip(mgmtPortNames, model);
 

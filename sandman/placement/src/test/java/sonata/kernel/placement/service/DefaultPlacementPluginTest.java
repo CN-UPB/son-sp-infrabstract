@@ -32,6 +32,7 @@ import static org.junit.Assert.*;
 
 public class DefaultPlacementPluginTest {
 
+
     @Test
     public void testTwo()
     {
@@ -56,6 +57,8 @@ public class DefaultPlacementPluginTest {
 
         mapping = plugin.initialPlacement(data, instance, config.getResources());
         //Add additional tcpdump vnfs
+
+
 
 
 
@@ -84,6 +87,40 @@ public class DefaultPlacementPluginTest {
                 e.printStackTrace();
             }
         }
+
+        ScaleMessage trigger_down = new ScaleMessage(ScaleMessage.SCALE_TYPE.SCALE_IN, nodeList);
+
+        instance = plugin.updateScaling(data, instance, trigger_down);
+
+        mapping = plugin.initialPlacement(data, instance, config.getResources());
+        //Add additional tcpdump vnfs
+
+        templates = ServiceHeatTranslator.translatePlacementMappingToHeat(instance, config.getResources(), mapping);
+
+        assert templates.size()==1;
+
+        for(HeatTemplate template: templates) {
+            HeatStackCreate createStack = new HeatStackCreate();
+            createStack.stackName = "MyLittleStack";
+            createStack.template = template;
+            ObjectMapper mapper2 = new ObjectMapper(new JsonFactory());
+            mapper2.disable(SerializationFeature.WRITE_EMPTY_JSON_ARRAYS);
+            mapper2.enable(SerializationFeature.WRITE_ENUMS_USING_TO_STRING);
+            mapper2.disable(SerializationFeature.WRITE_NULL_MAP_VALUES);
+            mapper2.enable(SerializationFeature.ORDER_MAP_ENTRIES_BY_KEYS);
+            mapper2.setSerializationInclusion(JsonInclude.Include.NON_NULL);
+            SimpleModule module = new SimpleModule();
+            module.addDeserializer(Unit.class, new UnitDeserializer());
+            mapper2.registerModule(module);
+            mapper2.enable(DeserializationFeature.READ_ENUMS_USING_TO_STRING);
+            try {
+                String body = mapper2.writeValueAsString(template);
+                System.out.println(body);
+            } catch (JsonProcessingException e) {
+                e.printStackTrace();
+            }
+        }
+
     }
 
     @Test

@@ -35,7 +35,7 @@ public final class PackageLoader {
     public final static String basedir = Paths.get(System.getProperty("java.io.tmpdir"), "placementtmp").toString();
 
     public static String processZipFile(byte[] data) throws IOException {
-    	logger.info("Processing ZIP file");
+    	logger.debug("Processing ZIP file");
         // Create destination paths
         String currentDir = "";
         SimpleDateFormat sdf = new SimpleDateFormat("yyyyMMdd-HHmmss");
@@ -81,7 +81,7 @@ public final class PackageLoader {
     }
 
     public static DeployServiceData loadPackageFromDisk(String packagePath) {
-    	logger.info("Loading package from disk");
+    	logger.debug("Loading package from disk");
         File packageFile = new File(packagePath);
         if (!packageFile.exists())
             return null;
@@ -206,7 +206,7 @@ public final class PackageLoader {
 
     public static PackageDescriptor processZipFileData(byte[] data, List<byte[]> services, List<byte[]> functions) throws IOException {
     	
-    	logger.info("Processing zip file data");
+    	logger.debug("Processing zip file data");
         ByteArrayInputStream byteIn = new ByteArrayInputStream(data);
 
         ZipInputStream zipstream;
@@ -227,14 +227,12 @@ public final class PackageLoader {
 
             }
 
-            System.out.println(ze.getName());
-
             ze = zipstream.getNextEntry();
         }
         zipstream.closeEntry();
         zipstream.close();
 
-        logger.info("End of ZIP file");
+        logger.debug("End of ZIP file");
         Set<String> files = fileMap.keySet();
         PackageDescriptor pd = null;
 
@@ -287,7 +285,7 @@ public final class PackageLoader {
                 byte[] fileData;
                 fileData = fileMap.get(name);
                 if (fileData==null) {
-                    logger.info("No data found in: "+ name);
+                    logger.debug("No data found in: "+ name);
                     continue;
                 }
 
@@ -312,20 +310,20 @@ public final class PackageLoader {
                     }
                 }
 
-                System.out.println("ContentType: "+pObj.getContentType());
+                logger.debug("ContentType: "+pObj.getContentType());
 
                 // It's a service descriptor
                 if ("application/sonata.service_descriptors".equals(pObj.getContentType())) {
 
                     services.add(fileData);
-                    logger.info("Service Descriptor found: "+name);
+                    logger.debug("Service Descriptor found: "+name);
                 }
 
                 // It's a function descriptor
                 if ("application/sonata.function_descriptor".equals(pObj.getContentType())) {
 
                     functions.add(fileData);
-                    logger.info("Function Descriptor found: "+name);
+                    logger.debug("Function Descriptor found: "+name);
                 }
             }
         }

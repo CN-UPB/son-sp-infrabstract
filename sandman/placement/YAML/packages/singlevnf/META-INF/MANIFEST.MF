@@ -1,0 +1,16 @@
+description: Example service with one empty VNF
+descriptor_version: '1.0'
+entry_service_template: /service_descriptors/nsd.yml
+maintainer: John Doe, john@example.org
+name: single-vnf-empty-service
+package_content:
+- content-type: application/sonata.service_descriptors
+  md5: a59d0dd6578a87638a191d4f6d5909b2
+  name: /service_descriptors/single-service.yml
+- content-type: application/sonata.function_descriptor
+  md5: a2b5c9911f962c18454354c0aad10f09
+  name: /function_descriptors/single-vnfd.yml
+schema: https://raw.githubusercontent.com/sonata-nfv/son-schema/master/package-descriptor/pd-schema.yml
+sealed: true
+vendor: ed.bpu.namdna
+version: '0.1'

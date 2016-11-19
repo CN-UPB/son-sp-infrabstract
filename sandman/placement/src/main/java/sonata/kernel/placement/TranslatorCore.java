@@ -66,16 +66,16 @@ public class TranslatorCore {
         public void run(){
 
             logger.info("Cleaning up for shutdown");
-            logger.info("Terminating DeploymentManager");
+            logger.info("Terminating DeploymentManager ...");
             MessageQueue.get_deploymentQ().add(new MessageQueueData(MessageType.TERMINATE_MESSAGE));
 
             try {
-                deploymentThread.join(5000);
+                deploymentThread.join(10000);
             } catch (InterruptedException e) {
                 e.printStackTrace();
             }
             if(deploymentThread.isAlive())
-                logger.info("Deployment still running");
+                logger.info("Deployment still running - Turning off anyway");
             else
                 logger.info("Deployment stopped");
 

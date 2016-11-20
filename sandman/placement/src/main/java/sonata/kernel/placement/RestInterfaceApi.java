@@ -124,7 +124,7 @@ class RestInterfaceServerApi extends NanoHTTPD implements Runnable {
                 	newIndex = Integer.parseInt(req_index);
                 	try {
 
-                        MessageQueueDeployData message = new MessageQueueDeployData(newIndex);
+                        MessageQueue.MessageQueueDeployData message = new MessageQueue.MessageQueueDeployData(newIndex);
                         MessageQueue.get_deploymentQ().put(message);
                         synchronized(message) {
                             message.wait(10000);

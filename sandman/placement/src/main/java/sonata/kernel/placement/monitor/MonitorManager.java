@@ -9,10 +9,13 @@ import org.apache.http.impl.nio.reactor.IOReactorConfig;
 import org.apache.http.nio.reactor.ConnectingIOReactor;
 import org.apache.http.nio.reactor.IOReactorException;
 import org.apache.log4j.Logger;
+import sonata.kernel.placement.MessageQueue;
 
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.locks.Condition;
+import java.util.concurrent.locks.ReentrantLock;
 
 public class MonitorManager implements Runnable {
 
@@ -20,12 +23,18 @@ public class MonitorManager implements Runnable {
 
     public static List<FunctionMonitor> monitors = new ArrayList<FunctionMonitor>();
 
+    public static int intervalMillis = 10000;
+    public static boolean active = false;
+
     public static ConnectingIOReactor ioreactor;
     public static PoolingNHttpClientConnectionManager pool;
     public static CloseableHttpAsyncClient asyncClient;
 
-    public static int intervalMillis = 10000;
-    public static boolean active = false;
+
+    public static ReentrantLock monitoringLock = new ReentrantLock();
+    public static Condition pendingRequestsCondition = monitoringLock.newCondition();
+    private static int pendingRequests = 0;
+
 
     public static Thread monitorThread;
 
@@ -89,23 +98,49 @@ public class MonitorManager implements Runnable {
         }
     }
 
+    public static void requestFinished(){
+        monitoringLock.lock();
+
+        pendingRequests--;
+        pendingRequestsCondition.signal();
+
+        monitoringLock.unlock();
+    }
+
     private MonitorManager(){
 
     }
 
     public void run(){
 
+        List<MonitorHistory> historyList;
+
+        monitoringLock.lock();
+
         while(active){
-
-
-            synchronized (monitors) {
-                for (int i=0; i<monitors.size(); i++){
-                    monitors.get(i).requestMonitorStats(asyncClient);
-                }
-            }
-
-
             try {
+
+                pendingRequests = monitors.size();
+
+                synchronized (monitors) {
+                    for (int i=0; i<monitors.size(); i++){
+                        monitors.get(i).requestMonitorStats(asyncClient);
+                    }
+                }
+
+                while(pendingRequests > 0) {
+                    pendingRequestsCondition.await(); // TODO: timeout?
+                }
+
+                synchronized (monitors) {
+                    historyList = new ArrayList<MonitorHistory>();
+                    for (int i=0; i<monitors.size(); i++){
+                        historyList.add(monitors.get(i).history);
+                    }
+                }
+
+                MessageQueue.get_deploymentQ().add(new MessageQueue.MessageQueueMonitorData(historyList));
+
                 Thread.sleep(intervalMillis);
             } catch (InterruptedException e) {
                 e.printStackTrace();

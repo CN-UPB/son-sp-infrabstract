@@ -29,7 +29,7 @@ public interface PlacementPlugin {
 
     public ServiceInstance initialScaling(DeployServiceData serviceData);
 
-    public ServiceInstance updateScaling(DeployServiceData serviceData, ServiceInstance instance, ScaleMessage trigger);
+    public ServiceInstance updateScaling(DeployServiceData serviceData, ServiceInstance instance, MonitorMessage trigger);
 
     /*
      * SONATA D4.1 - 4.2.1.1 Future Plugins - Features

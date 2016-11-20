@@ -51,7 +51,7 @@ public class DefaultPlacementPluginTest {
         List<Object> nodeList = new ArrayList<Object>();
         // add first node as example
         nodeList.add(mapping.mapping.keySet().iterator().next());
-        ScaleMessage trigger = new ScaleMessage(ScaleMessage.SCALE_TYPE.SCALE_OUT, nodeList);
+        MonitorMessage trigger = new MonitorMessage(MonitorMessage.SCALE_TYPE.SCALE_OUT, nodeList);
 
         instance = plugin.updateScaling(data, instance, trigger);
 
@@ -88,7 +88,7 @@ public class DefaultPlacementPluginTest {
             }
         }
 
-        ScaleMessage trigger_down = new ScaleMessage(ScaleMessage.SCALE_TYPE.SCALE_IN, nodeList);
+        MonitorMessage trigger_down = new MonitorMessage(MonitorMessage.SCALE_TYPE.SCALE_IN, nodeList);
 
         instance = plugin.updateScaling(data, instance, trigger_down);
 

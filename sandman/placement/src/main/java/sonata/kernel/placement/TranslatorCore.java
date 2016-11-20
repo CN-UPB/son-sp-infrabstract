@@ -67,7 +67,7 @@ public class TranslatorCore {
 
             logger.info("Cleaning up for shutdown");
             logger.info("Terminating DeploymentManager ...");
-            MessageQueue.get_deploymentQ().add(new MessageQueueData(MessageType.TERMINATE_MESSAGE));
+            MessageQueue.get_deploymentQ().add(new MessageQueue.MessageQueueData(MessageQueue.MessageType.TERMINATE_MESSAGE));
 
             try {
                 deploymentThread.join(10000);

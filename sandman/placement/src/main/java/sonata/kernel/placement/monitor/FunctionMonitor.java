@@ -16,7 +16,6 @@ import sonata.kernel.VimAdaptor.commons.vnfd.UnitDeserializer;
 import sonata.kernel.placement.config.PopResource;
 
 import java.io.IOException;
-import java.util.Arrays;
 import java.util.concurrent.Future;
 
 /**
@@ -34,19 +33,16 @@ public class FunctionMonitor implements FutureCallback<HttpResponse> {
     public CloseableHttpClient httpClient = null;
     public HttpGet httpRequest;
 
+    public MonitorHistory history;
     public int historySize = 100;
-    ValueHistoryDouble cpuHistory;
-    ValueHistoryLong memoryHistory;
 
     public FunctionMonitor(PopResource datacenter, String stack, String function){
         this.dc = datacenter;
         this.stack = stack;
         this.function = function;
-        //this.requestPath = datacenter.getMonitoringEndpoint()+"v1/monitor/"+function;
         this.requestPath = datacenter.getMonitoringEndpoint()+"v1/monitor/"+dc.getPopName()+"/"+stack+"/"+function;
         httpRequest = new HttpGet(this.requestPath);
-        cpuHistory = new ValueHistoryDouble(historySize);
-        memoryHistory = new ValueHistoryLong(historySize);
+        history = new MonitorHistory(datacenter.getPopName(), stack, function, historySize);
     }
 
     public void requestMonitorStats(CloseableHttpAsyncClient asyncClient){
@@ -68,9 +64,12 @@ public class FunctionMonitor implements FutureCallback<HttpResponse> {
         stats = readJsonMonitoring(json);
 
         if(stats != null) {
-            cpuHistory.addValue(stats.getSysTime(),stats.getCpu());
-            memoryHistory.addValue(stats.getSysTime(), stats.getMemoryUsed());
+
+            history.cpuHistory.addValue(stats.getSysTime(),stats.getCpu());
+            history.memoryHistory.addValue(stats.getSysTime(), stats.getMemoryUsed());
         }
+
+        MonitorManager.requestFinished();
 
         // TODO: Create monitor message if necessary
         // TODO: Maybe check some limits
@@ -80,11 +79,13 @@ public class FunctionMonitor implements FutureCallback<HttpResponse> {
 
     @Override
     public void failed(Exception e) {
+        MonitorManager.requestFinished();
         logger.debug("Monitor request failed for "+dc.getPopName()+"_"+stack+"_"+function);
     }
 
     @Override
     public void cancelled() {
+        MonitorManager.requestFinished();
         logger.debug("Monitor request cancelled for "+dc.getPopName()+"_"+stack+"_"+function);
     }
 
@@ -104,88 +105,5 @@ public class FunctionMonitor implements FutureCallback<HttpResponse> {
         return stats;
     }
 
-    /**
-     * Ringbuffer like array structure
-     */
-    public static class ValueHistoryLong{
 
-        public long[] time;
-        public long[] data;
-        public int nextIndex = 0;
-
-        public ValueHistoryLong(int length){
-            data = new long[length];
-            time = new long[length];
-        }
-
-        public void addValue(long time, long value) {
-            this.time[nextIndex] = time;
-            this.data[nextIndex] = value;
-            nextIndex++;
-            if(nextIndex>=data.length)
-                nextIndex = 0;
-        }
-
-        public int getLast(int number, long[] time, long[] data){
-            int newLength = Math.min(number, data.length);
-            if(nextIndex >= newLength) {
-                // copy in one go
-                System.arraycopy(this.data, newLength-data.length, data, 0, newLength);
-                System.arraycopy(this.time, newLength-data.length, time, 0, newLength);
-            } else {
-                // two copies since range is split
-                System.arraycopy(this.data, 0, data, newLength-nextIndex, nextIndex);
-                System.arraycopy(this.time, 0, time, newLength-nextIndex, nextIndex);
-
-                System.arraycopy(this.data, this.data.length-(newLength-nextIndex), data, 0, newLength-nextIndex);
-                System.arraycopy(this.time, this.time.length-(newLength-nextIndex), time, 0, newLength-nextIndex);
-            }
-            return newLength;
-        }
-
-        public int length(){
-            return data.length;
-        }
-    }
-
-    public static class ValueHistoryDouble{
-
-        public long[] time;
-        public double[] data;
-        public int nextIndex = 0;
-
-        public ValueHistoryDouble(int length){
-            time = new long[length];
-            data = new double[length];
-        }
-
-        public void addValue(long time, double value) {
-            this.time[nextIndex] = time;
-            this.data[nextIndex] = value;
-            nextIndex++;
-            if(nextIndex>=data.length)
-                nextIndex = 0;
-        }
-
-        public int getLast(int number, long[] time, double[] data){
-            int newLength = Math.min(number, data.length);
-            if(nextIndex >= newLength) {
-                // copy in one go
-                System.arraycopy(this.data, newLength-data.length, data, 0, newLength);
-                System.arraycopy(this.time, newLength-data.length, time, 0, newLength);
-            } else {
-                // two copies since range is split
-                System.arraycopy(this.data, 0, data, newLength-nextIndex, nextIndex);
-                System.arraycopy(this.time, 0, time, newLength-nextIndex, nextIndex);
-
-                System.arraycopy(this.data, this.data.length-(newLength-nextIndex), data, 0, newLength-nextIndex);
-                System.arraycopy(this.time, this.time.length-(newLength-nextIndex), time, 0, newLength-nextIndex);
-            }
-            return newLength;
-        }
-
-        public int length(){
-            return data.length;
-        }
-    }
 }

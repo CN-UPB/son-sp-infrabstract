@@ -44,23 +44,28 @@ public class DeploymentManager implements Runnable{
 
             try {
                 logger.debug("Waiting for message");
-                MessageQueueData message = MessageQueue.get_deploymentQ().take();
-                if(message.message_type == MessageType.TERMINATE_MESSAGE) {
+                MessageQueue.MessageQueueData message = MessageQueue.get_deploymentQ().take();
+                if(message.message_type == MessageQueue.MessageType.TERMINATE_MESSAGE) {
 
                     logger.info("Terminate Message");
                     tearDown();
                     return;
 
-                } else if (message.message_type == MessageType.DEPLOY_MESSAGE) {
+                } else if (message.message_type == MessageQueue.MessageType.DEPLOY_MESSAGE) {
 
-                    MessageQueueDeployData deployMessage = (MessageQueueDeployData) message;
+                    MessageQueue.MessageQueueDeployData deployMessage = (MessageQueue.MessageQueueDeployData) message;
                     logger.info("Deploy Message - deploy index "+deployMessage.index);
                     deploy(deployMessage);
 
-                } else if (message.message_type == MessageType.UNDEPLOY_MESSAGE) {
+                } else if (message.message_type == MessageQueue.MessageType.UNDEPLOY_MESSAGE) {
 
                     logger.info("Undeploy Message");
                     undeploy();
+                } else if (message.message_type == MessageQueue.MessageType.MONITOR_MESSAGE) {
+
+                    logger.info("Monitor Message");
+                    MessageQueue.MessageQueueMonitorData monitorMessage = (MessageQueue.MessageQueueMonitorData) message;
+                    monitor(monitorMessage);
                 }
             } catch (InterruptedException e) {
                 e.printStackTrace();
@@ -68,7 +73,7 @@ public class DeploymentManager implements Runnable{
         }
     }
 
-    public static void deploy(MessageQueueDeployData message){
+    public static void deploy(MessageQueue.MessageQueueDeployData message){
 
         message.responseId = 500;
         message.responseMessage = "Something went terribly wrong";
@@ -186,8 +191,8 @@ public class DeploymentManager implements Runnable{
         }
     }
 
-    public static void monitorMessage(){
-        // TODO: update running service here
+    public static void monitor(MessageQueue.MessageQueueMonitorData message){
+        // TODO: create MonitorMessage and pass the history to the plugin
     }
 
 

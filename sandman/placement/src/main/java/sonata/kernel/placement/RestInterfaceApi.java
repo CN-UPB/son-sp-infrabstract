@@ -11,9 +11,25 @@ import java.nio.charset.Charset;
 import java.nio.charset.CharsetDecoder;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.HashMap;
 import java.util.List;
 
+import org.apache.commons.io.IOUtils;
 import org.apache.log4j.Logger;
+import org.json.JSONObject;
+import org.json.JSONWriter;
+
+import com.fasterxml.jackson.annotation.JsonInclude;
+import com.fasterxml.jackson.core.JsonFactory;
+import com.fasterxml.jackson.databind.DeserializationFeature;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.SerializationFeature;
+import com.fasterxml.jackson.databind.module.SimpleModule;
+import com.fasterxml.jackson.dataformat.yaml.YAMLFactory;
+
+import sonata.kernel.VimAdaptor.commons.nsd.ServiceDescriptor;
+import sonata.kernel.VimAdaptor.commons.vnfd.Unit;
+import sonata.kernel.VimAdaptor.commons.vnfd.UnitDeserializer;
 import sonata.kernel.placement.pd.SonataPackage;
 
 class RestInterfaceServerApi extends NanoHTTPD implements Runnable {
@@ -102,10 +118,13 @@ class RestInterfaceServerApi extends NanoHTTPD implements Runnable {
 
                 int newIndex = Catalogue.addPackage(pack);
                 jsonPackage = Catalogue.getJsonPackageDescriptor(newIndex);
-
+                JSONObject jsonObj = new JSONObject();
+                jsonObj.put("service_uuid", newIndex);
+                String ret_index = jsonObj.toString();
+                logger.info("Index Returned is "+ret_index);
                 logger.info("Json Package is "+jsonPackage);
 
-                return newFixedLengthResponse(Response.Status.CREATED, "application/json", jsonPackage);
+                return newFixedLengthResponse(Response.Status.CREATED, "application/json", ret_index);
             }
             else
             if("/packages".equals(uri) && session.getMethod().equals(Method.GET)) {
@@ -119,9 +138,22 @@ class RestInterfaceServerApi extends NanoHTTPD implements Runnable {
             else
             if(req_uri.equals(uri) && session.getMethod().equals(Method.POST)) {
             	int newIndex;
-
-            	if (req_index.length() > 0) {
-                	newIndex = Integer.parseInt(req_index);
+               	String bla = null;
+            	ObjectMapper mapper = getJSONMapper();
+            	Integer contentLength = Integer.parseInt(session.getHeaders().get("content-length"));
+            	byte[] buffer = new byte[contentLength];
+            	session.getInputStream().read(buffer, 0, contentLength);
+            	String str = new String(buffer);
+            	String index = extractNumber(str);
+            	/*try{
+            		map = mapper.readValue(bla, HashMap.class);
+            	} catch(IOException e)
+            	{
+            		// return error
+            	}*/
+               //map.get("service_uuid"));
+            	if (index.length() > 0) {
+                	newIndex = Integer.parseInt(index);
                 	try {
 
                         MessageQueue.MessageQueueDeployData message = new MessageQueue.MessageQueueDeployData(newIndex);
@@ -159,6 +191,15 @@ class RestInterfaceServerApi extends NanoHTTPD implements Runnable {
         }
 
         return newFixedLengthResponse(Response.Status.INTERNAL_ERROR, null, null);
+    }
+    
+    public static ObjectMapper getJSONMapper(){
+    	ObjectMapper mapper = new ObjectMapper(new JsonFactory());
+        SimpleModule module = new SimpleModule();
+        module.addDeserializer(Unit.class, new UnitDeserializer());
+        mapper.registerModule(module);
+        mapper.enable(DeserializationFeature.READ_ENUMS_USING_TO_STRING);
+        return mapper;
     }
 
     public static byte[] stripMultiPartFormDataHeader(IHTTPSession session, byte[] buffer) {

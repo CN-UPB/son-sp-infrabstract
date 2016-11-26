@@ -389,7 +389,7 @@ public class ServiceHeatTranslator {
 
             int newIndex = populate_neutron_routers_E_LINE(instance, model, networkResources, subnetIndex);
 
-            //populate_neutron_routers_E_LAN(instance, model, networkResources, newIndex);
+            populate_neutron_routers_E_LAN(instance, model, networkResources, newIndex);
 
             populate_neutron_floatingip(mgmtPortNames, model);
 

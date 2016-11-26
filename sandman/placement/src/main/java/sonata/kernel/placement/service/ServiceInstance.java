@@ -33,7 +33,17 @@ public class ServiceInstance {
     public final Map<String, Map<String, LinkInstance>> outerlink_list;
     public final Map<String, Map<String, LinkInstance>> innerlink_list;
 
+    public List<Pair<String, String>> get_create_chain() {
+        return create_chain;
+    }
+
     public final List<Pair<String, String>> create_chain;
+
+
+    public List<Pair<String, String>> get_delete_chain() {
+        return delete_chain;
+    }
+
     public final List<Pair<String, String>> delete_chain;
 
     //public final List<UnitInstance> units;

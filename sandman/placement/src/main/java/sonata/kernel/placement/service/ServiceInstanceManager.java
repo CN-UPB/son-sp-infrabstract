@@ -23,6 +23,8 @@ import sonata.kernel.VimAdaptor.commons.vnfd.VnfDescriptor;
 import sonata.kernel.VimAdaptor.commons.vnfd.VnfVirtualLink;
 import sonata.kernel.placement.Catalogue;
 
+import javax.ws.rs.core.Link;
+
 /*
 ServiceInstanceManager enables addition/deletion/updation of resources
 for a given the ServiceInstance pertaining to the SONATA descriptor.
@@ -221,7 +223,7 @@ public class ServiceInstanceManager {
 
                 linkInstance.interfaceList.put(finst.getValue(), cp_ref);
 
-                instance.create_chain.add(new ImmutablePair<String, String>("x", "y"));
+
 
                 /*
                 port.setName(finst.getValue().getName() + ":" + conPointParts[1]
@@ -264,7 +266,57 @@ public class ServiceInstanceManager {
             }
 
         }
+
+        add_chaining_rules(linkInstance);
+
+
         return;
+    }
+
+    protected void delete_chaining_rules(LinkInstance linkInstance) {
+        return;
+    }
+
+    protected void add_chaining_rules(LinkInstance linkInstance) {
+        Object[] finst_t = linkInstance.interfaceList.entrySet().toArray();
+
+        if (linkInstance.isMgmtLink())
+            return;
+
+        //nslink:input and output cases
+        if (finst_t.length < 2)
+            return;
+
+        //E-LINE links
+
+        String port[] = new String[2];
+        String intf[] = new String[2];
+
+        for (int i = 0; i < 2; i++) {
+            for (Object v_link : (((HashMap.Entry<FunctionInstance, String>) finst_t[i]).getKey().descriptor.getVirtualLinks()).toArray()) {
+                if (((VnfVirtualLink) v_link).getId().equals(((HashMap.Entry<FunctionInstance, String>) finst_t[i]).getValue().split(":")[1])) {
+                    for (String if_name : ((VnfVirtualLink) v_link).getConnectionPointsReference()) {
+                        if (if_name.contains("vdu")) {
+                            intf[i] = if_name.split(":")[1];
+                        }
+                    }
+                }
+            }
+            port[i] = ((HashMap.Entry<FunctionInstance, String>) finst_t[i]).getKey().getName() + ":" + intf[i]
+                    + ":" + ((HashMap.Entry<FunctionInstance, String>) finst_t[i]).getValue().split(":")[1]
+                    + ":" + instance.service.getInstanceUuid();
+
+        }
+
+
+        if (((HashMap.Entry<FunctionInstance, String>) finst_t[1]).getValue().split(":")[1].equals("input")) {
+            instance.create_chain.add(new ImmutablePair<String, String>(port[0], port[1]));
+        } else {
+            instance.create_chain.add(new ImmutablePair<String, String>(port[1], port[0]));
+        }
+
+        return;
+
     }
 
     protected void initialize_vlinks_list(DeployServiceData service_data) {
@@ -408,6 +460,8 @@ public class ServiceInstanceManager {
             logger.error("ServiceInstanceManager::update_vlink_list: " + action.toString()
                     + " link between " + endpoint_src + " and " + endpoint_target + " failed");
 
+            add_chaining_rules(linkInstance);
+
 
         } else if (action == ACTION_TYPE.DELETE_INSTANCE) {
 
@@ -474,6 +528,8 @@ public class ServiceInstanceManager {
                 logger.error("ServiceInstanceManager::update_vlink_list: " + action.toString()
                         + " link between " + endpoint_src + " and " + endpoint_target + " failed");
             }
+
+
             /*
             for (Map.Entry<String, LinkInstance> link : instance.innerLinks.entrySet()) {
 

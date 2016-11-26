@@ -31,6 +31,7 @@ public class DefaultPlacementPlugin implements PlacementPlugin {
 
         //SAMPLE 1
         instance_manager.set_instance(instance);
+        instance_manager.flush_chaining_rules();
         /*
         Sample Scale-out scheme
         Add an additiontional tcpdump vnf.

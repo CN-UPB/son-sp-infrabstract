@@ -267,17 +267,26 @@ public class ServiceInstanceManager {
 
         }
 
-        add_chaining_rules(linkInstance);
+        add_chaining_rules(linkInstance, instance.create_chain);
 
 
         return;
     }
 
-    protected void delete_chaining_rules(LinkInstance linkInstance) {
+    public void flush_chaining_rules()
+    {
+        instance.create_chain.clear();
+        instance.delete_chain.clear();
+    }
+
+    protected void delete_chaining_rules(String link_id, String link_name) {
+
+        LinkInstance linkInstance = instance.innerlink_list.get(link_id).get(link_name);
+        add_chaining_rules(linkInstance, instance.delete_chain);
         return;
     }
 
-    protected void add_chaining_rules(LinkInstance linkInstance) {
+    protected void add_chaining_rules(LinkInstance linkInstance, List<Pair<String, String>> chain) {
         Object[] finst_t = linkInstance.interfaceList.entrySet().toArray();
 
         if (linkInstance.isMgmtLink())
@@ -310,9 +319,9 @@ public class ServiceInstanceManager {
 
 
         if (((HashMap.Entry<FunctionInstance, String>) finst_t[1]).getValue().split(":")[1].equals("input")) {
-            instance.create_chain.add(new ImmutablePair<String, String>(port[0], port[1]));
+            chain.add(new ImmutablePair<String, String>(port[0], port[1]));
         } else {
-            instance.create_chain.add(new ImmutablePair<String, String>(port[1], port[0]));
+            chain.add(new ImmutablePair<String, String>(port[1], port[0]));
         }
 
         return;
@@ -460,7 +469,7 @@ public class ServiceInstanceManager {
             logger.error("ServiceInstanceManager::update_vlink_list: " + action.toString()
                     + " link between " + endpoint_src + " and " + endpoint_target + " failed");
 
-            add_chaining_rules(linkInstance);
+            add_chaining_rules(linkInstance, instance.create_chain);
 
 
         } else if (action == ACTION_TYPE.DELETE_INSTANCE) {
@@ -496,6 +505,7 @@ public class ServiceInstanceManager {
                 }
                 if (link_name != null) {
                     link_id = link_m.getKey();
+                    delete_chaining_rules(link_id, link_name);
                     instance.innerlink_list.get(link_id).remove(link_name);
                     break;
                 }

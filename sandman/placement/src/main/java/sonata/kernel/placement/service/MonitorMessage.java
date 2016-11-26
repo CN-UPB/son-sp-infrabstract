@@ -2,7 +2,7 @@ package sonata.kernel.placement.service;
 
 import java.util.List;
 
-public class ScaleMessage {
+public class MonitorMessage {
 
     public enum SCALE_TYPE {
         SCALE_OUT,
@@ -13,7 +13,7 @@ public class ScaleMessage {
     // TODO: define type for scale subject
     public final List<Object> node_list;
 
-    public ScaleMessage(SCALE_TYPE type, List<Object> node_list){
+    public MonitorMessage(SCALE_TYPE type, List<Object> node_list){
         this.type = type;
         this.node_list = node_list;
     }

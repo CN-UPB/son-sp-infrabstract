@@ -16,7 +16,7 @@ public class RandomPlacementPlugin implements PlacementPlugin {
     }
 
     @Override
-    public ServiceInstance updateScaling(DeployServiceData serviceData, ServiceInstance instance, ScaleMessage trigger) {
+    public ServiceInstance updateScaling(DeployServiceData serviceData, ServiceInstance instance, MonitorMessage trigger) {
         return null;
     }
 

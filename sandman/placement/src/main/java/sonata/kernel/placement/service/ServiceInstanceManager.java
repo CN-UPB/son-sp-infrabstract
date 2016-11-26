@@ -3,6 +3,7 @@ package sonata.kernel.placement.service;
 import com.google.common.collect.Lists;
 import com.google.common.util.concurrent.Service;
 import org.apache.commons.chain.web.MapEntry;
+import org.apache.commons.lang3.tuple.ImmutablePair;
 import org.apache.commons.lang3.tuple.Pair;
 import org.jaxen.Function;
 import org.openstack4j.model.identity.v2.ServiceEndpoint;
@@ -21,6 +22,8 @@ import sonata.kernel.VimAdaptor.commons.vnfd.Network;
 import sonata.kernel.VimAdaptor.commons.vnfd.VnfDescriptor;
 import sonata.kernel.VimAdaptor.commons.vnfd.VnfVirtualLink;
 import sonata.kernel.placement.Catalogue;
+
+import javax.ws.rs.core.Link;
 
 /*
 ServiceInstanceManager enables addition/deletion/updation of resources
@@ -219,6 +222,13 @@ public class ServiceInstanceManager {
                         + " that does not contain link for connection point " + connectionPointName;
 
                 linkInstance.interfaceList.put(finst.getValue(), cp_ref);
+
+
+
+                /*
+                port.setName(finst.getValue().getName() + ":" + conPointParts[1]
+                        + ":" + link1.getLinkId() + ":" + instance.service.getInstanceUuid());
+                 */
             }
 
         }
@@ -256,7 +266,66 @@ public class ServiceInstanceManager {
             }
 
         }
+
+        add_chaining_rules(linkInstance, instance.create_chain);
+
+
         return;
+    }
+
+    public void flush_chaining_rules()
+    {
+        instance.create_chain.clear();
+        instance.delete_chain.clear();
+    }
+
+    protected void delete_chaining_rules(String link_id, String link_name) {
+
+        LinkInstance linkInstance = instance.innerlink_list.get(link_id).get(link_name);
+        add_chaining_rules(linkInstance, instance.delete_chain);
+        return;
+    }
+
+    protected void add_chaining_rules(LinkInstance linkInstance, List<Pair<String, String>> chain) {
+        Object[] finst_t = linkInstance.interfaceList.entrySet().toArray();
+
+        if (linkInstance.isMgmtLink())
+            return;
+
+        //nslink:input and output cases
+        if (finst_t.length < 2)
+            return;
+
+        //E-LINE links
+
+        String port[] = new String[2];
+        String intf[] = new String[2];
+
+        for (int i = 0; i < 2; i++) {
+            for (Object v_link : (((HashMap.Entry<FunctionInstance, String>) finst_t[i]).getKey().descriptor.getVirtualLinks()).toArray()) {
+                if (((VnfVirtualLink) v_link).getId().equals(((HashMap.Entry<FunctionInstance, String>) finst_t[i]).getValue().split(":")[1])) {
+                    for (String if_name : ((VnfVirtualLink) v_link).getConnectionPointsReference()) {
+                        if (if_name.contains("vdu")) {
+                            intf[i] = if_name.split(":")[1];
+                        }
+                    }
+                }
+            }
+            port[i] = ((HashMap.Entry<FunctionInstance, String>) finst_t[i]).getKey().getName() + ":" + intf[i]
+                    + ":" + ((HashMap.Entry<FunctionInstance, String>) finst_t[i]).getValue().split(":")[1]
+                    + ":" + instance.service.getInstanceUuid();
+
+        }
+
+
+        if (((HashMap.Entry<FunctionInstance, String>) finst_t[1]).getValue().split(":")[1].equals("input")) {
+            chain.add(new ImmutablePair<String, String>(port[0], port[1]));
+        } else {
+            chain.add(new ImmutablePair<String, String>(port[1], port[0]));
+        }
+
+        return;
+
     }
 
     protected void initialize_vlinks_list(DeployServiceData service_data) {
@@ -400,6 +469,8 @@ public class ServiceInstanceManager {
             logger.error("ServiceInstanceManager::update_vlink_list: " + action.toString()
                     + " link between " + endpoint_src + " and " + endpoint_target + " failed");
 
+            add_chaining_rules(linkInstance, instance.create_chain);
+
 
         } else if (action == ACTION_TYPE.DELETE_INSTANCE) {
 
@@ -434,6 +505,7 @@ public class ServiceInstanceManager {
                 }
                 if (link_name != null) {
                     link_id = link_m.getKey();
+                    delete_chaining_rules(link_id, link_name);
                     instance.innerlink_list.get(link_id).remove(link_name);
                     break;
                 }
@@ -466,6 +538,8 @@ public class ServiceInstanceManager {
                 logger.error("ServiceInstanceManager::update_vlink_list: " + action.toString()
                         + " link between " + endpoint_src + " and " + endpoint_target + " failed");
             }
+
+
             /*
             for (Map.Entry<String, LinkInstance> link : instance.innerLinks.entrySet()) {
 

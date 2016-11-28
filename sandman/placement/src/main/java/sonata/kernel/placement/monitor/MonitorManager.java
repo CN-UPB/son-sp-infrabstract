@@ -83,6 +83,13 @@ public class MonitorManager implements Runnable {
         startMonitor();
     }
 
+    public static void updateMonitors(List<FunctionMonitor> addMonitors, List<FunctionMonitor> removeMonitors){
+        synchronized (monitors){
+            monitors.removeAll(removeMonitors);
+            monitors.addAll(addMonitors);
+        }
+    }
+
     public static void stopAndRemoveAllMonitors(){
         stopMonitor();
         synchronized (monitors) {

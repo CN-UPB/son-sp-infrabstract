@@ -11,16 +11,10 @@ public class LinkChain {
     public String srcStack;
     public String dstStack;
 
-    // Names defined by Translator
     public String srcServer;
     public String srcPort;
     public String dstServer;
     public String dstPort;
-
-    // Names used by Emulator
-    public String srcNode;
-    public String srcInterface;
-    public String dstNode;
 
     public LinkChain(PopResource srcDc, String srcStack, String srcServer, String srcPort,
                      PopResource dstDc, String dstStack, String dstServer, String dstPort) {
@@ -33,5 +27,20 @@ public class LinkChain {
         this.dstServer = dstServer;
         this.dstPort = dstPort;
 
+    }
+
+    public boolean equals(LinkChain chain){
+        if(chain == null)
+            return false;
+        if(srcDc.getPopName().equals(chain.srcDc.getPopName()) &&
+           dstDc.getPopName().equals(chain.dstDc.getPopName()) &&
+           srcStack.equals(chain.srcStack) &&
+           dstStack.equals(chain.dstStack) &&
+           srcServer.equals(chain.srcServer) &&
+           dstServer.equals(chain.dstServer) &&
+           srcPort.equals(chain.srcPort) &&
+           dstPort.equals(chain.dstPort))
+            return true;
+        return false;
     }
 }

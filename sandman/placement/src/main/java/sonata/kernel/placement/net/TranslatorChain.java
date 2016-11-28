@@ -25,8 +25,8 @@ public class TranslatorChain {
         String srcDcName = chain.srcDc.getPopName();
         String dstDcName = chain.dstDc.getPopName();
 
-        requestUri = chainPath+"/v1/chain/"+srcDcName+"/"+chain.srcStack+"/"+chain.srcServer+"/"+chain.srcPort+"/"
-                +dstDcName+"/"+chain.dstStack+"/"+chain.dstNode+"/"+chain.srcInterface;
+        requestUri = chainPath+"v1/chain/"+srcDcName+"/"+chain.srcStack+"/"+chain.srcServer+"/"+chain.srcPort+"/"
+                +dstDcName+"/"+chain.dstStack+"/"+chain.dstServer+"/"+chain.dstPort;
 
         CloseableHttpClient client = HttpClients.createDefault();
         HttpPut getRequest = new HttpPut(requestUri);
@@ -58,8 +58,8 @@ public class TranslatorChain {
         String srcDcName = chain.srcDc.getPopName();
         String dstDcName = chain.dstDc.getPopName();
 
-        requestUri = chainPath+"/v1/chain/"+srcDcName+"/"+chain.srcStack+"/"+chain.srcServer+"/"+chain.srcPort+"/"
-                +dstDcName+"/"+chain.dstStack+"/"+chain.dstNode+"/"+chain.srcInterface;
+        requestUri = chainPath+"v1/chain/"+srcDcName+"/"+chain.srcStack+"/"+chain.srcServer+"/"+chain.srcPort+"/"
+                +dstDcName+"/"+chain.dstStack+"/"+chain.dstServer+"/"+chain.dstPort;
 
         CloseableHttpClient client = HttpClients.createDefault();
         HttpDelete getRequest = new HttpDelete(requestUri);

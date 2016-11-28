@@ -286,7 +286,7 @@ public class ServiceInstanceManager {
         return;
     }
 
-    protected void add_chaining_rules(LinkInstance linkInstance, List<Pair<String, String>> chain) {
+    protected void add_chaining_rules(LinkInstance linkInstance, List<Pair<Pair<String, String>, Pair<String, String>>> chain) {
         Object[] finst_t = linkInstance.interfaceList.entrySet().toArray();
 
         if (linkInstance.isMgmtLink())
@@ -297,7 +297,7 @@ public class ServiceInstanceManager {
             return;
 
         //E-LINE links
-
+        String server[] = new String[2];
         String port[] = new String[2];
         String intf[] = new String[2];
 
@@ -314,14 +314,15 @@ public class ServiceInstanceManager {
             port[i] = ((HashMap.Entry<FunctionInstance, String>) finst_t[i]).getKey().getName() + ":" + intf[i]
                     + ":" + ((HashMap.Entry<FunctionInstance, String>) finst_t[i]).getValue().split(":")[1]
                     + ":" + instance.service.getInstanceUuid();
-
+            server[i] = ((HashMap.Entry<FunctionInstance, String>) finst_t[i]).getKey().getName() + ":" +
+                    instance.service.getInstanceUuid();
         }
 
 
         if (((HashMap.Entry<FunctionInstance, String>) finst_t[1]).getValue().split(":")[1].equals("input")) {
-            chain.add(new ImmutablePair<String, String>(port[0], port[1]));
+            chain.add(new ImmutablePair<Pair<String,String>,Pair<String,String>>(new ImmutablePair<String,String>(server[0],port[0]), new ImmutablePair<String,String>(server[1],port[1])));
         } else {
-            chain.add(new ImmutablePair<String, String>(port[1], port[0]));
+            chain.add(new ImmutablePair<Pair<String,String>,Pair<String,String>>(new ImmutablePair<String,String>(server[1],port[1]), new ImmutablePair<String,String>(server[0],port[0])));
         }
 
         return;

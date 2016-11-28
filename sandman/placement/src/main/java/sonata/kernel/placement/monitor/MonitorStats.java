@@ -15,10 +15,10 @@ public class MonitorStats {
     long netOut;
     @JsonProperty("NET_in")
     long netIn;
-    @JsonProperty("BLOCK_out") // Disk - write in Bytes
-    String[] blockOut;
-    @JsonProperty("BLOCK_in") // Disk - read in Bytes
-    String[] blockIn;
+    @JsonProperty("BLOCK_write") // Disk - write in Bytes
+    String blockOut;
+    @JsonProperty("BLOCK_read") // Disk - read in Bytes
+    String blockIn;
     @JsonProperty("MEM_used") // Bytes of memory used from the docker container
     long memoryUsed;
     @JsonProperty("MEM_limit") // Bytes of memory the docker container could use
@@ -29,6 +29,8 @@ public class MonitorStats {
     int processes;
     @JsonProperty("CPU_%")
     double cpu;
+    @JsonProperty("CPU_cores")
+    int cpuCores;
     @JsonProperty("SYS_time")
     long sysTime;
 
@@ -48,19 +50,19 @@ public class MonitorStats {
         this.netIn = netIn;
     }
 
-    public String[] getBlockOut() {
+    public String getBlockOut() {
         return blockOut;
     }
 
-    public void setBlockOut(String[] blockOut) {
+    public void setBlockOut(String blockOut) {
         this.blockOut = blockOut;
     }
 
-    public String[] getBlockIn() {
+    public String getBlockIn() {
         return blockIn;
     }
 
-    public void setBlockIn(String[] blockIn) {
+    public void setBlockIn(String blockIn) {
         this.blockIn = blockIn;
     }
 
@@ -110,5 +112,13 @@ public class MonitorStats {
 
     public void setSysTime(long sysTime) {
         this.sysTime = sysTime;
+    }
+
+    public int getCpuCores() {
+        return cpuCores;
+    }
+
+    public void setCpuCores(int cpuCores) {
+        this.cpuCores = cpuCores;
     }
 }

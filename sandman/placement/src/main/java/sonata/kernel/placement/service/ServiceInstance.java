@@ -33,18 +33,18 @@ public class ServiceInstance {
     public final Map<String, Map<String, LinkInstance>> outerlink_list;
     public final Map<String, Map<String, LinkInstance>> innerlink_list;
 
-    public List<Pair<String, String>> get_create_chain() {
+    public List<Pair<Pair<String, String>, Pair<String, String>>> get_create_chain() {
         return create_chain;
     }
 
-    public final List<Pair<String, String>> create_chain;
+    public final List<Pair<Pair<String, String>, Pair<String, String>>> create_chain;
 
 
-    public List<Pair<String, String>> get_delete_chain() {
+    public List<Pair<Pair<String, String>, Pair<String, String>>> get_delete_chain() {
         return delete_chain;
     }
 
-    public final List<Pair<String, String>> delete_chain;
+    public final List<Pair<Pair<String, String>, Pair<String, String>>> delete_chain;
 
     //public final List<UnitInstance> units;
 
@@ -69,8 +69,8 @@ public class ServiceInstance {
         innerLinks = new HashMap<String, LinkInstance>();
         this.connectionPoints = new HashMap<String, String>();
 
-        create_chain = new ArrayList<Pair<String, String>>();
-        delete_chain = new ArrayList<Pair<String, String>>();
+        create_chain = new ArrayList<Pair<Pair<String, String>, Pair<String, String>>>();
+        delete_chain = new ArrayList<Pair<Pair<String, String>, Pair<String, String>>>();
 
     }
 

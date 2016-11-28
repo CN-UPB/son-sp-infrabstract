@@ -7,7 +7,9 @@ import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
 import com.fasterxml.jackson.databind.module.SimpleModule;
+import org.apache.commons.lang3.tuple.Pair;
 import org.apache.log4j.Logger;
+import org.jaxen.Function;
 import org.openstack4j.api.Builders;
 import org.openstack4j.api.OSClient;
 import org.openstack4j.model.heat.Stack;
@@ -21,6 +23,8 @@ import sonata.kernel.placement.config.PlacementConfig;
 import sonata.kernel.placement.config.PopResource;
 import sonata.kernel.placement.monitor.FunctionMonitor;
 import sonata.kernel.placement.monitor.MonitorManager;
+import sonata.kernel.placement.net.LinkChain;
+import sonata.kernel.placement.net.TranslatorChain;
 import sonata.kernel.placement.service.*;
 import java.text.SimpleDateFormat;
 import java.util.*;
@@ -35,9 +39,12 @@ public class DeploymentManager implements Runnable{
 
     // Maps datacenter name to stack name
     static Map<String, String> dcStackMap = new HashMap<String, String>();
-
-   static ServiceInstance currentInstance;
-   static PlacementMapping currentMapping;
+    static List<LinkChain> currentChaining = new ArrayList<LinkChain>();
+    static ServiceInstance currentInstance;
+    static PlacementMapping currentMapping;
+    static DeployServiceData currentDeployData;
+    static List<PopResource> currentPops;
+    static List<String> currentNodes;
 
     public void run(){
         while (true) {
@@ -94,6 +101,9 @@ public class DeploymentManager implements Runnable{
 
             List<FunctionMonitor> vnfMonitors = new ArrayList<FunctionMonitor>();
 
+            Map<PopResource,List<String>> popNodeMap = new HashMap<PopResource,List<String>>();
+
+            List<String> nodeList = new ArrayList<String>();
             List<PopResource> popList = new ArrayList<PopResource>();
             popList.addAll(mapping.popMapping.values());
             for (int i = 0; i < popList.size(); i++) {
@@ -111,20 +121,35 @@ public class DeploymentManager implements Runnable{
                 deployStack(pop, stackName, templateStr);
 
                 dcStackMap.put(popName, stackName);
+                List<String> popNodes = new ArrayList<String>();
                 Collection<HeatResource> col = (Collection)template.getResources().values();
                 for(HeatResource h: col){
-                    if(h.getType().equals("OS::Nova::Server"))
+                    if(h.getType().equals("OS::Nova::Server")) {
                         vnfMonitors.add(new FunctionMonitor(pop, stackName, h.getResourceName()));
+                        nodeList.add(h.getResourceName());
+                        popNodes.add(h.getResourceName());
+                    }
                 }
+                popNodeMap.put(pop, popNodes);
             }
 
-            // TODO: deploy LinkChains
+            // Chaining
+            List<Pair<Pair<String, String>,Pair<String, String>>> create_chains = instance.get_create_chain();
+            List<Pair<Pair<String, String>,Pair<String, String>>> delete_chains = instance.get_delete_chain();
+            List<LinkChain> create_link_chains = createLinkChainList(create_chains, dcStackMap, popNodeMap);
+            List<LinkChain> delete_link_chains = createLinkChainList(delete_chains, dcStackMap, popNodeMap);
+
+            chain(create_link_chains);
+            unchain(delete_link_chains);
 
             // Monitoring
             MonitorManager.addAndStartMonitor(vnfMonitors);
 
             currentInstance = instance;
             currentMapping = mapping;
+            currentDeployData = data;
+            currentPops = popList;
+            currentNodes = nodeList;
 
             message.responseId = 201;
             message.responseMessage = "Created";
@@ -154,7 +179,7 @@ public class DeploymentManager implements Runnable{
     public static void undeploy(){
         MonitorManager.stopAndRemoveAllMonitors();
 
-        // TODO: unchain
+        unchain(currentChaining);
 
         if(currentMapping != null) {
             List<PopResource> popList = new ArrayList<PopResource>();
@@ -166,7 +191,160 @@ public class DeploymentManager implements Runnable{
         }
         currentInstance = null;
         currentMapping = null;
+        currentDeployData = null;
+        currentPops = null;
+        currentNodes = null;
         dcStackMap.clear();
+    }
+
+    public static void monitor(MessageQueue.MessageQueueMonitorData message){
+        // TODO: create MonitorMessage and pass the history to the plugin
+
+        if(true)
+            return;
+
+        PlacementConfig config = PlacementConfigLoader.loadPlacementConfig();
+        PlacementPlugin plugin = PlacementPluginLoader.placementPlugin;
+        MonitorMessage monitorMessage = new MonitorMessage(null, null);
+        ServiceInstance instance = plugin.updateScaling(currentDeployData, currentInstance, monitorMessage);
+        PlacementMapping mapping = plugin.updatePlacement(currentDeployData, instance, config.getResources(), currentMapping);
+        String serviceName = currentDeployData.getNsd().getName();
+
+        List<HeatTemplate> templates = ServiceHeatTranslator.translatePlacementMappingToHeat(instance, config.getResources(), mapping);
+
+        SimpleDateFormat format = new SimpleDateFormat("yymmddHHmmss");
+        String timestamp = format.format(new Date());
+
+        List<FunctionMonitor> vnfMonitors = new ArrayList<FunctionMonitor>();
+        List<String> nodeList = new ArrayList<String>();
+
+        Map<PopResource,List<String>> popNodeMap = new HashMap<PopResource,List<String>>();
+
+        List<PopResource> popList = new ArrayList<PopResource>();
+        popList.addAll(mapping.popMapping.values());
+
+        List<String> removedNodes = new ArrayList<String>();
+        List<PopResource> removedPops = new ArrayList<PopResource>();
+        for(PopResource oldPop: currentPops) {
+            if (!popList.contains(oldPop))
+                removedPops.add(oldPop);
+        }
+        for(PopResource pop: removedPops){
+            dcStackMap.remove(pop.getPopName());
+        }
+
+        for (int i = 0; i < popList.size(); i++) {
+            PopResource pop = popList.get(i);
+            String popName = pop.getPopName();
+
+            String stackName = dcStackMap.get(popName); // get old stack name
+
+            if(stackName == null) // it's a pop not used before
+                stackName = timestamp + "-" + serviceName;
+
+            HeatTemplate template = templates.get(i);
+
+            String templateStr = templateToJson(template);
+
+            logger.debug("Template for datacenter: "+popName);
+            logger.debug(templateStr);
+
+            deployStack(pop, stackName, templateStr);
+
+            List<String> popNodes = new ArrayList<String>();
+            dcStackMap.put(popName, stackName);
+            Collection<HeatResource> col = (Collection)template.getResources().values();
+            for(HeatResource h: col){
+                if(h.getType().equals("OS::Nova::Server")) {
+                    vnfMonitors.add(new FunctionMonitor(pop, stackName, h.getResourceName()));
+                    nodeList.add(h.getResourceName());
+                    popNodes.add(h.getResourceName());
+                }
+            }
+            popNodeMap.put(pop, popNodes);
+        }
+        for(String oldNode: currentNodes)
+            if(!nodeList.contains(oldNode))
+                removedNodes.add(oldNode);
+
+        // Find out function monitor changes
+        List<FunctionMonitor> addedFunctions = new ArrayList<FunctionMonitor>();
+        List<FunctionMonitor> removedFunctions = new ArrayList<FunctionMonitor>();
+
+        for(FunctionMonitor monitor:MonitorManager.monitors){
+            if(removedNodes.contains(monitor.function))
+                removedFunctions.add(monitor);
+
+        }
+        for(FunctionMonitor monitor:vnfMonitors){
+            if(!vnfMonitors.contains(monitor))
+                addedFunctions.add(monitor);
+        }
+
+        // Chaining
+        List<Pair<Pair<String, String>,Pair<String, String>>> create_chains = instance.get_create_chain();
+        List<Pair<Pair<String, String>,Pair<String, String>>> delete_chains = instance.get_delete_chain();
+        List<LinkChain> create_link_chains = createLinkChainList(create_chains, dcStackMap, popNodeMap);
+        List<LinkChain> delete_link_chains = createLinkChainList(delete_chains, dcStackMap, popNodeMap);
+
+        chain(create_link_chains);
+        unchain(delete_link_chains);
+
+        // Monitoring
+        MonitorManager.updateMonitors(addedFunctions, removedFunctions);
+
+        currentInstance = instance;
+        currentMapping = mapping;
+        currentPops = popList;
+        currentNodes = nodeList;
+    }
+
+    public static List<LinkChain> createLinkChainList(List<Pair<Pair<String, String>,Pair<String, String>>> chains, Map<String, String> stackMap, Map<PopResource,List<String>> popNodeMap){
+        List<LinkChain> linkChainList = new ArrayList<LinkChain>();
+
+        for (Pair<Pair<String, String>,Pair<String, String>> c : chains){
+            Pair<String,String> left = c.getLeft();
+            Pair<String,String> right = c.getRight();
+            String leftNodeName = null;
+            String rightNodeName = null;
+
+            PopResource leftPop = null;
+            PopResource rightPop = null;
+
+            for(Map.Entry<PopResource, List<String>> popHeatEntry: popNodeMap.entrySet()){
+                for(String nodeName: popHeatEntry.getValue()){
+                    if(nodeName.equals(left.getLeft()))
+                        leftPop = popHeatEntry.getKey();
+                    if(nodeName.equals(right.getLeft()))
+                        rightPop = popHeatEntry.getKey();
+                }
+            }
+
+            if(leftPop == null || rightPop == null)
+                continue;
+
+            String leftStack = stackMap.get(leftPop.getPopName());
+            String rightStack = stackMap.get(rightPop.getPopName());
+
+            linkChainList.add(new LinkChain(leftPop, leftStack, left.getLeft(), left.getRight(),
+                    rightPop, rightStack, right.getLeft(), right.getRight()));
+        }
+        return linkChainList;
+    }
+
+    public static void chain(List<LinkChain> chains){
+        System.out.println("Chain "+chains.size());
+        for(LinkChain chain : chains) {
+            TranslatorChain.chain(chain);
+            currentChaining.add(chain);
+        }
+    }
+
+    public static void unchain(List<LinkChain> chains){
+        for(LinkChain chain :  chains) {
+            TranslatorChain.unchain(chain);
+            currentChaining.remove(chain);
+        }
     }
 
     public static void tearDown(){
@@ -190,11 +368,6 @@ public class DeploymentManager implements Runnable{
                 os.heat().stacks().delete(stack.getName(), stack.getId());
         }
     }
-
-    public static void monitor(MessageQueue.MessageQueueMonitorData message){
-        // TODO: create MonitorMessage and pass the history to the plugin
-    }
-
 
     // Utility
 

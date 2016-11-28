@@ -71,9 +71,6 @@ public class FunctionMonitor implements FutureCallback<HttpResponse> {
 
         MonitorManager.requestFinished();
 
-        // TODO: Create monitor message if necessary
-        // TODO: Maybe check some limits
-
         logger.debug("Incoming monitor status for "+dc.getPopName()+"_"+stack+"_"+function+": "+new String(json));
     }
 
@@ -105,5 +102,13 @@ public class FunctionMonitor implements FutureCallback<HttpResponse> {
         return stats;
     }
 
-
+    public boolean equals(FunctionMonitor monitor){
+        if(monitor == null)
+            return false;
+        if(dc.getPopName().equals(monitor.dc.getPopName()) &&
+           stack.equals(monitor.stack) &&
+           function.equals(monitor.function))
+            return true;
+        return false;
+    }
 }

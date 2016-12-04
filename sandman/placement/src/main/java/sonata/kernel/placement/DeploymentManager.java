@@ -23,6 +23,7 @@ import sonata.kernel.placement.config.PlacementConfig;
 import sonata.kernel.placement.config.PopResource;
 import sonata.kernel.placement.monitor.FunctionMonitor;
 import sonata.kernel.placement.monitor.MonitorManager;
+import sonata.kernel.placement.monitor.MonitorStats;
 import sonata.kernel.placement.net.LinkChain;
 import sonata.kernel.placement.net.TranslatorChain;
 import sonata.kernel.placement.service.*;
@@ -205,7 +206,14 @@ public class DeploymentManager implements Runnable{
 
         PlacementConfig config = PlacementConfigLoader.loadPlacementConfig();
         PlacementPlugin plugin = PlacementPluginLoader.placementPlugin;
-        MonitorMessage monitorMessage = new MonitorMessage(null, null);
+
+        //TODO : Construct valid MonitorMessage.
+        /* Hack-Start */
+        HashMap<String, MonitorStats> stats = new HashMap<String, MonitorStats>();
+        HashMap<String, List<MonitorStats>> stats_history = new HashMap<String, List<MonitorStats>>();
+        /* Hack-End */
+
+        MonitorMessage monitorMessage = new MonitorMessage(MonitorMessage.SCALE_TYPE.MONITOR_STATS, stats, stats_history);
         ServiceInstance instance = plugin.updateScaling(currentDeployData, currentInstance, monitorMessage);
         PlacementMapping mapping = plugin.updatePlacement(currentDeployData, instance, config.getResources(), currentMapping);
         String serviceName = currentDeployData.getNsd().getName();

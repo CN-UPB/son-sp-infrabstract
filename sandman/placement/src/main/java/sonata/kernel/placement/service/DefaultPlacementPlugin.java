@@ -26,12 +26,25 @@ public class DefaultPlacementPlugin implements PlacementPlugin {
 
 
     @Override
-    public ServiceInstance updateScaling(DeployServiceData serviceData, ServiceInstance instance, MonitorMessage trigger) {
+    public ServiceInstance updateScaling(DeployServiceData serviceData, ServiceInstance instance, MonitorMessage message) {
         logger.info("Update Scaling");
 
         //SAMPLE 1
         instance_manager.set_instance(instance);
         instance_manager.flush_chaining_rules();
+
+        List<String> overload_l = new ArrayList<String>();
+        List<String> underload_l = new ArrayList<String>();
+
+        ComputeMetrics c_metrics = new ComputeMetrics(instance, message.stats, message.stats_history);
+        c_metrics.compute_vnf_load(overload_l, underload_l);
+
+        //Do something with this monitoring data.
+
+
+
+        //
+
         /*
         Sample Scale-out scheme
         Add an additiontional tcpdump vnf.
@@ -46,7 +59,7 @@ public class DefaultPlacementPlugin implements PlacementPlugin {
 
 
          */
-        if (trigger.type == MonitorMessage.SCALE_TYPE.SCALE_OUT) {
+        if (message.type == MonitorMessage.SCALE_TYPE.SCALE_OUT) {
             instance_manager.update_functions_list("vnf_loadbalancer", null, ServiceInstanceManager.ACTION_TYPE.ADD_INSTANCE);
             instance_manager.update_functions_list("vnf_tcpdump", null, ServiceInstanceManager.ACTION_TYPE.ADD_INSTANCE);
 
@@ -68,7 +81,7 @@ public class DefaultPlacementPlugin implements PlacementPlugin {
 
 
 
-        } else if (trigger.type == MonitorMessage.SCALE_TYPE.SCALE_IN) {
+        } else if (message.type == MonitorMessage.SCALE_TYPE.SCALE_IN) {
             instance_manager.update_vlink_list("vnf_loadbalancer", "vnf_tcpdump", "vnf_loadbalancer1", "vnf_tcpdump1",
                     ServiceInstanceManager.ACTION_TYPE.DELETE_INSTANCE);
 

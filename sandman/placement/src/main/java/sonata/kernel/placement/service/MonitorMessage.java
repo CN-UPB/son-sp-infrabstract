@@ -1,21 +1,30 @@
 package sonata.kernel.placement.service;
 
+import sonata.kernel.placement.monitor.MonitorHistory;
+import sonata.kernel.placement.monitor.MonitorStats;
+
+import java.util.HashMap;
 import java.util.List;
 
 public class MonitorMessage {
 
     public enum SCALE_TYPE {
         SCALE_OUT,
-        SCALE_IN
+        SCALE_IN,
+        MONITOR_STATS,
+        NO_SCALE
     }
 
     public final SCALE_TYPE type;
-    // TODO: define type for scale subject
-    public final List<Object> node_list;
 
-    public MonitorMessage(SCALE_TYPE type, List<Object> node_list){
+    public final HashMap<String, MonitorStats> stats;
+    public final HashMap<String, List<MonitorStats>> stats_history;
+
+    public MonitorMessage(SCALE_TYPE type, HashMap<String, MonitorStats> stats, HashMap<String, List<MonitorStats>> stats_history)
+    {
         this.type = type;
-        this.node_list = node_list;
+        this.stats_history = stats_history;
+        this.stats = stats;
     }
 
 

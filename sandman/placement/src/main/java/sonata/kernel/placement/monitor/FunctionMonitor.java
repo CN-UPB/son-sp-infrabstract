@@ -16,6 +16,8 @@ import sonata.kernel.VimAdaptor.commons.vnfd.UnitDeserializer;
 import sonata.kernel.placement.config.PopResource;
 
 import java.io.IOException;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.concurrent.Future;
 
 /**
@@ -33,7 +35,8 @@ public class FunctionMonitor implements FutureCallback<HttpResponse> {
     public CloseableHttpClient httpClient = null;
     public HttpGet httpRequest;
 
-    public MonitorHistory history;
+    public List<MonitorStats> statsList;
+    public MonitorStats statsLast;
     public int historySize = 100;
 
     public FunctionMonitor(PopResource datacenter, String stack, String function){
@@ -42,7 +45,7 @@ public class FunctionMonitor implements FutureCallback<HttpResponse> {
         this.function = function;
         this.requestPath = datacenter.getMonitoringEndpoint()+"v1/monitor/"+dc.getPopName()+"/"+stack+"/"+function;
         httpRequest = new HttpGet(this.requestPath);
-        history = new MonitorHistory(datacenter.getPopName(), stack, function, historySize);
+        statsList = new ArrayList<MonitorStats>();
     }
 
     public void requestMonitorStats(CloseableHttpAsyncClient asyncClient){
@@ -65,8 +68,8 @@ public class FunctionMonitor implements FutureCallback<HttpResponse> {
 
         if(stats != null) {
 
-            history.cpuHistory.addValue(stats.getSysTime(),stats.getCpu());
-            history.memoryHistory.addValue(stats.getSysTime(), stats.getMemoryUsed());
+            statsLast = stats;
+            statsList.add(stats);
         }
 
         MonitorManager.requestFinished();

@@ -18,12 +18,12 @@ public class ComputeMetrics {
     public final ServiceInstance instance;
 
     //Threshold levels Network-function <-> Threshold
-    public final HashMap<String, MonitorStats> stats;
-    public final HashMap<String, List<MonitorStats>> stats_history;
+    public final Map<String, MonitorStats> stats;
+    public final Map<String, List<MonitorStats>> stats_history;
     public final HashMap<String, PerformanceThreshold> threshold_m;
 
-    public ComputeMetrics(ServiceInstance instance, HashMap<String, MonitorStats> stats,
-                          HashMap<String, List<MonitorStats>> stats_history) {
+    public ComputeMetrics(ServiceInstance instance, Map<String, MonitorStats> stats,
+                          Map<String, List<MonitorStats>> stats_history) {
         this.instance = instance;
         this.stats = stats;
         this.stats_history = stats_history;

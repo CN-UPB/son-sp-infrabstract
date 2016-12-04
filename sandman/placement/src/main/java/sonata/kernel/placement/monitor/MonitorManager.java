@@ -13,7 +13,9 @@ import sonata.kernel.placement.MessageQueue;
 
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.locks.Condition;
 import java.util.concurrent.locks.ReentrantLock;
 
@@ -124,7 +126,8 @@ public class MonitorManager implements Runnable {
 
     public void run(){
 
-        List<MonitorHistory> historyList;
+        Map<String, MonitorStats> statsMap;
+        Map<String,List<MonitorStats>> statsHistoryMap;
 
         monitoringLock.lock();
 
@@ -144,13 +147,21 @@ public class MonitorManager implements Runnable {
                 }
 
                 synchronized (monitors) {
-                    historyList = new ArrayList<MonitorHistory>();
+                    statsHistoryMap = new HashMap<String,List<MonitorStats>>();
+                    statsMap = new HashMap<String,MonitorStats>();
+                    FunctionMonitor monitor;
+                    List<MonitorStats> statsHistory;
+
                     for (int i=0; i<monitors.size(); i++){
-                        historyList.add(monitors.get(i).history);
+                        monitor = monitors.get(i);
+                        statsMap.put(monitor.function, monitor.statsLast);
+                        statsHistory = new ArrayList<MonitorStats>();
+                        statsHistory.addAll(monitor.statsList);
+                        statsHistoryMap.put(monitor.function, statsHistory);
                     }
                 }
 
-                MessageQueue.get_deploymentQ().add(new MessageQueue.MessageQueueMonitorData(historyList));
+                MessageQueue.get_deploymentQ().add(new MessageQueue.MessageQueueMonitorData(statsMap, statsHistoryMap));
 
                 Thread.sleep(intervalMillis);
             } catch (InterruptedException e) {

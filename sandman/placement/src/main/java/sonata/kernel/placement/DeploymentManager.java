@@ -211,22 +211,21 @@ public class DeploymentManager implements Runnable{
     }
 
     public static void monitor(MessageQueue.MessageQueueMonitorData message){
-        // TODO: create MonitorMessage and pass the history to the plugin
 
+        // TODO: For ... reasons don't do anything at this moment
         if(true)
             return;
 
         PlacementConfig config = PlacementConfigLoader.loadPlacementConfig();
         PlacementPlugin plugin = PlacementPluginLoader.placementPlugin;
 
-        //TODO : Construct valid MonitorMessage.
-        /* Hack-Start */
-        HashMap<String, MonitorStats> stats = new HashMap<String, MonitorStats>();
-        HashMap<String, List<MonitorStats>> stats_history = new HashMap<String, List<MonitorStats>>();
-        /* Hack-End */
-
-        MonitorMessage monitorMessage = new MonitorMessage(MonitorMessage.SCALE_TYPE.MONITOR_STATS, stats, stats_history);
+        MonitorMessage monitorMessage = new MonitorMessage(MonitorMessage.SCALE_TYPE.MONITOR_STATS, message.statsMap, message.statsHistoryMap);
         ServiceInstance instance = plugin.updateScaling(currentDeployData, currentInstance, monitorMessage);
+
+        if (monitorMessage.type == MonitorMessage.SCALE_TYPE.NO_SCALE) {
+            return;
+        }
+
         PlacementMapping mapping = plugin.updatePlacement(currentDeployData, instance, config.getResources(), currentMapping);
         String serviceName = currentDeployData.getNsd().getName();
 

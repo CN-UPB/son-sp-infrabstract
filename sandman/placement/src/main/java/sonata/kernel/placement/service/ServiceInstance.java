@@ -46,6 +46,10 @@ public class ServiceInstance {
 
     public final List<Pair<Pair<String, String>, Pair<String, String>>> delete_chain;
 
+
+
+
+
     //public final List<UnitInstance> units;
 
     // Maps virtual link id to LinkInstance
@@ -71,6 +75,8 @@ public class ServiceInstance {
 
         create_chain = new ArrayList<Pair<Pair<String, String>, Pair<String, String>>>();
         delete_chain = new ArrayList<Pair<Pair<String, String>, Pair<String, String>>>();
+
+
 
     }
 

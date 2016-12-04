@@ -1,5 +1,7 @@
 package sonata.kernel.placement.config;
 
+import sun.misc.Perf;
+
 import java.util.ArrayList;
 
 public class PlacementConfig {
@@ -8,11 +10,17 @@ public class PlacementConfig {
     public String placementPlugin;
     public ArrayList<PopResource> resources;
     public RestInterface restApi;
+    public  ArrayList<PerformanceThreshold> perfThreshold;
 
     public String internalFunctionsPath;
 
 	public ArrayList<PopResource> getResources() {
         return resources;
+    }
+
+    public ArrayList<PerformanceThreshold> getThreshold()
+    {
+        return perfThreshold;
     }
 
     public void setResources(ArrayList<PopResource> resources) {

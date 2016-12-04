@@ -45,9 +45,9 @@ public class MonitorManager implements Runnable {
             e.printStackTrace();
         }
         pool = new PoolingNHttpClientConnectionManager(ioreactor);
+        pool.setDefaultMaxPerRoute(10);
 
-
-        asyncClient = HttpAsyncClientBuilder.create().setConnectionManager(pool).setMaxConnPerRoute(1).build();
+        asyncClient = HttpAsyncClientBuilder.create().setConnectionManager(pool).build();
         asyncClient.start();
 
         startMonitor();
@@ -73,6 +73,8 @@ public class MonitorManager implements Runnable {
         synchronized (monitors) {
             monitors.add(monitor);
         }
+        if(monitors.size()>pool.getDefaultMaxPerRoute())
+            pool.setDefaultMaxPerRoute(monitors.size()+5);
         startMonitor();
     }
 
@@ -87,6 +89,8 @@ public class MonitorManager implements Runnable {
         synchronized (monitors){
             monitors.removeAll(removeMonitors);
             monitors.addAll(addMonitors);
+            if(monitors.size()>pool.getDefaultMaxPerRoute())
+                pool.setDefaultMaxPerRoute(monitors.size()+5);
         }
     }
 

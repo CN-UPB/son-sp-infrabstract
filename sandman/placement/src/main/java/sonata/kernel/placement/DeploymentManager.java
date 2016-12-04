@@ -23,8 +23,7 @@ import sonata.kernel.placement.config.PlacementConfig;
 import sonata.kernel.placement.config.PopResource;
 import sonata.kernel.placement.monitor.FunctionMonitor;
 import sonata.kernel.placement.monitor.MonitorManager;
-import sonata.kernel.placement.net.LinkChain;
-import sonata.kernel.placement.net.TranslatorChain;
+import sonata.kernel.placement.net.*;
 import sonata.kernel.placement.service.*;
 import java.text.SimpleDateFormat;
 import java.util.*;
@@ -40,11 +39,13 @@ public class DeploymentManager implements Runnable{
     // Maps datacenter name to stack name
     static Map<String, String> dcStackMap = new HashMap<String, String>();
     static List<LinkChain> currentChaining = new ArrayList<LinkChain>();
+    static Map<LinkPort,LinkLoadbalance> currentLoadbalanceMap = new HashMap<LinkPort,LinkLoadbalance>();
     static ServiceInstance currentInstance;
     static PlacementMapping currentMapping;
     static DeployServiceData currentDeployData;
     static List<PopResource> currentPops;
     static List<String> currentNodes;
+
 
     public void run(){
         while (true) {
@@ -142,6 +143,11 @@ public class DeploymentManager implements Runnable{
             chain(create_link_chains);
             unchain(delete_link_chains);
 
+            // Loadbalancing
+            unloadbalance(currentLoadbalanceMap.values());
+            createLinkLoadbalanceMap(currentLoadbalanceMap, create_link_chains, delete_link_chains);
+            loadbalance(currentLoadbalanceMap.values());
+
             // Monitoring
             MonitorManager.addAndStartMonitor(vnfMonitors);
 
@@ -181,6 +187,9 @@ public class DeploymentManager implements Runnable{
 
         unchain(currentChaining);
 
+        // Loadbalancing
+        unloadbalance(currentLoadbalanceMap.values());
+
         if(currentMapping != null) {
             List<PopResource> popList = new ArrayList<PopResource>();
             popList.addAll(currentMapping.popMapping.values());
@@ -194,6 +203,7 @@ public class DeploymentManager implements Runnable{
         currentDeployData = null;
         currentPops = null;
         currentNodes = null;
+        currentLoadbalanceMap.clear();
         dcStackMap.clear();
     }
 
@@ -290,6 +300,11 @@ public class DeploymentManager implements Runnable{
         chain(create_link_chains);
         unchain(delete_link_chains);
 
+        // Loadbalancing
+        unloadbalance(currentLoadbalanceMap.values());
+        createLinkLoadbalanceMap(currentLoadbalanceMap, create_link_chains, delete_link_chains);
+        loadbalance(currentLoadbalanceMap.values());
+
         // Monitoring
         MonitorManager.updateMonitors(addedFunctions, removedFunctions);
 
@@ -297,6 +312,37 @@ public class DeploymentManager implements Runnable{
         currentMapping = mapping;
         currentPops = popList;
         currentNodes = nodeList;
+    }
+
+    public static void createLinkLoadbalanceMap(Map<LinkPort, LinkLoadbalance> lbMap,List<LinkChain> createChains, List<LinkChain> deleteChains){
+        // Remove loadbalancing rules, that are to be deleted
+        for(LinkChain chain: deleteChains){
+            if(lbMap.containsKey(chain.srcPort)){
+                LinkLoadbalance lb = lbMap.get(chain.srcPort);
+                lb.dstPorts.remove(chain.dstPort);
+                // Keep empty loadbalance objects in case they will be used in creation loop later
+            } else {
+                // Nothing to do...
+            }
+        }
+        // Add new
+        for (LinkChain chain: createChains){
+            if(!lbMap.containsKey(chain.srcPort)){
+                List<LinkPort> dstPorts = new ArrayList<LinkPort>();
+                dstPorts.add(chain.dstPort);
+                LinkLoadbalance lb = new LinkLoadbalance(chain.srcPort, dstPorts);
+                lbMap.put(chain.srcPort, lb);
+            } else {
+                LinkLoadbalance lb = lbMap.get(chain.srcPort);
+                if(!lb.dstPorts.contains(chain.dstPort))
+                    lb.dstPorts.add(chain.dstPort);
+            }
+        }
+        // Remove empty loadbalancing rules
+        for(LinkLoadbalance lb : lbMap.values()){
+            if(lb.dstPorts.isEmpty())
+                lbMap.remove(lb.srcPort);
+        }
     }
 
     public static List<LinkChain> createLinkChainList(List<Pair<Pair<String, String>,Pair<String, String>>> chains, Map<String, String> stackMap, Map<PopResource,List<String>> popNodeMap){
@@ -345,6 +391,19 @@ public class DeploymentManager implements Runnable{
             TranslatorChain.unchain(chain);
             currentChaining.remove(chain);
         }
+    }
+
+    public static void loadbalance(Collection<LinkLoadbalance> balances){
+        for(LinkLoadbalance balance : balances) {
+            // No loadbalancing for only
+            if(balance.dstPorts.size()>1)
+                TranslatorLoadbalancer.loadbalance(balance);
+        }
+    }
+
+    public static void unloadbalance(Collection<LinkLoadbalance> balances){
+        for(LinkLoadbalance balance : balances)
+            TranslatorLoadbalancer.unloadbalance(balance.srcPort);
     }
 
     public static void tearDown(){

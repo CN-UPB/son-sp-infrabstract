@@ -1,4 +1,24 @@
 # Placement config file
+
+perfThreshold:
+  - vnfId: "vnf_tcpdump"
+    cpu_upper_l: "10"
+    cpu_lower_l: "2"
+    mem_upper_l: "30"
+    mem_lower_l: "5"
+
+  - vnfId: "vnf_firewall"
+    cpu_upper_l: "10"
+    cpu_lower_l: "2"
+    mem_upper_l: "30"
+    mem_lower_l: "5"
+
+  - vnfId: "vnf_iperf"
+    cpu_upper_l: "10"
+    cpu_lower_l: "2"
+    mem_upper_l: "30"
+    mem_lower_l: "5"
+
 restApi:
    serverIp: "0.0.0.0"
    port: 8080

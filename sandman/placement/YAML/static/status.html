@@ -1,0 +1,145 @@
+<html>
+<head>
+<style>
+body {
+    margin:0;
+}
+#topstatus {
+    border-bottom:solid 1px #000;
+}
+</style>
+<script type="text/javascript">
+
+actionPending = false;
+currentStatus = null;
+
+function ajax(method, path, params, type, callback){
+    var xmlHttp = null;
+    xmlHttp = new XMLHttpRequest();
+    if (xmlHttp) {
+        xmlHttp.open(method, path, true);
+        if (type != null)
+            xmlHttp.responseType = type;
+        xmlHttp.onreadystatechange = function () {
+            if (xmlHttp.readyState == 4) {
+                callback(xmlHttp.status, xmlHttp.response);
+            }
+        };
+        xmlHttp.send(params);
+    }
+}
+
+function setStatusMsg(msg, style){
+    var statusNode = document.getElementById("status");
+    while(statusNode.childNodes.length>0)
+        statusNode.removeChild(statusNode.firstChild);
+    statusNode.style = style;
+    statusNode.appendChild(document.createTextNode(msg));
+}
+
+function onStatus(status, response){
+    if(status == 200) {
+        newstatus = response;
+        if(newstatus.status == "DEPLOYED") {
+            document.getElementById("undeploybtn").disabled = false;
+            setStatusMsg(newstatus.status, "color:green;");
+        }
+        if(newstatus.status == "UNDEPLOYED") {
+            document.getElementById("undeploybtn").disabled = true;
+            setStatusMsg(newstatus.status, "color:red;");
+        }
+        // Check for status change and update appropriate information
+        if(currentStatus == null || currentStatus.packageCount != newstatus.packageCount)
+            getPkgList();
+        currentStatus = newstatus;
+    }
+    document.getElementById("statusbtn").disabled = false;
+    actionPending = false;
+}
+
+function checkStatus(){
+    document.getElementById("statusbtn").disabled = true;
+    setStatusMsg("Checking Status", "color:orange;");
+    ajax("GET", "/status/status", null, "json", onStatus);
+}
+
+function onUndeploy(status, response){
+    checkStatus();
+}
+
+function undeploy() {
+    if(actionPending == true)
+        return;
+    actionPending = true;
+    document.getElementById("undeploybtn").disabled = true;
+    setStatusMsg("Undeploying", "color:orange;");
+    ajax("GET", "/undeploy", null, "json", onUndeploy);
+}
+
+function onDeploy(status, response){
+    if(status == 201) {        
+    } else {
+    }
+    checkStatus();
+}
+
+function deployPkg(index){
+    if(actionPending == true)
+        return;
+    actionPending = true;
+    setStatusMsg("Deploying", "color:orange;");
+    ajax("POST", "/deploy", "asdf="+index, "json", onDeploy);
+}
+
+function setPkgList(status, response){
+    console.log(response);
+    if(status != 200) {
+        console.log("Package request unsuccessful");
+        return;
+    }
+    if (response != null) {
+        var ul = document.createElement("ul");
+        for (var i=0; i<response.length; i++) {
+            var node = response[i];
+            var li = document.createElement("li");
+            var name = document.createTextNode(node.name+"  ");
+            var btn = document.createElement("button");
+            btn.appendChild(document.createTextNode("Deploy"));
+            btn.addEventListener('click',deployPkg.bind(this,i));
+            btn.class="deploybtn";
+            li.appendChild(name);
+            li.appendChild(btn);
+            ul.appendChild(li);
+        }
+        var pkglist = document.getElementById("pkglist");
+        while(pkglist.childNodes.length > 0)
+            pkglist.removeChild(pkglist.firstChild);
+        pkglist.appendChild(document.createTextNode("Packages: "+response.length));
+        //pkglist.appendChild(document.createElement("br"));
+        pkglist.appendChild(ul);
+    }
+}
+
+function getPkgList(){
+    ajax("GET", serverPrefix+"/packages", null ,"json", setPkgList);
+}
+
+function init(){
+    serverPrefix = window.location.protocol+"//"+window.location.host;
+    // Check current status
+    checkStatus();
+}
+</script>
+</head>
+<body onload="init();">
+<div id="topstatus">
+<span>Status: <strong><span id="status"></span></strong></span>
+<button id="statusbtn" onclick="checkStatus();">Check</button>
+<button id="undeploybtn" onclick="undeploy();" disabled="true">Undeploy</button>
+</div>
+
+<h3>Package list</h3>
+<div id="pkglist"></div>
+
+</body>
+</html>

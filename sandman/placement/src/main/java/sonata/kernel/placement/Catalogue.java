@@ -67,19 +67,19 @@ public class Catalogue {
     
     static public DeployServiceData getPackagetoDeploy(int index) {
     	DeployServiceData data = new DeployServiceData();
-    	List<VnfDescriptor> data1 = packages.get(index).functions;
-    	for (int i = 0; i < data1.size(); i++) {
-    		System.out.println("Data1 is "+data1.get(i));
+    	List<VnfDescriptor> vnf = packages.get(index).functions;
+    	for (int i = 0; i < vnf.size(); i++) {
+    		System.out.println("Data1 is "+vnf.get(i));
     	}
-    	List<ServiceDescriptor> data2 =  packages.get(index).services;
-    	for (int j = 0; j < data2.size(); j++) {
-    		System.out.println("Data1 is "+data2.get(j));
+    	List<ServiceDescriptor> serdes =  packages.get(index).services;
+    	for (int j = 0; j < serdes.size(); j++) {
+    		System.out.println("Data1 is "+serdes.get(j));
     	}
-    	for (ServiceDescriptor sd:data2) {
+    	for (ServiceDescriptor sd:serdes) {
     		data.setServiceDescriptor(sd);
     	}
     	//data.setServiceDescriptor(data2);
-    	for (VnfDescriptor vnfd:data1) {
+    	for (VnfDescriptor vnfd:vnf) {
     		data.addVnfDescriptor(vnfd);
     	}
     	return data;

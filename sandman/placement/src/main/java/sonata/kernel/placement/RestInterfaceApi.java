@@ -16,6 +16,7 @@ import java.util.List;
 
 import org.apache.commons.io.IOUtils;
 import org.apache.log4j.Logger;
+import org.json.JSONArray;
 import org.json.JSONObject;
 import org.json.JSONWriter;
 
@@ -138,12 +139,21 @@ class RestInterfaceServerApi extends NanoHTTPD implements Runnable {
             }
             else
             if("/packages".equals(uri) && session.getMethod().equals(Method.GET)) {
-                logger.info("Package list");
+				logger.info("Package list");
                 String jsonPackageList = Catalogue.getJsonPackageList();
+                String ret_index=null;
+                JSONObject jsonObj = new JSONObject();
+            	JSONArray jsonArray = new JSONArray();
+                for (int i = 0;i < Catalogue.packages.size();i++){
+                	jsonArray.put(i);
+                }
+                jsonObj.put("service_uuid_list", jsonArray);
+                ret_index = jsonObj.toString();
+                System.out.println("Json list: "+ret_index);
                 if(jsonPackageList == null)
                     return newFixedLengthResponse(Response.Status.INTERNAL_ERROR, null, null);
                 else
-                	return newFixedLengthResponse(Response.Status.OK, "application/json", jsonPackageList);
+                	return newFixedLengthResponse(Response.Status.OK, "application/json", ret_index);
             }
             else
             if("/undeploy".equals(uri) && session.getMethod().equals(Method.GET)) {

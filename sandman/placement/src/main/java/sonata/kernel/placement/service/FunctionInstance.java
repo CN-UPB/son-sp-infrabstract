@@ -59,7 +59,7 @@ public class FunctionInstance {
     //public final Map<String, LinkInstance> innerLinks;
 
     public FunctionInstance(NetworkFunction function, VnfDescriptor descriptor, String name){
-    	logger.info("Function Instance Name: "+ name);
+    	logger.debug("Function Instance Name: "+ name);
         this.function = function;
         this.descriptor = descriptor;
         this.name = name;

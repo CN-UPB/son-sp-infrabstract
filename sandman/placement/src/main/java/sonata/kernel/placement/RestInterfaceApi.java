@@ -41,7 +41,7 @@ class RestInterfaceServerApi extends NanoHTTPD implements Runnable {
 
     public RestInterfaceServerApi(String hostname, int port) throws IOException {
         super(hostname, port);
-        logger.debug("Started RESTful server Hostname: "
+        logger.info("Started RESTful server Hostname: "
                 + hostname + " Port: " + port);
     }
 
@@ -53,7 +53,7 @@ class RestInterfaceServerApi extends NanoHTTPD implements Runnable {
         try {
             start_server();
         } catch (IOException ioe) {
-            System.err.println("RestInterfaceServerApi::run : Failed to start server " + ioe);
+            logger.error("Failed to start server ",ioe);
         }
     }
     public static String extractNumber(String str) {                
@@ -83,9 +83,10 @@ class RestInterfaceServerApi extends NanoHTTPD implements Runnable {
             String req_index = extractNumber(uri);
             String req_uri = uri;            
             if("/packages".equals(uri) && session.getMethod().equals(Method.POST)) {
+                logger.info("Package post");
                 session.getParms();
                 Integer contentLength = Integer.parseInt(session.getHeaders().get("content-length"));
-                logger.info("Content Length is " + contentLength);
+                logger.debug("Content Length is " + contentLength);
                 byte[] buffer = new byte[contentLength];
                 int alreadyRead = 0;
                 int read = -1;
@@ -128,7 +129,7 @@ class RestInterfaceServerApi extends NanoHTTPD implements Runnable {
             }
             else
             if("/packages".equals(uri) && session.getMethod().equals(Method.GET)) {
-            	System.out.println("RestInterface :: List of packages");
+                logger.info("Package list");
                 String jsonPackageList = Catalogue.getJsonPackageList();
                 if(jsonPackageList == null)
                     return newFixedLengthResponse(Response.Status.INTERNAL_ERROR, null, null);
@@ -136,7 +137,25 @@ class RestInterfaceServerApi extends NanoHTTPD implements Runnable {
                 	return newFixedLengthResponse(Response.Status.OK, "application/json", jsonPackageList);
             }
             else
+            if("/undeploy".equals(uri) && session.getMethod().equals(Method.GET)) {
+                logger.info("Undeploy");
+
+                MessageQueue.MessageQueueUnDeployData message = new MessageQueue.MessageQueueUnDeployData();
+                MessageQueue.get_deploymentQ().put(message);
+                synchronized(message) {
+                    message.wait(10000);
+                }
+
+                if(message.responseId == -1) {
+                    logger.debug("Undeployment timed out.");
+                    return newFixedLengthResponse(new Status(504, "Undeployment is pending"), null, null);
+                }
+                else
+                    return newFixedLengthResponse(new Status(message.responseId, message.responseMessage), null, null);
+            }
+            else
             if(req_uri.equals(uri) && session.getMethod().equals(Method.POST)) {
+                logger.info("Deploy");
             	int newIndex;
                	String bla = null;
             	ObjectMapper mapper = getJSONMapper();

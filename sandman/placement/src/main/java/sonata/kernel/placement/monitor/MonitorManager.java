@@ -26,7 +26,7 @@ public class MonitorManager implements Runnable {
     public static List<FunctionMonitor> monitors = new ArrayList<FunctionMonitor>();
 
     public static int intervalMillis = 10000;
-    public static boolean active = false;
+    public static volatile boolean active = false;
 
     public static ConnectingIOReactor ioreactor;
     public static PoolingNHttpClientConnectionManager pool;
@@ -51,16 +51,20 @@ public class MonitorManager implements Runnable {
 
         asyncClient = HttpAsyncClientBuilder.create().setConnectionManager(pool).build();
         asyncClient.start();
-
-        startMonitor();
     }
 
 
 
     public static void startMonitor(){
+        if(monitorThread != null)
+            logger.debug("MonitorThread not null!!!");
         if(monitorThread == null) {
             active = true;
-            monitorThread = new Thread(new MonitorManager());
+
+            if(monitors.size()>pool.getDefaultMaxPerRoute())
+                pool.setDefaultMaxPerRoute(monitors.size()+5);
+
+            monitorThread = new Thread(new MonitorManager(), "MonitorManagerThread");
             monitorThread.start();
         }
     }
@@ -75,8 +79,6 @@ public class MonitorManager implements Runnable {
         synchronized (monitors) {
             monitors.add(monitor);
         }
-        if(monitors.size()>pool.getDefaultMaxPerRoute())
-            pool.setDefaultMaxPerRoute(monitors.size()+5);
         startMonitor();
     }
 
@@ -131,6 +133,8 @@ public class MonitorManager implements Runnable {
 
         monitoringLock.lock();
 
+        logger.info("Start monitoring");
+
         while(active){
             try {
 
@@ -168,6 +172,10 @@ public class MonitorManager implements Runnable {
                 e.printStackTrace();
             }
         }
+
+        monitoringLock.unlock();
+
+        logger.info("Stop monitoring");
 
         monitorThread = null;
     }

@@ -5,9 +5,10 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 public class MonitorStats {
 
     /* example
-    {'MEM_used': 790528, 'PIDS': 2, 'BLOCK_out': [], 'NET_out': 648,
-     'SYS_time': 1479522691737230080L, 'MEM_limit': 16827117568,
-     'NET_in': 648, 'BLOCK_in': ['Total', '0'], 'MEM_%': 4.6979406710947397e-05, 'CPU_%': 0.0}
+    {"BLOCK_read": 0, "NET_out": 1016, "CPU_cores": 4, "NET_systime": 1480879807587300096,
+    "MEM_used": 630784, "PIDS": 2, "CPU_used_systime": 1480879807533447936, "NET_in": 1016,
+    "SYS_time": 1480879807587481856, "CPU_used": 22920796, "BLOCK_write": 0,
+    "MEM_limit": 16827117568, "MEM_%": 3.7486158722724864e-05}
     */
 
     // Network traffic of all network interfaces within the controller
@@ -33,6 +34,12 @@ public class MonitorStats {
     int cpuCores;
     @JsonProperty("SYS_time")
     long sysTime;
+    @JsonProperty("NET_systime")
+    long netSysTime;
+    @JsonProperty("CPU_used_systime")
+    long cpuUsedSysTime;
+    @JsonProperty("CPU_used")
+    long cpuUsed;
 
     public long getNetOut() {
         return netOut;
@@ -120,5 +127,29 @@ public class MonitorStats {
 
     public void setCpuCores(int cpuCores) {
         this.cpuCores = cpuCores;
+    }
+
+    public long getNetSysTime() {
+        return netSysTime;
+    }
+
+    public void setNetSysTime(long netSysTime) {
+        this.netSysTime = netSysTime;
+    }
+
+    public long getCpuUsedSysTime() {
+        return cpuUsedSysTime;
+    }
+
+    public void setCpuUsedSysTime(long cpuUsedSysTime) {
+        this.cpuUsedSysTime = cpuUsedSysTime;
+    }
+
+    public long getCpuUsed() {
+        return cpuUsed;
+    }
+
+    public void setCpuUsed(long cpuUsed) {
+        this.cpuUsed = cpuUsed;
     }
 }

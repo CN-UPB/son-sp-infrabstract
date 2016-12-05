@@ -17,25 +17,25 @@ public class TranslatorChain {
     public static void chain(LinkChain chain){
 
         // Same chaining port for both datacenters
-        String chainPath = chain.srcDc.getChainingEndpoint();
+        String chainPath = chain.srcPort.pop.getChainingEndpoint();
         if(!chainPath.endsWith("/"))
             chainPath += "/";
         String requestUri;
 
-        String srcDcName = chain.srcDc.getPopName();
-        String dstDcName = chain.dstDc.getPopName();
+        String srcDcName = chain.srcPort.pop.getPopName();
+        String dstDcName = chain.dstPort.pop.getPopName();
 
-        requestUri = chainPath+"v1/chain/"+srcDcName+"/"+chain.srcStack+"/"+chain.srcServer+"/"+chain.srcPort+"/"
-                +dstDcName+"/"+chain.dstStack+"/"+chain.dstServer+"/"+chain.dstPort;
+        requestUri = chainPath+"v1/chain/"+srcDcName+"/"+chain.srcPort.stack+"/"+chain.srcPort.server+"/"+chain.srcPort.port+"/"
+                +dstDcName+"/"+chain.dstPort.stack+"/"+chain.dstPort.server+"/"+chain.dstPort.port;
 
         CloseableHttpClient client = HttpClients.createDefault();
-        HttpPut getRequest = new HttpPut(requestUri);
+        HttpPut putRequest = new HttpPut(requestUri);
         CloseableHttpResponse response = null;
 
-        logger.info("Chaining "+getRequest.getRequestLine().getUri());
+        logger.info("Chaining "+putRequest.getRequestLine().getUri());
 
         try {
-            response = client.execute(getRequest);
+            response = client.execute(putRequest);
             if (response.getStatusLine().getStatusCode() == 500) {
                 logger.error("Chaining failed "+requestUri);
             } else {
@@ -50,25 +50,25 @@ public class TranslatorChain {
     public static void unchain(LinkChain chain){
 
         // Same chaining port for both datacenters
-        String chainPath = chain.srcDc.getChainingEndpoint();
+        String chainPath = chain.srcPort.pop.getChainingEndpoint();
         if(!chainPath.endsWith("/"))
             chainPath += "/";
         String requestUri;
 
-        String srcDcName = chain.srcDc.getPopName();
-        String dstDcName = chain.dstDc.getPopName();
+        String srcDcName = chain.srcPort.pop.getPopName();
+        String dstDcName = chain.dstPort.pop.getPopName();
 
-        requestUri = chainPath+"v1/chain/"+srcDcName+"/"+chain.srcStack+"/"+chain.srcServer+"/"+chain.srcPort+"/"
-                +dstDcName+"/"+chain.dstStack+"/"+chain.dstServer+"/"+chain.dstPort;
+        requestUri = chainPath+"v1/chain/"+srcDcName+"/"+chain.srcPort.stack+"/"+chain.srcPort.server+"/"+chain.srcPort.port+"/"
+                +dstDcName+"/"+chain.dstPort.stack+"/"+chain.dstPort.server+"/"+chain.dstPort.port;
 
         CloseableHttpClient client = HttpClients.createDefault();
-        HttpDelete getRequest = new HttpDelete(requestUri);
+        HttpDelete deleteRequest = new HttpDelete(requestUri);
         CloseableHttpResponse response = null;
 
-        logger.info("Unchaining "+getRequest.getRequestLine().getUri());
+        logger.info("Unchaining "+deleteRequest.getRequestLine().getUri());
 
         try {
-            response = client.execute(getRequest);
+            response = client.execute(deleteRequest);
             if (response.getStatusLine().getStatusCode() == 500) {
                 logger.error("Unchaining failed "+requestUri);
             } else {

@@ -2,12 +2,14 @@ package sonata.kernel.placement;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.Queue;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.LinkedBlockingDeque;
 
 import org.apache.log4j.Logger;
 import sonata.kernel.placement.monitor.MonitorHistory;
+import sonata.kernel.placement.monitor.MonitorStats;
 
 
 public class MessageQueue
@@ -46,11 +48,24 @@ public class MessageQueue
             this.index = index;
         }
     }
+    public static class MessageQueueUnDeployData extends MessageQueueData{
+
+        public volatile String responseMessage = null;
+        public volatile int responseId = -1;
+
+        public MessageQueueUnDeployData(){
+            super(MessageType.UNDEPLOY_MESSAGE);
+        }
+    }
     public static class MessageQueueMonitorData extends MessageQueueData{
-        public final List<MonitorHistory> history;
-        public MessageQueueMonitorData(List<MonitorHistory> history){
+
+        public final Map<String, MonitorStats> statsMap;
+        public final Map<String,List<MonitorStats>> statsHistoryMap;
+
+        public MessageQueueMonitorData(Map<String, MonitorStats> statsMap, Map<String,List<MonitorStats>> statsHistoryMap){
             super(MessageType.MONITOR_MESSAGE);
-            this.history = history;
+            this.statsMap = statsMap;
+            this.statsHistoryMap = statsHistoryMap;
         }
     }
 }

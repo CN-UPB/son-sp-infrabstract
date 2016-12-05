@@ -41,12 +41,12 @@ public class TranslatorCore {
         // Start servers
         try {
 
-            logger.debug("Starting Gatekeeper Server");
+            logger.info("Starting Gatekeeper Server");
             new RestInterfaceServerApi(config.restApi.getServerIp(), config.restApi.getPort()).start();
 
-            logger.debug("Starting DeploymentManager");
+            logger.info("Starting DeploymentManager");
             deployment = new DeploymentManager();
-            deploymentThread = new Thread(deployment);
+            deploymentThread = new Thread(deployment, "DeploymentManagerThread");
             deploymentThread.start();
 
             Runtime.getRuntime().addShutdownHook(new Thread(new Cleanup()));

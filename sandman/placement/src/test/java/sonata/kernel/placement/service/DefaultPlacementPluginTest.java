@@ -22,10 +22,12 @@ import sonata.kernel.placement.PackageLoader;
 import sonata.kernel.placement.PlacementConfigLoader;
 import sonata.kernel.placement.config.PlacementConfig;
 import sonata.kernel.placement.config.PopResource;
+import sonata.kernel.placement.monitor.MonitorStats;
 
 import java.io.File;
 import java.nio.file.Paths;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 
 import static org.junit.Assert.*;
@@ -51,7 +53,10 @@ public class DefaultPlacementPluginTest {
         List<Object> nodeList = new ArrayList<Object>();
         // add first node as example
         nodeList.add(mapping.mapping.keySet().iterator().next());
-        MonitorMessage trigger = new MonitorMessage(MonitorMessage.SCALE_TYPE.SCALE_OUT, nodeList);
+
+        HashMap<String, MonitorStats> stats = new HashMap<String, MonitorStats>();
+        HashMap<String, List<MonitorStats>> stats_history = new HashMap<String, List<MonitorStats>>();
+        MonitorMessage trigger = new MonitorMessage(MonitorMessage.SCALE_TYPE.SCALE_OUT, stats, stats_history);
 
         instance = plugin.updateScaling(data, instance, trigger);
 
@@ -87,8 +92,7 @@ public class DefaultPlacementPluginTest {
                 e.printStackTrace();
             }
         }
-
-        MonitorMessage trigger_down = new MonitorMessage(MonitorMessage.SCALE_TYPE.SCALE_IN, nodeList);
+        MonitorMessage trigger_down = new MonitorMessage(MonitorMessage.SCALE_TYPE.SCALE_IN, stats, stats_history);
 
         instance = plugin.updateScaling(data, instance, trigger_down);
 

@@ -23,6 +23,8 @@ import sonata.kernel.placement.config.PlacementConfig;
 import sonata.kernel.placement.config.PopResource;
 import sonata.kernel.placement.monitor.FunctionMonitor;
 import sonata.kernel.placement.monitor.MonitorManager;
+import sonata.kernel.placement.net.*;
+import sonata.kernel.placement.monitor.MonitorStats;
 import sonata.kernel.placement.net.LinkChain;
 import sonata.kernel.placement.net.TranslatorChain;
 import sonata.kernel.placement.service.*;
@@ -40,11 +42,13 @@ public class DeploymentManager implements Runnable{
     // Maps datacenter name to stack name
     static Map<String, String> dcStackMap = new HashMap<String, String>();
     static List<LinkChain> currentChaining = new ArrayList<LinkChain>();
+    static Map<LinkPort,LinkLoadbalance> currentLoadbalanceMap = new HashMap<LinkPort,LinkLoadbalance>();
     static ServiceInstance currentInstance;
     static PlacementMapping currentMapping;
     static DeployServiceData currentDeployData;
     static List<PopResource> currentPops;
     static List<String> currentNodes;
+
 
     public void run(){
         while (true) {
@@ -66,8 +70,9 @@ public class DeploymentManager implements Runnable{
 
                 } else if (message.message_type == MessageQueue.MessageType.UNDEPLOY_MESSAGE) {
 
+                    MessageQueue.MessageQueueUnDeployData undeployMessage = (MessageQueue.MessageQueueUnDeployData) message;
                     logger.info("Undeploy Message");
-                    undeploy();
+                    undeploy(undeployMessage);
                 } else if (message.message_type == MessageQueue.MessageType.MONITOR_MESSAGE) {
 
                     logger.info("Monitor Message");
@@ -91,6 +96,7 @@ public class DeploymentManager implements Runnable{
 
             DeployServiceData data = Catalogue.getPackagetoDeploy(message.index);
             String serviceName = data.getNsd().getName();
+            logger.info("Deloying service: "+serviceName);
 
             ServiceInstance instance = plugin.initialScaling(data);
             PlacementMapping mapping = plugin.initialPlacement(data, instance, config.getResources());
@@ -115,7 +121,7 @@ public class DeploymentManager implements Runnable{
 
                 String templateStr = templateToJson(template);
 
-                logger.debug("Template for datacenter: "+popName);
+                logger.debug("Template for datacenter: "+popName+" Stack name: "+stackName);
                 logger.debug(templateStr);
 
                 deployStack(pop, stackName, templateStr);
@@ -141,6 +147,11 @@ public class DeploymentManager implements Runnable{
 
             chain(create_link_chains);
             unchain(delete_link_chains);
+
+            // Loadbalancing
+            unloadbalance(currentLoadbalanceMap.values());
+            createLinkLoadbalanceMap(currentLoadbalanceMap, create_link_chains, delete_link_chains);
+            loadbalance(currentLoadbalanceMap.values());
 
             // Monitoring
             MonitorManager.addAndStartMonitor(vnfMonitors);
@@ -176,37 +187,66 @@ public class DeploymentManager implements Runnable{
                 .timeoutMins(5L).build());
     }
 
-    public static void undeploy(){
-        MonitorManager.stopAndRemoveAllMonitors();
+    public static void undeploy(MessageQueue.MessageQueueUnDeployData message){
 
-        unchain(currentChaining);
+        try {
+            MonitorManager.stopAndRemoveAllMonitors();
 
-        if(currentMapping != null) {
-            List<PopResource> popList = new ArrayList<PopResource>();
-            popList.addAll(currentMapping.popMapping.values());
-            for (PopResource pop : popList) {
-                String stackName = dcStackMap.get(pop.getPopName());
-                undeployStack(pop, stackName);
+            unchain(currentChaining);
+
+            // Loadbalancing
+            unloadbalance(currentLoadbalanceMap.values());
+
+            if (currentMapping != null) {
+                List<PopResource> popList = new ArrayList<PopResource>();
+                popList.addAll(currentMapping.popMapping.values());
+                for (PopResource pop : popList) {
+                    String stackName = dcStackMap.get(pop.getPopName());
+                    undeployStack(pop, stackName);
+                }
+            }
+            currentInstance = null;
+            currentMapping = null;
+            currentDeployData = null;
+            currentPops = null;
+            currentNodes = null;
+            currentLoadbalanceMap.clear();
+            dcStackMap.clear();
+
+            if(message != null) {
+                message.responseId = 200;
+                message.responseMessage = "OK";
+            }
+        } finally {
+            if (message != null) {
+                synchronized (message) {
+                    message.notify();
+                }
             }
         }
-        currentInstance = null;
-        currentMapping = null;
-        currentDeployData = null;
-        currentPops = null;
-        currentNodes = null;
-        dcStackMap.clear();
     }
 
     public static void monitor(MessageQueue.MessageQueueMonitorData message){
-        // TODO: create MonitorMessage and pass the history to the plugin
 
+        // TODO: For ... reasons don't do anything at this moment
         if(true)
             return;
 
         PlacementConfig config = PlacementConfigLoader.loadPlacementConfig();
         PlacementPlugin plugin = PlacementPluginLoader.placementPlugin;
-        MonitorMessage monitorMessage = new MonitorMessage(null, null);
+
+        MonitorMessage monitorMessage = new MonitorMessage(MonitorMessage.SCALE_TYPE.MONITOR_STATS, message.statsMap, message.statsHistoryMap);
         ServiceInstance instance = plugin.updateScaling(currentDeployData, currentInstance, monitorMessage);
+
+        if (monitorMessage.type == MonitorMessage.SCALE_TYPE.NO_SCALE) {
+            return;
+        }
+
+        if(monitorMessage.type == MonitorMessage.SCALE_TYPE.SCALE_OUT)
+            logger.info("Scale out");
+        else if(monitorMessage.type == MonitorMessage.SCALE_TYPE.SCALE_IN)
+            logger.info("Scale in");
+
         PlacementMapping mapping = plugin.updatePlacement(currentDeployData, instance, config.getResources(), currentMapping);
         String serviceName = currentDeployData.getNsd().getName();
 
@@ -246,7 +286,7 @@ public class DeploymentManager implements Runnable{
 
             String templateStr = templateToJson(template);
 
-            logger.debug("Template for datacenter: "+popName);
+            logger.debug("Template for datacenter: "+popName+" Stack name: "+stackName);
             logger.debug(templateStr);
 
             deployStack(pop, stackName, templateStr);
@@ -290,6 +330,11 @@ public class DeploymentManager implements Runnable{
         chain(create_link_chains);
         unchain(delete_link_chains);
 
+        // Loadbalancing
+        unloadbalance(currentLoadbalanceMap.values());
+        createLinkLoadbalanceMap(currentLoadbalanceMap, create_link_chains, delete_link_chains);
+        loadbalance(currentLoadbalanceMap.values());
+
         // Monitoring
         MonitorManager.updateMonitors(addedFunctions, removedFunctions);
 
@@ -297,6 +342,39 @@ public class DeploymentManager implements Runnable{
         currentMapping = mapping;
         currentPops = popList;
         currentNodes = nodeList;
+    }
+
+    public static void createLinkLoadbalanceMap(Map<LinkPort, LinkLoadbalance> lbMap,List<LinkChain> createChains, List<LinkChain> deleteChains){
+        // Remove loadbalancing rules, that are to be deleted
+        for(LinkChain chain: deleteChains){
+            if(lbMap.containsKey(chain.srcPort)){
+                LinkLoadbalance lb = lbMap.get(chain.srcPort);
+                lb.dstPorts.remove(chain.dstPort);
+                // Keep empty loadbalance objects in case they will be used in creation loop later
+            } else {
+                // Nothing to do...
+            }
+        }
+        // Add new
+        for (LinkChain chain: createChains){
+            if(!lbMap.containsKey(chain.srcPort)){
+                List<LinkPort> dstPorts = new ArrayList<LinkPort>();
+                dstPorts.add(chain.dstPort);
+                LinkLoadbalance lb = new LinkLoadbalance(chain.srcPort, dstPorts);
+                lbMap.put(chain.srcPort, lb);
+            } else {
+                LinkLoadbalance lb = lbMap.get(chain.srcPort);
+                if(!lb.dstPorts.contains(chain.dstPort))
+                    lb.dstPorts.add(chain.dstPort);
+            }
+        }
+        // Remove empty loadbalancing rules, or rules concerning only one destination port
+        List<LinkLoadbalance> lbList = new ArrayList<LinkLoadbalance>();
+        lbList.addAll(lbMap.values());
+        for(LinkLoadbalance lb : lbList){
+            if(lb.dstPorts.size()<=1)
+                lbMap.remove(lb.srcPort);
+        }
     }
 
     public static List<LinkChain> createLinkChainList(List<Pair<Pair<String, String>,Pair<String, String>>> chains, Map<String, String> stackMap, Map<PopResource,List<String>> popNodeMap){
@@ -333,7 +411,6 @@ public class DeploymentManager implements Runnable{
     }
 
     public static void chain(List<LinkChain> chains){
-        System.out.println("Chain "+chains.size());
         for(LinkChain chain : chains) {
             TranslatorChain.chain(chain);
             currentChaining.add(chain);
@@ -343,12 +420,28 @@ public class DeploymentManager implements Runnable{
     public static void unchain(List<LinkChain> chains){
         for(LinkChain chain :  chains) {
             TranslatorChain.unchain(chain);
-            currentChaining.remove(chain);
+            if(chains != currentChaining)
+                currentChaining.remove(chain);
+        }
+        if (chains == currentChaining)
+            currentChaining.clear();
+    }
+
+    public static void loadbalance(Collection<LinkLoadbalance> balances){
+        for(LinkLoadbalance balance : balances) {
+            // No loadbalancing for only
+            if(balance.dstPorts.size()>1)
+                TranslatorLoadbalancer.loadbalance(balance);
         }
     }
 
+    public static void unloadbalance(Collection<LinkLoadbalance> balances){
+        for(LinkLoadbalance balance : balances)
+            TranslatorLoadbalancer.unloadbalance(balance.srcPort);
+    }
+
     public static void tearDown(){
-        undeploy();
+        undeploy(null);
         MonitorManager.closeConnectionPool();
     }
 

@@ -48,7 +48,7 @@ public class LinkInstance {
     public boolean build_in;
 
     public LinkInstance(Object link, String name){
-    	logger.info("Link Instance");
+    	logger.debug("Link Instance");
         this.link = link;
         this.name = name;
         assert link instanceof VirtualLink || link instanceof VnfVirtualLink : "LinkInstance is based on a VirtualLink or a VnfVirtualLink";

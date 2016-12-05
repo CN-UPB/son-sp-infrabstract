@@ -46,6 +46,10 @@ public class ServiceInstance {
 
     public final List<Pair<Pair<String, String>, Pair<String, String>>> delete_chain;
 
+
+
+
+
     //public final List<UnitInstance> units;
 
     // Maps virtual link id to LinkInstance
@@ -57,7 +61,7 @@ public class ServiceInstance {
 
 
     public ServiceInstance(){
-    	logger.info("Service Instance");
+    	logger.debug("Service Instance");
         //functions = new HashMap<String,FunctionInstance>();
         function_list = new HashMap<String, Map<String,FunctionInstance>>();
         vnf_uid = new HashMap<String, AtomicInteger>();
@@ -71,6 +75,8 @@ public class ServiceInstance {
 
         create_chain = new ArrayList<Pair<Pair<String, String>, Pair<String, String>>>();
         delete_chain = new ArrayList<Pair<Pair<String, String>, Pair<String, String>>>();
+
+
 
     }
 

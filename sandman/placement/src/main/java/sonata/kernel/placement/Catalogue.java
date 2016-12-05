@@ -34,8 +34,6 @@ public class Catalogue {
     static public Map<String,VnfDescriptor> functions = new HashMap<String,VnfDescriptor>();
 
     static public Map<String,VnfDescriptor> internalFunctions = new HashMap<String,VnfDescriptor>();
-    
-    static public List<Integer> index = new ArrayList<Integer>();
 
     public final static String[] INTERNAL_VNF_FOLDERS = new String[]{"sandman\\placement\\YAML\\internal", "sandman/placement/YAML/internal", "YAML/internal", "placement/YAML/internal"};
 
@@ -63,7 +61,6 @@ public class Catalogue {
         for(VnfDescriptor newVnf:sPackage.functions) {
             functions.put(newVnf.getName(),newVnf);
         }
-        index.add(newIndex);
         logger.info("Added package: "+sPackage.descriptor.getName());
         return newIndex;
     }
@@ -104,11 +101,8 @@ public class Catalogue {
         return jsonData;
     }
 
-    static public List<Integer> getJsonPackageList(){
+    static public String getJsonPackageList(){
         String jsonList = null;
-        for (int i = 0;i<index.size();i++){
-        	System.out.println("List of index = "+index.get(i));
-        }
 
         List<PackageDescriptor> packageList = new ArrayList<PackageDescriptor>();
         for(SonataPackage p:packages)
@@ -121,7 +115,7 @@ public class Catalogue {
             e.printStackTrace();
         }
 		
-        return index;
+        return jsonList;
     }
     static protected ObjectMapper getJsonMapper(){
         ObjectMapper mapper = new ObjectMapper(new JsonFactory());

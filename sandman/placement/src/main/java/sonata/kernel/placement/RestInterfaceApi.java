@@ -16,6 +16,7 @@ import java.util.List;
 
 import org.apache.commons.io.IOUtils;
 import org.apache.log4j.Logger;
+import org.json.JSONArray;
 import org.json.JSONObject;
 import org.json.JSONWriter;
 
@@ -130,14 +131,16 @@ class RestInterfaceServerApi extends NanoHTTPD implements Runnable {
             else
             if("/packages".equals(uri) && session.getMethod().equals(Method.GET)) {
 				logger.info("Package list");
-                List<Integer> jsonPackageList = Catalogue.getJsonPackageList();
+                String jsonPackageList = Catalogue.getJsonPackageList();
                 String ret_index=null;
-                for (int i = 0;i < jsonPackageList.size();i++){
-                	JSONObject jsonObj = new JSONObject();
-                    jsonObj.put("service_uuid", jsonPackageList.get(i));
-                    ret_index = jsonObj.toString();
-                    System.out.println("Jason list: "+ret_index);
+                JSONObject jsonObj = new JSONObject();
+            	JSONArray jsonArray = new JSONArray();
+                for (int i = 0;i < Catalogue.packages.size();i++){
+                	jsonArray.put(i);
                 }
+                jsonObj.put("service_uuid_list", jsonArray);
+                ret_index = jsonObj.toString();
+                System.out.println("Json list: "+ret_index);
                 if(jsonPackageList == null)
                     return newFixedLengthResponse(Response.Status.INTERNAL_ERROR, null, null);
                 else

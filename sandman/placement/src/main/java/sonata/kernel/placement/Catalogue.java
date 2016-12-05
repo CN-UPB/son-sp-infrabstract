@@ -34,6 +34,8 @@ public class Catalogue {
     static public Map<String,VnfDescriptor> functions = new HashMap<String,VnfDescriptor>();
 
     static public Map<String,VnfDescriptor> internalFunctions = new HashMap<String,VnfDescriptor>();
+    
+    static public List<Integer> index = new ArrayList<Integer>();
 
     public final static String[] INTERNAL_VNF_FOLDERS = new String[]{"sandman\\placement\\YAML\\internal", "sandman/placement/YAML/internal", "YAML/internal", "placement/YAML/internal"};
 
@@ -61,24 +63,25 @@ public class Catalogue {
         for(VnfDescriptor newVnf:sPackage.functions) {
             functions.put(newVnf.getName(),newVnf);
         }
+        index.add(newIndex);
         return newIndex;
     }
     
     static public DeployServiceData getPackagetoDeploy(int index) {
     	DeployServiceData data = new DeployServiceData();
-    	List<VnfDescriptor> data1 = packages.get(index).functions;
-    	for (int i = 0; i < data1.size(); i++) {
-    		System.out.println("Data1 is "+data1.get(i));
+    	List<VnfDescriptor> vnf = packages.get(index).functions;
+    	for (int i = 0; i < vnf.size(); i++) {
+    		System.out.println("Data1 is "+vnf.get(i));
     	}
-    	List<ServiceDescriptor> data2 =  packages.get(index).services;
-    	for (int j = 0; j < data2.size(); j++) {
-    		System.out.println("Data1 is "+data2.get(j));
+    	List<ServiceDescriptor> serdes =  packages.get(index).services;
+    	for (int j = 0; j < serdes.size(); j++) {
+    		System.out.println("Data1 is "+serdes.get(j));
     	}
-    	for (ServiceDescriptor sd:data2) {
+    	for (ServiceDescriptor sd:serdes) {
     		data.setServiceDescriptor(sd);
     	}
     	//data.setServiceDescriptor(data2);
-    	for (VnfDescriptor vnfd:data1) {
+    	for (VnfDescriptor vnfd:vnf) {
     		data.addVnfDescriptor(vnfd);
     	}
     	return data;
@@ -100,8 +103,11 @@ public class Catalogue {
         return jsonData;
     }
 
-    static public String getJsonPackageList(){
+    static public List<Integer> getJsonPackageList(){
         String jsonList = null;
+        for (int i = 0;i<index.size();i++){
+        	System.out.println("List of index = "+index.get(i));
+        }
 
         List<PackageDescriptor> packageList = new ArrayList<PackageDescriptor>();
         for(SonataPackage p:packages)
@@ -114,7 +120,7 @@ public class Catalogue {
             e.printStackTrace();
         }
 		
-        return jsonList;
+        return index;
     }
     static protected ObjectMapper getJsonMapper(){
         ObjectMapper mapper = new ObjectMapper(new JsonFactory());

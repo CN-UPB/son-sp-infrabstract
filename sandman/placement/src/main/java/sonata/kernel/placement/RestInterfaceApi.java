@@ -136,7 +136,8 @@ class RestInterfaceServerApi extends NanoHTTPD implements Runnable {
                 JSONObject jsonObj = new JSONObject();
             	JSONArray jsonArray = new JSONArray();
                 for (int i = 0;i < Catalogue.packages.size();i++){
-                	jsonArray.put(i);
+                	String str = String.valueOf(i);
+                	jsonArray.put(str);
                 }
                 jsonObj.put("service_uuid_list", jsonArray);
                 ret_index = jsonObj.toString();

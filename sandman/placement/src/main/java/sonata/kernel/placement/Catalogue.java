@@ -61,6 +61,7 @@ public class Catalogue {
         for(VnfDescriptor newVnf:sPackage.functions) {
             functions.put(newVnf.getName(),newVnf);
         }
+        logger.info("Added package: "+sPackage.descriptor.getName());
         return newIndex;
     }
     
@@ -131,7 +132,7 @@ public class Catalogue {
     }
 
     static public void loadInternalFunctions(){
-        logger.debug("Load internal functions");
+        logger.info("Load internal functions");
 
         List<String> internalFolders = new ArrayList<String>();
 
@@ -162,7 +163,7 @@ public class Catalogue {
             if(files==null || files.length==0)
                 continue;
 
-            logger.debug("Load files from "+folder.toString());
+            logger.info("Load files from "+folder.toString());
 
             // Try to load files as vnf descriptors and add them to the internal list
             for(File f:files) {
@@ -177,9 +178,9 @@ public class Catalogue {
                 //internalFunctions.put(vnfdName,vnfd);
                 internalFunctions.put("vnf_" + vnfdName.split("-")[0], vnfd);
 
-                logger.debug("Add internal function "+vnfdName+" "+f);
+                logger.info("Add internal function "+vnfdName+" "+f);
             }
-            logger.debug("Loaded "+internalFunctions.size()+" functions");
+            logger.info("Loaded "+internalFunctions.size()+" functions");
             // Use only first non-empty folder
             break;
         }

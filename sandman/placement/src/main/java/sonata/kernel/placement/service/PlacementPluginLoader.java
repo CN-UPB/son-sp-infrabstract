@@ -24,8 +24,8 @@ public final class PlacementPluginLoader {
 
     public static PlacementPlugin createPlacementPlugin(String path, String pluginName){
     	logger.info("Creating placement Plugin");
-    	logger.debug("Plugin pathe: "+path);
-    	logger.debug("Plugin Name: "+pluginName);
+    	logger.info("Plugin path: "+path);
+    	logger.info("Plugin Name: "+pluginName);
         try {
             // Get ClassLoader for plugin folder
             File pluginFolder = new File(path);

@@ -32,7 +32,7 @@ public class ServiceHeatTranslator {
     static ArrayList<Flavor> vimFlavors;
 
     protected static void initialize_defaults() {
-        logger.info("ServiceHeatTranslator::initialize_defaults: Translating Placement Mapping to Heat");
+        logger.info("initialize_defaults: Translating Placement Mapping to Heat");
 
         config = new WrapperConfiguration();
         config.setTenantExtNet("decd89e2-1681-427e-ac24-6e9f1abb1715");
@@ -370,7 +370,7 @@ public class ServiceHeatTranslator {
                                                                      List<PopResource> resources,
                                                                      PlacementMapping mapping) {
 
-        logger.info("ServiceHeatTranslator::translatePlacementMappingToHeat: Translating Placement Mapping to Heat");
+        logger.info("translatePlacementMappingToHeat: Translating Placement Mapping to Heat");
 
         initialize_defaults();
         List<HeatTemplate> templates = new ArrayList<HeatTemplate>();

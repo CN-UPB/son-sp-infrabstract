@@ -4,6 +4,5 @@
 #-F "service_uuid=:0" \
 # http://localhost:8080/requests
 
-curl -D - -X POST \
- -d "asdf=0" \
- http://localhost:8080/bla
+curl -D - -X GET \
+ http://localhost:8080/undeploy

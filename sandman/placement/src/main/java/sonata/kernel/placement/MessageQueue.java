@@ -48,6 +48,15 @@ public class MessageQueue
             this.index = index;
         }
     }
+    public static class MessageQueueUnDeployData extends MessageQueueData{
+
+        public volatile String responseMessage = null;
+        public volatile int responseId = -1;
+
+        public MessageQueueUnDeployData(){
+            super(MessageType.UNDEPLOY_MESSAGE);
+        }
+    }
     public static class MessageQueueMonitorData extends MessageQueueData{
 
         public final Map<String, MonitorStats> statsMap;

@@ -82,7 +82,16 @@ class RestInterfaceServerApi extends NanoHTTPD implements Runnable {
         try {
             String uri = session.getUri();
             String req_index = extractNumber(uri);
-            String req_uri = uri;            
+            String req_uri = uri;
+
+            if(uri.startsWith("/status")) {
+                return MiniStatusServer.serveDynamic(session);
+            }
+            else
+            if(uri.startsWith("/static")) {
+                return MiniStatusServer.serveStatic(session);
+            }
+            else
             if("/packages".equals(uri) && session.getMethod().equals(Method.POST)) {
                 logger.info("Package post");
                 session.getParms();

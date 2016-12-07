@@ -90,6 +90,16 @@ public class DeploymentManager implements Runnable{
         message.responseId = 500;
         message.responseMessage = "Something went terribly wrong";
 
+        if(currentInstance != null) {
+            logger.info("Already deployed, undeploy first");
+            message.responseId = 406;
+            message.responseMessage = "Already deployed, undeploy first";
+            synchronized(message) {
+                message.notify();
+            }
+            return;
+        }
+
         try {
             PlacementConfig config = PlacementConfigLoader.loadPlacementConfig();
             PlacementPlugin plugin = PlacementPluginLoader.placementPlugin;
@@ -190,19 +200,35 @@ public class DeploymentManager implements Runnable{
     public static void undeploy(MessageQueue.MessageQueueUnDeployData message){
 
         try {
-            MonitorManager.stopAndRemoveAllMonitors();
+            try {
+                MonitorManager.stopAndRemoveAllMonitors();
+            } catch (Exception e) {
+                logger.error(e);
+            }
 
-            unchain(currentChaining);
+            try {
+                unchain(currentChaining);
+            } catch (Exception e) {
+                logger.error(e);
+            }
 
             // Loadbalancing
-            unloadbalance(currentLoadbalanceMap.values());
+            try {
+                unloadbalance(currentLoadbalanceMap.values());
+            } catch (Exception e) {
+                logger.error(e);
+            }
 
             if (currentMapping != null) {
                 List<PopResource> popList = new ArrayList<PopResource>();
                 popList.addAll(currentMapping.popMapping.values());
                 for (PopResource pop : popList) {
                     String stackName = dcStackMap.get(pop.getPopName());
-                    undeployStack(pop, stackName);
+                    try {
+                        undeployStack(pop, stackName);
+                    } catch (Exception e) {
+                        logger.error(e);
+                    }
                 }
             }
             currentInstance = null;

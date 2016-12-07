@@ -5,16 +5,16 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 public class MonitorStats {
 
     /* example
-    {"BLOCK_read": 0, "NET_out": 1016, "CPU_cores": 4, "NET_systime": 1480879807587300096,
-    "MEM_used": 630784, "PIDS": 2, "CPU_used_systime": 1480879807533447936, "NET_in": 1016,
-    "SYS_time": 1480879807587481856, "CPU_used": 22920796, "BLOCK_write": 0,
-    "MEM_limit": 16827117568, "MEM_%": 3.7486158722724864e-05}
-    */
+    {"CPU_cores": 4, "SYS_time": 1480931732998331904, "PIDS": 2,
+    "NET_in/s": 303, "BLOCK_read": 0, "MEM_limit": 16827117568,
+    "NET_out/s": 396, "BLOCK_write": 0, "CPU_%": 0.003207987403821142,
+    "MEM_used": 643072, "MEM_%": 3.821640856797275e-05}
+     */
 
     // Network traffic of all network interfaces within the controller
-    @JsonProperty("NET_out")
+    @JsonProperty("NET_out/s")
     long netOut;
-    @JsonProperty("NET_in")
+    @JsonProperty("NET_in/s")
     long netIn;
     @JsonProperty("BLOCK_write") // Disk - write in Bytes
     String blockOut;
@@ -152,4 +152,6 @@ public class MonitorStats {
     public void setCpuUsed(long cpuUsed) {
         this.cpuUsed = cpuUsed;
     }
+
+
 }

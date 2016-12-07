@@ -18,9 +18,10 @@ public class LinkChain {
         this.dstPort = dstPort;
     }
 
-    public boolean equals(LinkChain chain){
-        if(chain == null)
+    public boolean equals(Object obj){
+        if(obj == null || !(obj instanceof LinkChain))
             return false;
+        LinkChain chain = (LinkChain) obj;
         if(srcPort.equals(chain.srcPort) && dstPort.equals(chain.dstPort))
             return true;
         return false;

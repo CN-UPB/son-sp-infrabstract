@@ -110,7 +110,8 @@ public class ServiceInstanceManager {
                         id, function_instance);
             }
 
-            function_instance.setName(function.getVnfName().split("-")[0] + id);
+
+            function_instance.setName(function.getVnfId().split("_")[1] + id);
 
             initialize_vnfvlink_list(function_instance, descriptor);
         }

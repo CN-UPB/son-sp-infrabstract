@@ -12,6 +12,10 @@ import fi.iki.elonen.NanoHTTPD;
 import org.apache.log4j.Logger;
 import sonata.kernel.VimAdaptor.commons.vnfd.Unit;
 import sonata.kernel.VimAdaptor.commons.vnfd.UnitDeserializer;
+import sonata.kernel.placement.monitor.MonitorManager;
+import sonata.kernel.placement.pd.PackageDescriptor;
+import sonata.kernel.placement.pd.SonataPackage;
+import sonata.kernel.placement.service.FunctionInstance;
 
 import java.io.File;
 import java.io.FileInputStream;
@@ -19,7 +23,9 @@ import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 import static fi.iki.elonen.NanoHTTPD.newFixedLengthResponse;
@@ -38,7 +44,7 @@ public class MiniStatusServer {
         if (!rootFile.exists())
             logger.error("Path does not exist "+root);
         extMimeMap.put("json","application/json");
-        extMimeMap.put("js","text/javascript");
+        extMimeMap.put("js","application/javascript; charset=utf-8");
         extMimeMap.put("css","text/css");
         extMimeMap.put("htm","text/html");
         extMimeMap.put("html","text/html");
@@ -54,22 +60,44 @@ public class MiniStatusServer {
         if(uri.startsWith("/status"))
             uri = uri.substring(7);
 
-        if(uri.startsWith("/status")) {
+        if(uri.equals("/status")) {
 
             Map<String,Object> statusObj = new HashMap<String, Object>();
-
+            // Deployment status
             if(DeploymentManager.currentInstance == null) {
                 statusObj.put("status", "UNDEPLOYED");
             } else {
                 statusObj.put("status", "DEPLOYED");
             }
+            // Catalogue package count
             statusObj.put("packageCount",Catalogue.packages.size());
+
             jsonObj = statusObj;
+        }
+
+        if(uri.equals("/monitor")) {
+            if(DeploymentManager.currentInstance != null) {
+                Map<String,Object> statusObj = new HashMap<String, Object>();
+                // Deployed instance monitor information
+                MessageQueue.MessageQueueMonitorData monitorData = MonitorManager.getMonitorData();
+                statusObj.put("monitorFunctions", monitorData.statsMap.keySet());
+                //statusObj.put("monitorLastData", monitorData.statsMap);
+                statusObj.put("monitorHistoryData", monitorData.statsHistoryMap);
+                jsonObj = statusObj;
+            }
+        }
+
+        if(uri.equals("/packages")) {
+            List<PackageDescriptor> packageList = new ArrayList<PackageDescriptor>();
+            for(SonataPackage p:Catalogue.packages)
+                packageList.add(p.descriptor);
+            jsonObj = packageList;
         }
 
         try {
             if(jsonObj != null) {
                 json = jsonMapper.writeValueAsString(jsonObj);
+                logger.debug(json);
                 logger.debug("200 - "+uri);
                 return newFixedLengthResponse(NanoHTTPD.Response.Status.OK, "application/json", json);
             }

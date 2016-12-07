@@ -122,14 +122,33 @@ public class MonitorManager implements Runnable {
         monitoringLock.unlock();
     }
 
+    public static MessageQueue.MessageQueueMonitorData getMonitorData(){
+        Map<String, MonitorStats> statsMap;
+        Map<String,List<MonitorStats>> statsHistoryMap;
+        synchronized (monitors) {
+            statsHistoryMap = new HashMap<String,List<MonitorStats>>();
+            statsMap = new HashMap<String,MonitorStats>();
+            FunctionMonitor monitor;
+            List<MonitorStats> statsHistory;
+
+            for (int i=0; i<monitors.size(); i++){
+                monitor = monitors.get(i);
+                statsMap.put(monitor.function, monitor.statsLast);
+                statsHistory = new ArrayList<MonitorStats>();
+                statsHistory.addAll(monitor.statsList);
+                statsHistoryMap.put(monitor.function, statsHistory);
+            }
+        }
+        return new MessageQueue.MessageQueueMonitorData(statsMap, statsHistoryMap);
+    }
+
     private MonitorManager(){
 
     }
 
     public void run(){
 
-        Map<String, MonitorStats> statsMap;
-        Map<String,List<MonitorStats>> statsHistoryMap;
+
 
         monitoringLock.lock();
 
@@ -150,22 +169,7 @@ public class MonitorManager implements Runnable {
                     pendingRequestsCondition.await(); // TODO: timeout?
                 }
 
-                synchronized (monitors) {
-                    statsHistoryMap = new HashMap<String,List<MonitorStats>>();
-                    statsMap = new HashMap<String,MonitorStats>();
-                    FunctionMonitor monitor;
-                    List<MonitorStats> statsHistory;
-
-                    for (int i=0; i<monitors.size(); i++){
-                        monitor = monitors.get(i);
-                        statsMap.put(monitor.function, monitor.statsLast);
-                        statsHistory = new ArrayList<MonitorStats>();
-                        statsHistory.addAll(monitor.statsList);
-                        statsHistoryMap.put(monitor.function, statsHistory);
-                    }
-                }
-
-                MessageQueue.get_deploymentQ().add(new MessageQueue.MessageQueueMonitorData(statsMap, statsHistoryMap));
+                MessageQueue.get_deploymentQ().add(getMonitorData());
 
                 Thread.sleep(intervalMillis);
             } catch (InterruptedException e) {

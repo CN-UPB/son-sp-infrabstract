@@ -25,9 +25,10 @@ public class LinkPort {
         return pop.getPopName();
     }
 
-    public boolean equals(LinkPort port){
-        if(port == null)
+    public boolean equals(Object obj){
+        if(obj == null || !(obj instanceof LinkPort))
             return false;
+        LinkPort port = (LinkPort) obj;
         if(pop.getPopName().equals(port.pop.getPopName()) &&
            stack.equals(port.stack) &&
            server.equals(port.server) &&
@@ -36,4 +37,7 @@ public class LinkPort {
         return false;
     }
 
+    public int hashCode(){
+        return ((this.pop == null? "null" : this.pop.getPopName())+port+stack+server).hashCode();
+    }
 }

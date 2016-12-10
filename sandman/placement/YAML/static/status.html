@@ -105,10 +105,12 @@ body {
 .thresholdupper {
     stroke: #f00;
     stroke-width: 2px;
+    stroke-dasharray: 5,5;
 }
 .thresholdlower {
     stroke: #00f;
     stroke-width: 2px;
+    stroke-dasharray: 5,5;
 }
 .vnfMonitor svg {
     border: solid 1px #000;
@@ -452,6 +454,13 @@ function addGraph(graph){
     var nodecirc = svgd3.selectAll("g").data(nodes).enter()
         .append("g").attr("class","node");
     nodecirc.each(function(d){
+
+        if (d.border == true) {
+            d.width = 30;
+            d.height = 30;
+            return;
+        }
+
         d3.select(this).append("circle")
             .attr("class", d.type)
             .attr("r", graphSizes[d.type])
@@ -566,51 +575,8 @@ function updateMonitorView(monitorData) {
     for(var i=0; i<newFunctions.length; i++) {
 
         var newFunctionDiv = createPlot(newFunctions[i], monitorData);
-
         updatePlot(newFunctions[i], monitorData)
-
         functionDivList.push(newFunctionDiv);
-
-        updatePlot(newFunctions[i], monitorData);
-        /*
-        var newFunctionDiv = document.createElement("div");
-        newFunctionDiv.setAttribute("class","vnfMonitor");
-        var monitorLabelDiv = document.createElement("div");
-        monitorLabelDiv.setAttribute("class","vnfMonitorLabel");
-        monitorLabelDiv.appendChild(document.createTextNode(functionList[i]));
-        var newCpuDiv = document.createElement("div");
-        newCpuDiv.setAttribute("class","vnfMonitorCpu");
-        var newMemDiv = document.createElement("div");
-        newMemDiv.setAttribute("class","vnfMonitorMem");
-        newFunctionDiv.appendChild(monitorLabelDiv);
-        newFunctionDiv.appendChild(newCpuDiv);
-        newFunctionDiv.appendChild(newMemDiv);
-
-        // prepare thresholds
-        var vnfid = monitorData.functions[newFunctions[i]].vnfId;
-        var thresholds = null;
-        for(var ti=0; ti<monitorData.thresholds.length; ti++) {
-            if(monitorData.thresholds[ti].vnfId == vnfid){
-                thresholds = monitorData.thresholds[ti];
-                break;
-            }
-        }
-
-        // Add d3 stuff
-        var cpuSvg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
-        cpuSvg.setAttributeNS("http://www.w3.org/2000/xmlns/", "xmlns:xlink", "http://www.w3.org/1999/xlink");
-        var cpuSvgd3 = d3.select(cpuSvg);
-        var cpud3 = setupD3Svg(cpuSvgd3, newFunctions[i], monitorData.monitorHistoryData[newFunctions[i]], "CPU_%", thresholds);
-        var memSvg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
-        memSvg.setAttributeNS("http://www.w3.org/2000/xmlns/", "xmlns:xlink", "http://www.w3.org/1999/xlink");
-        var memSvgd3 = d3.select(memSvg);
-        var memd3 = setupD3Svg(memSvgd3, newFunctions[i], monitorData.monitorHistoryData[newFunctions[i]], "MEM_%", thresholds);
-        newCpuDiv.appendChild(cpuSvg);
-        newMemDiv.appendChild(memSvg);
-        currentMonitorD3[newFunctions[i]] = {cpu:cpud3,mem:memd3};
-        currentMonitorDivs[newFunctions[i]] = newFunctionDiv;
-        functionDivList.push(newFunctionDiv);
-        */
     }
     for (var i=0; i<functionDivList; i++) {
         monitordiv.appendChild(functionDivList[i]);
@@ -648,6 +614,7 @@ function defineSvgSize(dataKey){
 function createPlot(funname, monitorData){
 
     console.log("create div for function "+funname);
+    // add monitor divs
     var newFunctionDiv = document.createElement("div");
     newFunctionDiv.setAttribute("class","vnfMonitor");
     var monitorLabelDiv = document.createElement("h3");
@@ -665,16 +632,10 @@ function createPlot(funname, monitorData){
     newFunctionDiv.appendChild(newMemDiv);
 
     var data = monitorData.monitorHistoryData[funname];
-
     var currentStat = data[data.length-1];
-    /*
-    currentStatsDiv.appendChild(document.createTextNode(
-        "Currently: CPU (load) " + currentStat["CPU_%"].toPrecision(3) + " Memory (bytes) " + currentStat["MEM_used"] + " Time " + new Date(currentStat["SYS_time"]/1000000)
-        ));
-    */
 
     // Add d3 stuff
-
+    // cpu divs
     var cpuSvg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
     cpuSvg.setAttributeNS("http://www.w3.org/2000/xmlns/", "xmlns:xlink", "http://www.w3.org/1999/xlink");
         var cpuLabel = document.createElement("center");
@@ -683,7 +644,7 @@ function createPlot(funname, monitorData){
     newCpuDiv.appendChild(cpuSvg);
     var cpuSvgd3 = d3.select(cpuSvg);
 
-
+    // mem divs
     var memSvg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
     memSvg.setAttributeNS("http://www.w3.org/2000/xmlns/", "xmlns:xlink", "http://www.w3.org/1999/xlink");
         var memLabel = document.createElement("center");
@@ -692,23 +653,34 @@ function createPlot(funname, monitorData){
     newMemDiv.appendChild(memSvg);
     var memSvgd3 = d3.select(memSvg);
 
-
-    //setupD3Svg(cpuSvgd3, functionList[i], data, "CPU_%", [0, data[0]["CPU_cores"]], ",.1f", thresholds);
-    //setupD3Svg(memSvgd3, functionList[i], data, "MEM_used", [0, data[0]["MEM_limit"]], ",i", thresholds);
     setupD3Svg(cpuSvgd3, "CPU_%");
     setupD3Svg(memSvgd3, "MEM_used");
-
-    //document.getElementsByTagName("body")[0].appendChild(cpuSvg);
 
     currentMonitorD3[funname] = {cpu:cpuSvgd3, mem:memSvgd3, currentStatsDiv:currentStatsDiv};
     currentMonitorDivs[funname] = newFunctionDiv;
     return newFunctionDiv;
-    //functionDivList.push(newFunctionDiv);
-    //bla(monitorData);
+}
+
+function updatePlot(funname, monitorData){
+    var data = monitorData.monitorHistoryData[funname];
+    var datapath = currentMonitorD3[funname];
+    var currentStat = data[data.length-1];
+
+    if(currentStat["SYS_time"] == datapath.lastTimestamp)
+        return;
+
+    datapath.lastTimestamp = currentStat["SYS_time"];
+
+    var currentStatsDiv = datapath.currentStatsDiv;
+    while (currentStatsDiv.childNodes.length > 0)
+        currentStatsDiv.removeChild(currentStatsDiv.firstChild);
+
+    currentStatsDiv.appendChild(document.createTextNode(
+        "Currently: CPU (load) " + currentStat["CPU_%"].toPrecision(3) + " Memory (bytes) " + currentStat["MEM_used"] + " Time " + new Date(currentStat["SYS_time"]/1000000)
+        ));
 
     // prepare thresholds
-    /*
-    var vnfid = monitorData.functions[functionList[i]].vnfId;
+    var vnfid = monitorData.functions[funname].vnfId;
     var thresholds = null;
     for(var ti=0; ti<monitorData.thresholds.length; ti++) {
         if(monitorData.thresholds[ti].vnfId == vnfid){
@@ -716,42 +688,9 @@ function createPlot(funname, monitorData){
             break;
         }
     }
-    */
 
-    //setupD3Svg(cpuSvgd3, functionList[i], data, "CPU_%", [0, data[0]["CPU_cores"]], ",.1f", thresholds);
-    //setupD3Svg(memSvgd3, functionList[i], data, "MEM_used", [0, data[0]["MEM_limit"]], ",i", thresholds);
-}
-
-function updatePlot(funname, monitorData){
-        var data = monitorData.monitorHistoryData[funname];
-        var datapath = currentMonitorD3[funname];
-        var currentStat = data[data.length-1];
-
-        if(currentStat["SYS_time"] == datapath.lastTimestamp)
-            return;
-
-        datapath.lastTimestamp = currentStat["SYS_time"];
-
-        var currentStatsDiv = datapath.currentStatsDiv;
-        while (currentStatsDiv.childNodes.length > 0)
-            currentStatsDiv.removeChild(currentStatsDiv.firstChild);
-
-        currentStatsDiv.appendChild(document.createTextNode(
-            "Currently: CPU (load) " + currentStat["CPU_%"].toPrecision(3) + " Memory (bytes) " + currentStat["MEM_used"] + " Time " + new Date(currentStat["SYS_time"]/1000000)
-            ));
-
-        // prepare thresholds
-        var vnfid = monitorData.functions[funname].vnfId;
-        var thresholds = null;
-        for(var ti=0; ti<monitorData.thresholds.length; ti++) {
-            if(monitorData.thresholds[ti].vnfId == vnfid){
-                thresholds = monitorData.thresholds[ti];
-                break;
-            }
-        }
-
-        updateD3Svg(datapath.cpu, funname, data, "CPU_%", [0, data[0]["CPU_cores"]], ",.1f", thresholds);
-        updateD3Svg(datapath.mem, funname, data, "MEM_used", [0, data[0]["MEM_limit"]], ",i", thresholds);
+    updateD3Svg(datapath.cpu, funname, data, "CPU_%", [0, data[0]["CPU_cores"]], ",.1f", thresholds);
+    updateD3Svg(datapath.mem, funname, data, "MEM_used", [0, data[0]["MEM_limit"]], ",i", thresholds);
 }
 
 function updateD3Svg(svg, name, data, dataKey, limit, format, thresholds) {
@@ -766,7 +705,6 @@ function updateD3Svg(svg, name, data, dataKey, limit, format, thresholds) {
     .rangeRound([sizes.height, 0]);
 
     var xextent = d3.extent(data, function(d) { return new Date(d["SYS_time"]/1000000); });
-    //var yextent = d3.extent(data, function(d) { return d[dataKey]; });
     var yextent = limit;
 
     var line = d3.svg.line()
@@ -778,10 +716,8 @@ function updateD3Svg(svg, name, data, dataKey, limit, format, thresholds) {
     svg.select(".axis--x")
         .attr("transform", "translate(0," + sizes.height + ")")
         .call(d3.svg.axis().scale(x).orient("bottom").ticks(5));
-        //.call(d3.axisBottom(x).ticks(10));
     svg.select(".axis--y")
         .call(d3.svg.axis().tickFormat(d3.format(format)).scale(y).orient("left").ticks(10));
-        //.call(d3.axisLeft(y).ticks(10));
 
     var thresholdline = d3.svg.line()
     .x(function(d) { return x(d.time); })
@@ -813,7 +749,6 @@ function updateD3Svg(svg, name, data, dataKey, limit, format, thresholds) {
     
 }
 
-//function setupD3Svg(svg, name, data, dataKey, limit, format, thresholds) {
 function setupD3Svg(svg, dataKey) {
     var sizes = defineSvgSize(dataKey);
     svg.attr("width", sizes.svgWidth);
@@ -834,8 +769,6 @@ function setupD3Svg(svg, dataKey) {
 
     g.append("path")
         .attr("class", "thresholdlower");
-
-    //updateD3Svg(svg, name, data, dataKey, limit, format, thresholds);
 }
 
 function createMonitorView(monitorData) {
@@ -861,7 +794,6 @@ function createMonitorView(monitorData) {
         updatePlot(functionList[i], monitorData)
 
         functionDivList.push(newFunctionDiv);
-        updatePlot(functionList[i], monitorData);
     }
     currentMonitorFunctionList = functionList;
     for (var i=0; i<functionDivList.length; i++) {

@@ -12,10 +12,14 @@ import fi.iki.elonen.NanoHTTPD;
 import org.apache.log4j.Logger;
 import sonata.kernel.VimAdaptor.commons.vnfd.Unit;
 import sonata.kernel.VimAdaptor.commons.vnfd.UnitDeserializer;
+import sonata.kernel.placement.monitor.FunctionMonitor;
 import sonata.kernel.placement.monitor.MonitorManager;
+import sonata.kernel.placement.monitor.MonitorStats;
 import sonata.kernel.placement.pd.PackageDescriptor;
 import sonata.kernel.placement.pd.SonataPackage;
 import sonata.kernel.placement.service.FunctionInstance;
+import sonata.kernel.placement.service.LinkInstance;
+import sonata.kernel.placement.service.ServiceInstance;
 
 import java.io.File;
 import java.io.FileInputStream;
@@ -23,10 +27,7 @@ import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.nio.file.Path;
 import java.nio.file.Paths;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 
 import static fi.iki.elonen.NanoHTTPD.newFixedLengthResponse;
 
@@ -50,6 +51,8 @@ public class MiniStatusServer {
         extMimeMap.put("html","text/html");
 
     }
+
+    static final int maxHistory = 300;
 
     public static NanoHTTPD.Response serveDynamic(NanoHTTPD.IHTTPSession session){
         String uri = session.getUri();
@@ -78,11 +81,95 @@ public class MiniStatusServer {
         if(uri.equals("/monitor")) {
             if(DeploymentManager.currentInstance != null) {
                 Map<String,Object> statusObj = new HashMap<String, Object>();
+                //Map<String,String> functionMap = new HashMap<String,String>();
                 // Deployed instance monitor information
                 MessageQueue.MessageQueueMonitorData monitorData = MonitorManager.getMonitorData();
                 statusObj.put("monitorFunctions", monitorData.statsMap.keySet());
+                // Clear unnecessary data
+                for(List<MonitorStats> list : monitorData.statsHistoryMap.values()){
+                    if(list.size()>maxHistory) {
+                        for(int i=list.size()-maxHistory-1; i>=0; i--)
+                            list.remove(i);
+                    }
+                }
+                /*
+                for(String key:monitorData.statsMap.keySet()) {
+                    functionMap.put(key, key.substring(0,key.lastIndexOf(":")));
+                }
+                */
+                // function instance list
+                // templateName ->
+                //      instanceName
+                //      vnfId
+                //      vnfName
+                //
+
+                // Key of nodeMap is normal name like firewall2
+                Map<String,Map<String,String>> nodeMap = new HashMap<String,Map<String,String>>();
+                // Key of instanceMap is template name like firewall2:asdfasdfadsf
+                Map<String,Map<String,String>> instanceMap = new HashMap<String,Map<String,String>>();
+                List<FunctionMonitor> monitors = MonitorManager.getMonitorListCopy();
+                for(FunctionMonitor monitor: monitors) {
+                    if(monitor == null)
+                        System.out.println("");
+                    Map<String,String> fMap = new HashMap<String,String>();
+                    fMap.put("instanceName", monitor.instance.name);
+                    fMap.put("vnfId", monitor.instance.function.getVnfId());
+                    fMap.put("vnfName", monitor.instance.descriptor.getName());
+                    instanceMap.put(monitor.function, fMap);
+                    nodeMap.put(monitor.instance.name, fMap);
+                }
+                // instance graph
+                List<String> nsPoints = new ArrayList<String>();
+                List<List<String>> nsPointToNode = new ArrayList<List<String>>();
+                //Map<String,String> nsPointToNode = new HashMap<String,String>();
+                List<List<String>> nodeToNode = new ArrayList<List<String>>();
+                //Map<String,String> nodeToNode = new HashMap<String,String>();
+                ServiceInstance serviceInstance = DeploymentManager.currentInstance;
+
+                // Get nsPoints and nsPointToNode links
+                for(Map.Entry<String,Map<String, LinkInstance>> linkMap : serviceInstance.outerlink_list.entrySet()) {
+                    String nsPointName = linkMap.getKey();
+                    for(Map.Entry<String, LinkInstance> link : linkMap.getValue().entrySet()) {
+                        Set<FunctionInstance> functions = link.getValue().interfaceList.keySet();
+                        for(FunctionInstance f: functions) {
+                            //nsPointToNode.put(nsPointName, f.name);
+                            List<String> linkPair = new ArrayList<String>();
+                            linkPair.add(nsPointName);
+                            linkPair.add(f.name);
+                            nsPointToNode.add(linkPair);
+                        }
+                    }
+                    nsPoints.add(nsPointName);
+                }
+
+                // Get nodeToNode links
+                for(Map.Entry<String,Map<String, LinkInstance>> linkMap : serviceInstance.innerlink_list.entrySet()) {
+                    for(Map.Entry<String, LinkInstance> link : linkMap.getValue().entrySet()) {
+                        // Assume one to one connections
+                        List<FunctionInstance> functions = new ArrayList<FunctionInstance>(link.getValue().interfaceList.keySet());
+                        //nodeToNode.put(functions.get(0).name, functions.get(1).name);
+                        List<String> linkPair = new ArrayList<String>();
+                        linkPair.add(functions.get(0).name);
+                        linkPair.add(functions.get(1).name);
+                        nodeToNode.add(linkPair);
+                    }
+                }
+                Map<String,Object> graph = new HashMap<String,Object>();
+                graph.put("nsPoints",nsPoints);
+                graph.put("nodes",nodeMap);
+                graph.put("nsPointToNode",nsPointToNode);
+                graph.put("nodeToNode",nodeToNode);
+                graph.put("forwardGraphs",serviceInstance.service.getForwardingGraphs());
+                statusObj.put("graph",graph);
+
+                statusObj.put("thresholds",PlacementConfigLoader.loadPlacementConfig().getThreshold());
+
+                //statusObj.put("names",functionMap);
+                statusObj.put("functions", instanceMap);
                 //statusObj.put("monitorLastData", monitorData.statsMap);
                 statusObj.put("monitorHistoryData", monitorData.statsHistoryMap);
+
                 jsonObj = statusObj;
             }
         }
@@ -97,7 +184,7 @@ public class MiniStatusServer {
         try {
             if(jsonObj != null) {
                 json = jsonMapper.writeValueAsString(jsonObj);
-                logger.debug(json);
+                //logger.debug(json);
                 logger.debug("200 - "+uri);
                 return newFixedLengthResponse(NanoHTTPD.Response.Status.OK, "application/json", json);
             }

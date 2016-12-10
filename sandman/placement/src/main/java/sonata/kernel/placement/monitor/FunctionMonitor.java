@@ -14,6 +14,7 @@ import org.apache.log4j.Logger;
 import sonata.kernel.VimAdaptor.commons.vnfd.Unit;
 import sonata.kernel.VimAdaptor.commons.vnfd.UnitDeserializer;
 import sonata.kernel.placement.config.PopResource;
+import sonata.kernel.placement.service.FunctionInstance;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -31,9 +32,12 @@ public class FunctionMonitor implements FutureCallback<HttpResponse> {
     public String stack;
     public String function;
     public String requestPath;
+    public String instanceName;
+    public FunctionInstance instance;
 
     public CloseableHttpClient httpClient = null;
     public HttpGet httpRequest;
+    public Future<HttpResponse> lastRequest;
 
     public List<MonitorStats> statsList;
     public MonitorStats statsLast;
@@ -46,11 +50,18 @@ public class FunctionMonitor implements FutureCallback<HttpResponse> {
         this.requestPath = datacenter.getMonitoringEndpoint()+"v1/monitor/"+dc.getPopName()+"/"+stack+"/"+function;
         httpRequest = new HttpGet(this.requestPath);
         statsList = new ArrayList<MonitorStats>();
+        instanceName = function.substring(0,function.lastIndexOf(":"));
+    }
+
+    public void stopMonitorRequest() {
+        if(lastRequest != null)
+            lastRequest.cancel(true);
     }
 
     public void requestMonitorStats(CloseableHttpAsyncClient asyncClient){
         logger.debug("Requested monitor status for "+dc.getPopName()+"_"+stack+"_"+function);
-        Future<HttpResponse> f = asyncClient.execute(this.httpRequest, this);
+        lastRequest = asyncClient.execute(this.httpRequest, this);
+        logger.debug("Done Requested monitor status for "+dc.getPopName()+"_"+stack+"_"+function);
     }
 
     @Override
@@ -74,18 +85,21 @@ public class FunctionMonitor implements FutureCallback<HttpResponse> {
 
         MonitorManager.requestFinished();
 
+        lastRequest = null;
         logger.debug("Incoming monitor status for "+dc.getPopName()+"_"+stack+"_"+function+": "+new String(json));
     }
 
     @Override
     public void failed(Exception e) {
         MonitorManager.requestFinished();
+        lastRequest = null;
         logger.debug("Monitor request failed for "+dc.getPopName()+"_"+stack+"_"+function);
     }
 
     @Override
     public void cancelled() {
         MonitorManager.requestFinished();
+        lastRequest = null;
         logger.debug("Monitor request cancelled for "+dc.getPopName()+"_"+stack+"_"+function);
     }
 

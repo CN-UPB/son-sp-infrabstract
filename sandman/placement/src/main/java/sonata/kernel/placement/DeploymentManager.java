@@ -50,6 +50,8 @@ public class DeploymentManager implements Runnable{
     static List<String> currentNodes;
 
 
+    static MonitorMessage.SCALE_TYPE nextScale = null;
+
     public void run(){
         while (true) {
 
@@ -79,8 +81,10 @@ public class DeploymentManager implements Runnable{
                     MessageQueue.MessageQueueMonitorData monitorMessage = (MessageQueue.MessageQueueMonitorData) message;
                     monitor(monitorMessage);
                 }
-            } catch (InterruptedException e) {
+            } catch (Exception e) {
                 e.printStackTrace();
+                logger.error(e);
+                logger.trace(e);
             }
         }
     }
@@ -112,6 +116,12 @@ public class DeploymentManager implements Runnable{
             PlacementMapping mapping = plugin.initialPlacement(data, instance, config.getResources());
             List<HeatTemplate> templates = ServiceHeatTranslator.translatePlacementMappingToHeat(instance, config.getResources(), mapping);
 
+            Map<String, FunctionInstance> functionMap = new HashMap<String, FunctionInstance>();
+            for(Map<String, FunctionInstance> map: instance.function_list.values()){
+                for(Map.Entry<String, FunctionInstance> entry : map.entrySet())
+                    functionMap.put(entry.getValue().name,entry.getValue());
+            }
+
             SimpleDateFormat format = new SimpleDateFormat("yymmddHHmmss");
             String timestamp = format.format(new Date());
 
@@ -141,7 +151,11 @@ public class DeploymentManager implements Runnable{
                 Collection<HeatResource> col = (Collection)template.getResources().values();
                 for(HeatResource h: col){
                     if(h.getType().equals("OS::Nova::Server")) {
-                        vnfMonitors.add(new FunctionMonitor(pop, stackName, h.getResourceName()));
+                        String functionInstanceName = h.getResourceName();
+                        functionInstanceName = functionInstanceName.substring(0,functionInstanceName.lastIndexOf(":"));
+                        FunctionMonitor monitor = new FunctionMonitor(pop, stackName, h.getResourceName());
+                        monitor.instance = functionMap.get(functionInstanceName);
+                        vnfMonitors.add(monitor);
                         nodeList.add(h.getResourceName());
                         popNodes.add(h.getResourceName());
                     }
@@ -204,12 +218,14 @@ public class DeploymentManager implements Runnable{
                 MonitorManager.stopAndRemoveAllMonitors();
             } catch (Exception e) {
                 logger.error(e);
+                logger.trace(e);
             }
 
             try {
                 unchain(currentChaining);
             } catch (Exception e) {
                 logger.error(e);
+                logger.trace(e);
             }
 
             // Loadbalancing
@@ -217,6 +233,7 @@ public class DeploymentManager implements Runnable{
                 unloadbalance(currentLoadbalanceMap.values());
             } catch (Exception e) {
                 logger.error(e);
+                logger.trace(e);
             }
 
             if (currentMapping != null) {
@@ -255,16 +272,29 @@ public class DeploymentManager implements Runnable{
     public static void monitor(MessageQueue.MessageQueueMonitorData message){
 
         // TODO: For ... reasons don't do anything at this moment
-        if(true)
-            return;
+        //if(true)
+        //    return;
 
         PlacementConfig config = PlacementConfigLoader.loadPlacementConfig();
         PlacementPlugin plugin = PlacementPluginLoader.placementPlugin;
 
-        MonitorMessage monitorMessage = new MonitorMessage(MonitorMessage.SCALE_TYPE.MONITOR_STATS, message.statsMap, message.statsHistoryMap);
+        MonitorMessage monitorMessage;
+
+        if (message.fakeScaleType != null) {
+            nextScale = message.fakeScaleType;
+            return;
+        }
+
+        if (nextScale == null)
+            monitorMessage = new MonitorMessage(MonitorMessage.SCALE_TYPE.MONITOR_STATS, message.statsMap, message.statsHistoryMap);
+        else {
+            monitorMessage = new MonitorMessage(nextScale, message.statsMap, message.statsHistoryMap);
+            nextScale = null;
+        }
+
         ServiceInstance instance = plugin.updateScaling(currentDeployData, currentInstance, monitorMessage);
 
-        if (monitorMessage.type == MonitorMessage.SCALE_TYPE.NO_SCALE) {
+        if (instance == null || monitorMessage.type == MonitorMessage.SCALE_TYPE.MONITOR_STATS || monitorMessage.type == MonitorMessage.SCALE_TYPE.NO_SCALE) {
             return;
         }
 
@@ -277,6 +307,12 @@ public class DeploymentManager implements Runnable{
         String serviceName = currentDeployData.getNsd().getName();
 
         List<HeatTemplate> templates = ServiceHeatTranslator.translatePlacementMappingToHeat(instance, config.getResources(), mapping);
+
+        Map<String, FunctionInstance> functionMap = new HashMap<String, FunctionInstance>();
+        for(Map<String, FunctionInstance> map: instance.function_list.values()){
+            for(Map.Entry<String, FunctionInstance> entry : map.entrySet())
+                functionMap.put(entry.getValue().name,entry.getValue());
+        }
 
         SimpleDateFormat format = new SimpleDateFormat("yymmddHHmmss");
         String timestamp = format.format(new Date());
@@ -322,7 +358,11 @@ public class DeploymentManager implements Runnable{
             Collection<HeatResource> col = (Collection)template.getResources().values();
             for(HeatResource h: col){
                 if(h.getType().equals("OS::Nova::Server")) {
-                    vnfMonitors.add(new FunctionMonitor(pop, stackName, h.getResourceName()));
+                    String functionInstanceName = h.getResourceName();
+                    functionInstanceName = functionInstanceName.substring(0,functionInstanceName.lastIndexOf(":"));
+                    FunctionMonitor monitor = new FunctionMonitor(pop, stackName, h.getResourceName());
+                    monitor.instance = functionMap.get(functionInstanceName);
+                    vnfMonitors.add(monitor);
                     nodeList.add(h.getResourceName());
                     popNodes.add(h.getResourceName());
                 }

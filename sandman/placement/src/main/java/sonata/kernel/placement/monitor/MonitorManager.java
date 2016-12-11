@@ -1,5 +1,6 @@
 package sonata.kernel.placement.monitor;
 
+import com.google.common.collect.Lists;
 import org.apache.http.impl.nio.client.CloseableHttpAsyncClient;
 import org.apache.http.impl.nio.client.HttpAsyncClientBuilder;
 import org.apache.http.impl.nio.client.HttpAsyncClients;
@@ -25,7 +26,7 @@ public class MonitorManager implements Runnable {
 
     public static List<FunctionMonitor> monitors = new ArrayList<FunctionMonitor>();
 
-    public static int intervalMillis = 10000;
+    public static int intervalMillis = 2000;
     public static volatile boolean active = false;
 
     public static ConnectingIOReactor ioreactor;
@@ -70,8 +71,22 @@ public class MonitorManager implements Runnable {
     }
 
     public static void stopMonitor(){
-        if(monitorThread != null) {
+        Thread oldThread = monitorThread;
+        if(oldThread != null) {
+
             active = false;
+
+            try {
+                oldThread.join(15000);
+
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+            } finally {
+                if(oldThread.getState() != Thread.State.TERMINATED) {
+                    logger.debug("Thread is stuck, going to interrupt it.");
+                    monitorThread.interrupt();
+                }
+            }
         }
     }
 
@@ -122,6 +137,12 @@ public class MonitorManager implements Runnable {
         monitoringLock.unlock();
     }
 
+    public static List<FunctionMonitor> getMonitorListCopy(){
+        synchronized (monitors){
+            return new ArrayList<FunctionMonitor>(monitors);
+        }
+    }
+
     public static MessageQueue.MessageQueueMonitorData getMonitorData(){
         Map<String, MonitorStats> statsMap;
         Map<String,List<MonitorStats>> statsHistoryMap;
@@ -159,11 +180,15 @@ public class MonitorManager implements Runnable {
 
                 pendingRequests = monitors.size();
 
+                monitoringLock.unlock();
+
                 synchronized (monitors) {
                     for (int i=0; i<monitors.size(); i++){
                         monitors.get(i).requestMonitorStats(asyncClient);
                     }
                 }
+
+                monitoringLock.lock();
 
                 while(pendingRequests > 0) {
                     pendingRequestsCondition.await(); // TODO: timeout?
@@ -173,7 +198,13 @@ public class MonitorManager implements Runnable {
 
                 Thread.sleep(intervalMillis);
             } catch (InterruptedException e) {
-                e.printStackTrace();
+                //e.printStackTrace();
+                logger.error(e);
+                for(int i=0; i<monitors.size(); i++) {
+                    FunctionMonitor monitor = monitors.get(i);
+                    if(monitor!=null)
+                        monitor.stopMonitorRequest();
+                }
             }
         }
 

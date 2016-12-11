@@ -1,12 +1,13 @@
 <html>
 <head>
-<script src="d3.v4.min.js"></script>
+<!--<script src="d3.v4.min.js"></script>-->
+<script src="d3.js"></script>
 <script src="cola.v3.js"></script>
 <script src="d3-scale.v1.min.js"></script>
 <script src="d3-array.v1.min.js"></script>
 <script src="d3-collection.v1.min.js"></script>
 <script src="d3-color.v1.min.js"></script>
-<script src="d3-format.v1.min.js"></script>
+<script src="d3-format.v1.js"></script>
 <script src="d3-interpolate.v1.min.js"></script>
 <script src="d3-time.v1.min.js"></script>
 <script src="d3-time-format.v2.min.js"></script>
@@ -17,24 +18,114 @@ body {
 #topstatus {
     border-bottom:solid 1px #000;
 }
+/* graph */
+.vnfnode {
+    fill: lightblue;
+}
+.nsnode {
+    fill: black;
+}
+.nslink {
+    stroke: black;
+    stroke-width: 5px;
+}
+.vnflink {
+    stroke: red;
+    stroke-width: 5px;
+}
+.nslink[source=mgmt] {
+    stroke: grey;
+}
+.nslink[target=mgmt] {
+    stroke: grey;
+}
+.node > .nodetext {
+    display: none;
+    fill: red;
+    text-anchor: middle;
+    cursor: default;
+    font-weight: bold;
+}
+.node:hover > .nodetext {
+    display: block;
+}
+.node:hover > .vnfnode {
+    fill: blue;
+}
+.node:hover > .nsnode {
+    fill: blue;
+}
+.graphbg {
+    fill: lightgrey;
+}
+.graphzoombg {
+    opacity: 0;
+}
+#graphpage {
+    fill: WhiteSmoke;
+}
+/* monitor */
 .vnfMonitor {
-    background-color: #ddd;
+/*    background-color: #ddd;*/
+    clear: both;
 }
 .vnfMonitorLabel {
-   /* clear: both;*/
+    clear: both;
+    /*text-align: center;*/
 }
 .vnfMonitorCpu {
-   /* float: left;*/
+    float: left;
+    margin: 5px;
+/*
     width: 500px;
-    height: 400px;
-    border: solid 1px #000;
+    height: 400px;*/
+    /*border: solid 1px #000;*/
 }
 .vnfMonitorMem {
-   /* float: left;*/
-    width: 500px;
-    height: 400px;
+    float: left;
+    margin: 5px;
+    /*width: 500px;
+    height: 400px;*/
+    /*border: solid 1px #000;*/
+}
+.axis path {
+    fill: none;
+    stroke: #000;
+}
+/*
+.axis--y > path {
+    stroke-width: 1px;
+    transform:scale(0.1,1);
+}
+.axis--x > path {
+    stroke-width: 1px;
+    transform:scale(1,0.1);
+}
+*/
+.thresholdupper {
+    stroke: #f00;
+    stroke-width: 2px;
+    stroke-dasharray: 5,5;
+}
+.thresholdlower {
+    stroke: #00f;
+    stroke-width: 2px;
+    stroke-dasharray: 5,5;
+}
+.vnfMonitor svg {
     border: solid 1px #000;
 }
+.plotline {
+    fill: none;
+    stroke: #f00;
+    stroke-width: 3;
+}
+.line {
+    fill: none;
+    stroke: #f00;
+}
+#monitordiv{
+    clear:both;
 }
 </style>
 <script type="text/javascript">
@@ -72,15 +163,20 @@ function onStatus(status, response){
         if(newstatus.status == "DEPLOYED") {
             document.getElementById("undeploybtn").disabled = false;
             setStatusMsg(newstatus.status, "color:green;");
+            monitorLooping = true;
+            getMonitor();
         }
         if(newstatus.status == "UNDEPLOYED") {
             document.getElementById("undeploybtn").disabled = true;
             setStatusMsg(newstatus.status, "color:red;");
+            monitorLooping = false;
         }
         // Check for status change and update appropriate information
         if(currentStatus == null || currentStatus.packageCount != newstatus.packageCount)
             getPkgList();
         currentStatus = newstatus;
+    } else {
+        monitorLooping = false;
     }
     document.getElementById("statusbtn").disabled = false;
     actionPending = false;
@@ -153,10 +249,10 @@ function getPkgList() {
     ajax("GET", serverPrefix+"/status/packages", null ,"json", setPkgList);
 }
 
-currentMonitorFunctionList = null;
-currentMonitorData = null;
-currentMonitorD3 = null;
-currentMonitorDivs = null;
+var currentMonitorFunctionList = null;
+var currentMonitorData = null;
+var currentMonitorD3 = null;
+var currentMonitorDivs = null;
 
 function removeMonitorView() {
     var monitordiv = document.getElementById("monitordiv");
@@ -165,6 +261,291 @@ function removeMonitorView() {
     currentMonitorData = null;
 }
 
+/* Instance Graph */
+var graphSizes = {vnfnode:30,nsnode:20};
+
+d3cola = cola.d3adaptor();
+function addGraph(graph){
+    var graphdiv = document.getElementById("graphdiv");
+    var svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+    svg.setAttributeNS("http://www.w3.org/2000/xmlns/", "xmlns:xlink", "http://www.w3.org/1999/xlink");
+    graphdiv.appendChild(svg);
+    var svgd3 = d3.select(svg);
+
+    // define nodes
+    var nodes = [];
+        // add vnf nodes
+        for (var nodeName in graph.nodes) {
+            nodes.push({id:nodeName, name:nodeName, type:"vnfnode", vnfid:graph.nodes[nodeName].vnfId}); // TODO: Maybe add also other attributes?
+        }
+        // add ns nodes
+        for (var i=0; i<graph.nsPoints.length; i++) {
+            var nodeName = graph.nsPoints[i];
+            nodes.push({id:nodeName, name:nodeName, type:"nsnode"});
+        }
+
+    var links = [];
+        // add node to node links
+        for (var i=0; i<graph.nodeToNode.length; i++) {
+            var link = graph.nodeToNode[i];
+            links.push({source:link[0], target:link[1], type:"vnflink"});
+        }
+        // add ns to node links
+        for (var i=0; i<graph.nsPointToNode.length; i++) {
+            var link = graph.nsPointToNode[i];
+            links.push({source:link[0], target:link[1], type:"nslink"});
+        }
+
+    var svgSizes = {w: 1000, h: 400};
+    var randomPositions = {minY:20, maxY:400, minX:20, maxX:1100};
+    var pageBounds = { x: 0, y: 0, width: 1000, height: 400 };
+
+    // rectangle border
+    var borderTopLeft = { x: pageBounds.x, y: pageBounds.y, fixed: true , border: true, name:"bordertl"};
+    var borderBottomRight = { x: pageBounds.x + pageBounds.width, y: pageBounds.y + pageBounds.height, fixed: true , border: true, name:"borderbr"};
+    var tlIndex = nodes.push(borderTopLeft)-1;
+    var brIndex = nodes.push(borderBottomRight)-1;
+    
+    var constraints = [];
+
+    for (var i = 0; i < nodes.length; i++) { 
+        constraints.push({ axis: 'x', type: 'separation', left: tlIndex, right: i, gap: 5 });
+        constraints.push({ axis: 'y', type: 'separation', left: tlIndex, right: i, gap: 5 });
+        constraints.push({ axis: 'x', type: 'separation', left: i, right: brIndex, gap: 5 });
+        constraints.push({ axis: 'y', type: 'separation', left: i, right: brIndex, gap: 5 });
+    }
+
+
+    // add ids to links
+    var newLinks = [];
+    links.forEach(function(v,i,a){
+        var edge = v;
+        edge.source = nodes.filter(function(n){return n.id === v.source;})[0];
+        edge.target = nodes.filter(function(n){return n.id === v.target;})[0];
+        newLinks.push(edge);
+    });
+    links = newLinks;
+
+    /* create random positions*/
+    nodes.forEach(function(v,i,a){
+        if(v.border != true) {
+            var x = Math.random()*(randomPositions.maxX-randomPositions.minX)+randomPositions.minX;
+            var y = Math.random()*(randomPositions.maxY-randomPositions.minY)+randomPositions.minY;
+            v.x = x;
+            v.y = y;
+        }
+    });
+
+    
+    // Add special constraints
+    // Search for mgmt connection point
+    var mgmtId = null;
+    for (var i=0; i<nodes.length; i++) {
+        if (nodes[i].name === "mgmt") {
+            mgmtNode = nodes[i];
+            mgmtId = i;
+            break;
+        }
+    }
+    // Create constraints for mgmt node
+    if (mgmtId !== null) {
+        console.log("add mgmt constraint");
+        for (var i=0; i<nodes.length; i++) {
+            if (i != mgmtId && nodes[i].border != true) 
+                constraints.push({ axis: 'y', left: mgmtId, right: i, gap: 50 });
+        }
+    }
+    // Search for input ns nodes
+    var inputNsNodes = [];
+    var outputNsNodes = [];
+    for (var i=0; i<nodes.length; i++) {
+        if( nodes[i].type == "nsnode" && nodes[i].name.startsWith("input")) {
+            nodes[i].nstype = "input";
+            console.log("Add constraints for ns input "+nodes[i].name);
+            inputNsNodes.push(i);
+        }
+        if( nodes[i].type == "nsnode" && nodes[i].name.endsWith("output")) {
+            nodes[i].nstype = "output";
+            console.log("Add constraints for ns output "+nodes[i].name);
+            outputNsNodes.push(i);
+        }
+    }
+    // Add Constraints for input / output ns nodes
+    if (inputNsNodes.length > 0 || outputNsNodes.length > 0) {
+        for (var i=0; i<nodes.length; i++) {
+            if (nodes[i].border != true && nodes[i].nstype != "input") {
+                for (var ni=0; ni<inputNsNodes.length; ni++)
+                    constraints.push({ axis: 'x', left:inputNsNodes[ni] , right: i, gap: 50 });
+            }
+            if (nodes[i].border != true && nodes[i].nstype != "output") {
+                for (var ni=0; ni<outputNsNodes.length; ni++)
+                    constraints.push({ axis: 'x', left:i, right: outputNsNodes[ni], gap: 50 });
+            }
+        }
+    }
+    // Search for clusters of vnfids
+    var vnfIdClusters = {};
+    for (var i=0; i<nodes.length; i++) {
+        if (nodes[i].type == "vnfnode") {
+            if (vnfIdClusters[nodes[i].vnfid] === undefined)
+                vnfIdClusters[nodes[i].vnfid] = [];
+            vnfIdClusters[nodes[i].vnfid].push(i);
+        }
+    }
+    // Check if there are clusters with more than one node, add constraints for these nodes
+    for (var vnfid in vnfIdClusters) {
+        if (vnfIdClusters[vnfid].length > 1) {
+            console.log("Add cluster constraints for "+vnfid);
+            var clusterNodes = vnfIdClusters[vnfid];
+            for (var i=0; i<clusterNodes.length; i++) { // create order: node i is on top of all following nodes (all j)
+                for (var j=i+1; j<clusterNodes.length; j++) {
+                    constraints.push({ axis: 'y', left:clusterNodes[i], right: clusterNodes[j], gap: 40 });
+                }
+            }
+        }
+    }
+
+    /* create main svg*/
+    svgd3.attr("width", svgSizes.w).attr("height",svgSizes.h);
+    var bg_transform = [0,0];
+    var bg_scale = 1.0;
+    var bg1 = svgd3.append("rect").attr("class","graphbg").attr("width","100%").attr("height","100%");
+    var fakezoombox = svgd3.append("g").attr("transform","translate("+bg_transform[0]+","+bg_transform[1]+") scale("+bg_scale+")");
+    /* create border rect*/
+    var page = fakezoombox.append('rect').attr('id', 'graphpage').attr(pageBounds);
+ 
+    // Zoom
+    function zoomed(e) {
+      svgd3.attr("transform", "translate(" + d3.event.translate + ")scale(" + d3.event.scale + ")");
+      fakezoombox.attr("transform", "translate(" + d3.event.translate + ")scale(" + d3.event.scale + ")");
+    }
+
+    /*
+    var zoom = d3.behavior.zoom()
+    .scaleExtent([0.1, 50])
+    .on("zoom", zoomed);
+    */
+
+   
+
+    var bg = svgd3.append("rect").attr("class","graphzoombg").attr("width","100%").attr("height","100%");
+        //.call(zoom);
+
+    /* create translation box*/
+    svgd3 = svgd3.append("g").attr("transform","translate("+bg_transform[0]+","+bg_transform[1]+") scale("+bg_scale+")");
+
+
+
+    /* create link objects*/
+    var linklines = svgd3.selectAll("line").data(links).enter()
+    .append("line");
+    linklines.each(function(d){
+        d3.select(this)
+        .attr("class",d.type)
+        .attr("source",d.source.name)
+        .attr("target",d.target.name)
+        .attr('x1',function(d){ return d.source.x;})
+        .attr('y1',function(d){ return d.source.y;})
+        .attr('x2',function(d){ return d.target.x;})
+        .attr('y2',function(d){ return d.target.y;});
+    });
+
+    /* create node objects*/
+    var nodecirc = svgd3.selectAll("g").data(nodes).enter()
+        .append("g").attr("class","node");
+    nodecirc.each(function(d){
+
+        if (d.border == true) {
+            d.width = 30;
+            d.height = 30;
+            return;
+        }
+
+        d3.select(this).append("circle")
+            .attr("class", d.type)
+            .attr("r", graphSizes[d.type])
+            .attr("cx", d.x)
+            .attr("cy", d.y);
+        d3.select(this)
+            .append("text")
+            .attr("class","nodetext")
+            .attr("x",d.x)
+            .attr("y",d.y-graphSizes[d.type]-5)
+            .text(function(d){return d.name;});
+
+        d.width = graphSizes[d.type];
+        d.height = graphSizes[d.type];
+        if (d.type === "nsnode" || d.type === "vnfnode") {
+            d3.select(this).call(d3cola.drag)
+                .on('mouseup', function (d) {
+                    d.fixed = 1;
+                    d3cola.avoidOverlaps(true);
+                    d3cola.alpha(1); // fire it off again to satify gridify
+                }).on("mousedown", safeDragStart);
+            d3.select(this).on("dblclick", function(d){d.fixed = 0; d3cola.resume();});
+        }
+    });
+
+    d3cola.linkDistance(function(e){
+        if(e.type === "vnflink")
+            return 100;
+        if(e.type === "nslink")
+            return 120;
+        return 20;
+    })
+    .size([svgSizes.w/2,svgSizes.h/2]);
+
+    d3cola.nodes(nodes).links(links);
+
+    d3cola.on('tick',function(){
+        window.requestAnimationFrame(function(){
+            linklines
+                .attr('x1',function(d){ return d.source.x;})
+                .attr('y1',function(d){ return d.source.y;})
+                .attr('x2',function(d){ return d.target.x;})
+                .attr('y2',function(d){ return d.target.y;});
+
+
+            //console.log(nodecirc);
+            nodecirc.each(function(d){
+                d3.select(this).select("circle")
+                    .attr("r", graphSizes[d.type])
+                    .attr("cx", d.x)
+                    .attr("cy", d.y);
+                d3.select(this).select("text")
+                 .attr("x", d.x)
+                 .attr("y", d.y-graphSizes[d.type]-5);
+            });
+            
+        });
+    });
+
+    d3cola
+    .constraints(constraints)
+    .handleDisconnected(false)
+    //.avoidOverlaps(true)
+    .start();
+
+        
+}
+
+safeDragNode = null;
+
+function safeDragStart(e) {
+    safeDragNode = e;
+    d3cola.avoidOverlaps(false);
+}
+
+function safeDragStop(e) {
+    if(safeDragNode != null) {
+        safeDragNode.fixed = 1;
+        safeDragNode = null;
+    }
+}
+
+document.addEventListener('mouseup',safeDragStop,false);
+
+/* Line plots */
 function updateMonitorView(monitorData) {
     if(currentMonitorData == null)
         return;
@@ -192,29 +573,9 @@ function updateMonitorView(monitorData) {
     var monitordiv = document.getElementById("monitordiv");
     var functionDivList = [];
     for(var i=0; i<newFunctions.length; i++) {
-        var newFunctionDiv = document.createElement("div");
-        newFunctionDiv.setAttribute("class","vnfMonitor");
-        var monitorLabelDiv = document.createElement("div");
-        monitorLabelDiv.setAttribute("class","vnfMonitorLabel");
-        monitorLabelDiv.appendChild(document.createTextNode(functionList[i]));
-        var newCpuDiv = document.createElement("div");
-        newCpuDiv.setAttribute("class","vnfMonitorCpu");
-        var newMemDiv = document.createElement("div");
-        newMemDiv.setAttribute("class","vnfMonitorMem");
-        newFunctionDiv.appendChild(monitorLabelDiv);
-        newFunctionDiv.appendChild(newCpuDiv);
-        newFunctionDiv.appendChild(newMemDiv);
-        // Add d3 stuff
-        var cpuSvg = document.createElement("svg");
-        var cpuSvgd3 = d3.select(cpuSvg);
-        var cpud3 = setupD3Svg(cpuSvgd3, newFunctions[i], monitorData.monitorHistoryData[newFunctions[i]], "CPU_%");
-        var memSvg = document.createElement("svg");
-        var memSvgd3 = d3.select(memSvg);
-        var memd3 = setupD3Svg(memSvgd3, newFunctions[i], monitorData.monitorHistoryData[newFunctions[i]], "MEM_%");
-        newCpuDiv.appendChild(cpuSvg);
-        newMemDiv.appendChild(memSvg);
-        currentMonitorD3[newFunctions[i]] = {cpu:cpud3,mem:memd3};
-        currentMonitorDivs[newFunctions[i]] = newFunctionDiv;
+
+        var newFunctionDiv = createPlot(newFunctions[i], monitorData);
+        updatePlot(newFunctions[i], monitorData)
         functionDivList.push(newFunctionDiv);
     }
     for (var i=0; i<functionDivList; i++) {
@@ -222,58 +583,207 @@ function updateMonitorView(monitorData) {
     }
     // Update data for old functions
     for(var i=0; i<oldFunctions.length; i++) {
-        var datapath = currentMonitorD3[oldFunctions[i]];
-        datapath.datum(data);
+
+        updatePlot(oldFunctions[i], monitorData);
     }
     currentMonitorData = monitorData;
     currentMonitorFunctionList = newFunctionList;
 }
 
-function setupD3Svg(svg, name, data, dataKey) {
-    var width = 500;
-    var height = 400;
-    var margin = {top: 2, right: 2, bottom: 3, left: 5};
-    svg.attr("width", width);
-    svg.attr("height", height);
-    var svgWidth = +svg.attr("width") - margin.left - margin.right;
-    var svgHeight = +svg.attr("height") - margin.top - margin.bottom;
-    var g = svg.append("g").attr("transform", "translate(" + margin.left + "," + margin.top + ")");
-    var x = d3.scaleTime()
-    .rangeRound([0, width]);
-    var y = d3.scaleLinear()
-    .rangeRound([height, 0]);
-    var line = d3.line()
+function defineSvgSize(dataKey){
+    if (dataKey === "CPU_%") {
+        var svgWidth = 500;
+        var svgHeight = 400;
+        var margin = {top: 20, right: 20, bottom: 30, left: 40};
+    } else { // "MEM_used"
+        var svgWidth = 600;
+        var svgHeight = 400;
+        var margin = {top: 20, right: 20, bottom: 30, left: 140};
+    }
+        var width = svgWidth - margin.left - margin.right;
+        var height = svgHeight - margin.top - margin.bottom;
+    return {
+        svgWidth: svgWidth,
+        svgHeight: svgHeight,
+        margin: margin,
+        width: width,
+        height: height
+    };
+}
+
+function createPlot(funname, monitorData){
+
+    console.log("create div for function "+funname);
+    // add monitor divs
+    var newFunctionDiv = document.createElement("div");
+    newFunctionDiv.setAttribute("class","vnfMonitor");
+    var monitorLabelDiv = document.createElement("h3");
+    monitorLabelDiv.setAttribute("class","vnfMonitorLabel");
+    monitorLabelDiv.appendChild(document.createTextNode(funname));
+    var currentStatsDiv = document.createElement("div");
+    currentStatsDiv.setAttribute("class", "vnfMonitorCurrent");
+    var newCpuDiv = document.createElement("div");
+    newCpuDiv.setAttribute("class","vnfMonitorCpu");
+    var newMemDiv = document.createElement("div");
+    newMemDiv.setAttribute("class","vnfMonitorMem");
+    newFunctionDiv.appendChild(monitorLabelDiv);
+    newFunctionDiv.appendChild(currentStatsDiv);
+    newFunctionDiv.appendChild(newCpuDiv);
+    newFunctionDiv.appendChild(newMemDiv);
+
+    var data = monitorData.monitorHistoryData[funname];
+    var currentStat = data[data.length-1];
+
+    // Add d3 stuff
+    // cpu divs
+    var cpuSvg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+    cpuSvg.setAttributeNS("http://www.w3.org/2000/xmlns/", "xmlns:xlink", "http://www.w3.org/1999/xlink");
+        var cpuLabel = document.createElement("center");
+        cpuLabel.appendChild(document.createTextNode("CPU utilization (load)"));
+    newCpuDiv.appendChild(cpuLabel);
+    newCpuDiv.appendChild(cpuSvg);
+    var cpuSvgd3 = d3.select(cpuSvg);
+
+    // mem divs
+    var memSvg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+    memSvg.setAttributeNS("http://www.w3.org/2000/xmlns/", "xmlns:xlink", "http://www.w3.org/1999/xlink");
+        var memLabel = document.createElement("center");
+        memLabel.appendChild(document.createTextNode("Memory utilization (bytes)"));
+    newMemDiv.appendChild(memLabel);
+    newMemDiv.appendChild(memSvg);
+    var memSvgd3 = d3.select(memSvg);
+
+    setupD3Svg(cpuSvgd3, "CPU_%");
+    setupD3Svg(memSvgd3, "MEM_used");
+
+    currentMonitorD3[funname] = {cpu:cpuSvgd3, mem:memSvgd3, currentStatsDiv:currentStatsDiv};
+    currentMonitorDivs[funname] = newFunctionDiv;
+    return newFunctionDiv;
+}
+
+function updatePlot(funname, monitorData){
+    var data = monitorData.monitorHistoryData[funname];
+
+    if (data.length == 0)
+        return;
+
+    var datapath = currentMonitorD3[funname];
+    var currentStat = data[data.length-1];
+
+    if(currentStat["SYS_time"] == datapath.lastTimestamp)
+        return;
+
+    datapath.lastTimestamp = currentStat["SYS_time"];
+
+    var currentStatsDiv = datapath.currentStatsDiv;
+    while (currentStatsDiv.childNodes.length > 0)
+        currentStatsDiv.removeChild(currentStatsDiv.firstChild);
+
+    currentStatsDiv.appendChild(document.createTextNode(
+        "Currently: CPU (load) " + currentStat["CPU_%"].toPrecision(3) + " Memory (bytes) " + currentStat["MEM_used"] + " Time " + new Date(currentStat["SYS_time"]/1000000)
+        ));
+
+    // prepare thresholds
+    var vnfid = monitorData.functions[funname].vnfId;
+    var thresholds = null;
+    for(var ti=0; ti<monitorData.thresholds.length; ti++) {
+        if(monitorData.thresholds[ti].vnfId == vnfid){
+            thresholds = monitorData.thresholds[ti];
+            break;
+        }
+    }
+
+    updateD3Svg(datapath.cpu, funname, data, "CPU_%", [0, data[0]["CPU_cores"]], ",.1f", thresholds);
+    updateD3Svg(datapath.mem, funname, data, "MEM_used", [0, data[0]["MEM_limit"]], ",i", thresholds);
+}
+
+function updateD3Svg(svg, name, data, dataKey, limit, format, thresholds) {
+    var sizes = defineSvgSize(dataKey);
+    var plot;
+    svg.select(".plot")
+        .attr("transform", "translate(" + sizes.margin.left + "," + sizes.margin.top + ")");
+    
+    var x = d3.time.scale()
+    .rangeRound([0, sizes.width]);
+    var y = d3.scale.linear()
+    .rangeRound([sizes.height, 0]);
+
+    var xextent = d3.extent(data, function(d) { return new Date(d["SYS_time"]/1000000); });
+    var yextent = limit;
+
+    var line = d3.svg.line()
     .x(function(d) { return x(new Date(d["SYS_time"]/1000000)); })
     .y(function(d) { return y(d[dataKey]); });
-    x.domain(d3.extent(data, function(d) { return new Date(d["SYS_time"]/1000000); }));
-    y.domain(d3.extent(data, function(d) { return d[dataKey]; }));
+    x.domain(xextent);
+    y.domain(yextent);
+
+    svg.select(".axis--x")
+        .attr("transform", "translate(0," + sizes.height + ")")
+        .call(d3.svg.axis().scale(x).orient("bottom").ticks(5));
+    svg.select(".axis--y")
+        .call(d3.svg.axis().tickFormat(d3.format(format)).scale(y).orient("left").ticks(10));
+
+    var thresholdline = d3.svg.line()
+    .x(function(d) { return x(d.time); })
+    .y(function(d) { return y(d.data); });
+    x.domain(xextent);
+    y.domain(yextent);
+
+    if(dataKey == "CPU_%") {
+        var upperkey = "cpu_upper_l";
+        var lowerkey = "cpu_lower_l";
+    } else {
+        var upperkey = "mem_upper_l";
+        var lowerkey = "mem_lower_l";
+    }
+
+    svg.select(".thresholdupper")
+        .datum([{time:xextent[0],data:yextent[1]*0.01*thresholds[upperkey]},
+                {time:xextent[1],data:yextent[1]*0.01*thresholds[upperkey]}])
+        .attr("d", thresholdline);
+
+    svg.select(".thresholdlower")
+        .datum([{time:xextent[0],data:yextent[1]*0.01*thresholds[lowerkey]},
+                {time:xextent[1],data:yextent[1]*0.01*thresholds[lowerkey]}])
+        .attr("d", thresholdline);
+
+    svg.select(".plotline")
+        .datum(data)
+        .attr("d", line);
+    
+}
+
+function setupD3Svg(svg, dataKey) {
+    var sizes = defineSvgSize(dataKey);
+    svg.attr("width", sizes.svgWidth);
+    svg.attr("height", sizes.svgHeight);
+    var g = svg.append("g").attr("class", "plot");
+    
+    g.append("g")
+       .attr("class", "axis axis--x");    
 
     g.append("g")
-       .attr("class", "axis axis--x")
-       .attr("transform", "translate(0," + height + ")")
-       .call(d3.axisBottom(x));
+      .attr("class", "axis axis--y");
 
-    g.append("g")
-      .attr("class", "axis axis--y")
-      .call(d3.axisLeft(y));
-    /*
-    .append("text")
-      .attr("fill", "#000")
-      .attr("transform", "rotate(-90)")
-      .attr("y", 6)
-      .attr("dy", "0.71em")
-      .style("text-anchor", "end")
-      .text("Price ($)");
-    */
+    g.append("path")
+        .attr("class", "plotline");
 
-    var datapath = g.append("path")
-      .datum(data)
-      .attr("class", "line")
-      .attr("d", line);
-    return datapath;
+    g.append("path")
+        .attr("class", "thresholdupper");
+
+    g.append("path")
+        .attr("class", "thresholdlower");
 }
 
 function createMonitorView(monitorData) {
+    // first check monitor data
+    if (monitorData.monitorHistoryData[monitorData.monitorFunctions[0]].length == 0)
+        return;
+
+    console.log(monitorData);
+    console.log("createGraph");
+    addGraph(monitorData.graph);
+
     console.log("createMonitorView");
     var monitordiv = document.getElementById("monitordiv");
     var functionList = monitorData.monitorFunctions;
@@ -282,35 +792,11 @@ function createMonitorView(monitorData) {
     currentMonitorDivs = {};
     var dummy = [{"SYS_time":123,"CPU_used":123,"MEM_used":123},{"SYS_time":125,"CPU_used":123,"MEM_used":123},{"SYS_time":124,"CPU_used":123,"MEM_used":123}];
     for (var i=0; i<functionList.length; i++) {
-        console.log("create div for function "+functionList[i]);
-        var newFunctionDiv = document.createElement("div");
-        newFunctionDiv.setAttribute("class","vnfMonitor");
-        var monitorLabelDiv = document.createElement("div");
-        monitorLabelDiv.setAttribute("class","vnfMonitorLabel");
-        monitorLabelDiv.appendChild(document.createTextNode(functionList[i]));
-        var newCpuDiv = document.createElement("div");
-        newCpuDiv.setAttribute("class","vnfMonitorCpu");
-        var newMemDiv = document.createElement("div");
-        newMemDiv.setAttribute("class","vnfMonitorMem");
-        newFunctionDiv.appendChild(monitorLabelDiv);
-        newFunctionDiv.appendChild(newCpuDiv);
-        newFunctionDiv.appendChild(newMemDiv);
-        // Add d3 stuff
-        var cpuSvg = document.createElement("svg");
-        var cpuSvgd3 = d3.select(cpuSvg);
-        var data = monitorData.monitorHistoryData[functionList[i]];
-        for (var i=0; i<data.length; i++) {
-            data[i]["x"] = i;
-            console.log(new Date(data[i]["SYS_time"]/1000000));
-        }
-        var cpud3 = setupD3Svg(cpuSvgd3, functionList[i], data, "x");
-        var memSvg = document.createElement("svg");
-        var memSvgd3 = d3.select(memSvg);
-        var memd3 = setupD3Svg(memSvgd3, functionList[i], data, "MEM_used");
-        newCpuDiv.appendChild(cpuSvg);
-        newMemDiv.appendChild(memSvg);
-        currentMonitorD3[functionList[i]] = {cpu:cpud3,mem:memd3};
-        currentMonitorDivs[functionList[i]] = newFunctionDiv;
+
+        var newFunctionDiv = createPlot(functionList[i], monitorData);
+
+        updatePlot(functionList[i], monitorData)
+
         functionDivList.push(newFunctionDiv);
     }
     currentMonitorFunctionList = functionList;
@@ -321,13 +807,23 @@ function createMonitorView(monitorData) {
     currentMonitorData = monitorData;
 }
 
+
+
+var monitorLooping = false;
+
+function monitorLoop() {
+    getMonitor();
+}
+
 function onMonitor(status, response) {
     if (status != 200)
         return;
     if (currentMonitorData == null) 
         createMonitorView(response);
     else
-        updateMonitorView();
+        updateMonitorView(response);
+    if (monitorLooping == true)
+        setTimeout(monitorLoop, 2000);
 }
 
 function getMonitor() {
@@ -347,12 +843,11 @@ function init() {
 <button id="statusbtn" onclick="checkStatus();">Check</button>
 <button id="undeploybtn" onclick="undeploy();" disabled="true">Undeploy</button>
 </div>
-
+<div id="graphdiv"></div>
 <h3>Monitoring</h3>
 <div id="monitordiv"></div>
-
-<h3>Package list</h3>
+<br/>
+<h3 style="clear:both;">Package list</h3>
 <div id="pkglist"></div>
-
 </body>
 </html>

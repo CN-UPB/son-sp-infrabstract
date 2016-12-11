@@ -35,15 +35,34 @@ public class MiniStatusServer {
 
     final static Logger logger = Logger.getLogger(MiniStatusServer.class);
 
-    public static Path rootPath = Paths.get("sandman","placement","YAML","static");
-    public static String root = rootPath.toString();
-    public static File rootFile = rootPath.toFile();
+    public static Path[] rootPaths = new Path[]{
+
+            Paths.get("placement","YAML","static"),
+            Paths.get("sandman","placement","YAML","static")
+    };
+
+    public static Path rootPath = null;
+    public static String root = null;
+    public static File rootFile = null;
 
     public static Map<String,String> extMimeMap = new HashMap<String,String>();
 
     static {
-        if (!rootFile.exists())
-            logger.error("Path does not exist "+root);
+
+        for(Path rootP: rootPaths) {
+            if (rootP.toFile().exists()) {
+                rootPath = rootP;
+                root = rootPath.toString();
+                rootFile = rootPath.toFile();
+            }
+        }
+
+        if (rootPath == null) {
+            logger.error("No root path found");
+        } else {
+            logger.info("Found root path " + rootFile.getAbsolutePath());
+        }
+
         extMimeMap.put("json","application/json");
         extMimeMap.put("js","application/javascript; charset=utf-8");
         extMimeMap.put("css","text/css");
@@ -196,7 +215,13 @@ public class MiniStatusServer {
     }
 
     public static NanoHTTPD.Response serveStatic(NanoHTTPD.IHTTPSession session) {
+
         String uri = session.getUri();
+
+        if (rootPath == null) {
+            logger.debug("404 - "+uri);
+            return newFixedLengthResponse(NanoHTTPD.Response.Status.NOT_FOUND, null, null);
+        }
 
         if(uri.startsWith("/static"))
             uri = uri.substring(7);

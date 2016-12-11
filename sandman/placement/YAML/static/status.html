@@ -663,6 +663,10 @@ function createPlot(funname, monitorData){
 
 function updatePlot(funname, monitorData){
     var data = monitorData.monitorHistoryData[funname];
+
+    if (data.length == 0)
+        return;
+
     var datapath = currentMonitorD3[funname];
     var currentStat = data[data.length-1];
 

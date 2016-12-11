@@ -119,9 +119,10 @@ public class FunctionMonitor implements FutureCallback<HttpResponse> {
         return stats;
     }
 
-    public boolean equals(FunctionMonitor monitor){
-        if(monitor == null)
+    public boolean equals(Object obj){
+        if(obj == null || ! (obj instanceof FunctionMonitor))
             return false;
+        FunctionMonitor monitor = (FunctionMonitor)obj;
         if(dc.getPopName().equals(monitor.dc.getPopName()) &&
            stack.equals(monitor.stack) &&
            function.equals(monitor.function))

@@ -191,6 +191,30 @@ public class ServiceInstanceManager {
         return;
     }
 
+    protected void internal_add_mgmt_link(FunctionInstance f_inst){
+
+        logger.debug("Add internal mgmt link "+f_inst.getName());
+        VirtualLink link = new VirtualLink();
+        link.setId("mgmt");
+        LinkInstance linkInstance = new LinkInstance(link, "nslink:mgmt");
+        linkInstance.interfaceList.put(f_inst, f_inst.function.getVnfId()+":mgmt");
+
+        int id;
+        if (instance.outerlink_list.get(link.getId()) == null) {
+            AtomicInteger vnf_vlinkid = new AtomicInteger(0);
+            id = vnf_vlinkid.addAndGet(1);
+            vnf_vlinkid.set(id);
+            instance.vnf_vlinkid.put(link.getId(), vnf_vlinkid);
+            Map<String, LinkInstance> map = new HashMap<String, LinkInstance>();
+            map.put(link.getId() + ":" + id, linkInstance);
+            instance.outerlink_list.put(link.getId(), map);
+        } else {
+            id = instance.vnf_vlinkid.get(link.getId()).addAndGet(1);
+            instance.vnf_vlinkid.get(link.getId()).set(id);
+            instance.outerlink_list.get(link.getId()).put(link.getId() + ":" + id, linkInstance);
+        }
+    }
+
     protected void update_ns_link(FunctionInstance f_inst)
     {
         ArrayList<VirtualLink> virtual_links = Lists.newArrayList(instance.service.getVirtualLinks());
@@ -202,7 +226,7 @@ public class ServiceInstanceManager {
             boolean is_nslink = false;
 
             for (String cp_ref : link.getConnectionPointsReference()) {
-
+System.out.println("update_ns_link "+link.getId()+"  "+cp_ref);
                 String[] cp_ref_str = cp_ref.split(":");
                 assert cp_ref_str != null && cp_ref_str.length == 2 : "Virtual Link " + link.getId() + " uses odd vnf reference " + cp_ref;
                 String vnfid = cp_ref_str[0];
@@ -220,19 +244,18 @@ public class ServiceInstanceManager {
                             + " that does not contain link for connection point " + connectionPointName;
                     linkInstance.interfaceList.put(f_inst, cp_ref);
                     do_not = false; //Do not add to outerlink list. Not a NS link.
-                } else {
-                    break;
                 }
 
             }
             if(do_not)
                 continue;
 
-            if(linkInstance.isMgmtLink())
-                continue;
+            //if(linkInstance.isMgmtLink())
+            //    continue;
 
             int id;
             if (is_nslink) {
+                System.out.println("Add to outerlink list");
                 if (instance.outerlink_list.get(link.getId()) == null) {
                     AtomicInteger vnf_vlinkid = new AtomicInteger(0);
                     id = vnf_vlinkid.addAndGet(1);
@@ -442,6 +465,7 @@ public class ServiceInstanceManager {
             /*
             Special network functions: Load balancers etc.
              */
+                logger.debug("Add instance of unknown function "+vnf_id);
                 Catalogue.loadInternalFunctions();
                 VnfDescriptor descriptor = Catalogue.internalFunctions.get(vnf_id);
                 assert descriptor != null : "Virtual Network Function " + vnf_id + " not found";
@@ -475,8 +499,10 @@ public class ServiceInstanceManager {
                 map.put(n_function.getVnfId() + id, function_instance);
                 instance.function_list.put(n_function.getVnfId(), map);
 
-            } else {
+                internal_add_mgmt_link(function_instance);
 
+            } else {
+                logger.debug("Add instance of known function "+vnf_id);
                 VnfDescriptor descriptor = nw_function_desc_map.get(network_functions_db.get(vnf_id).getVnfName());
                 assert descriptor != null : "Virtual Network Function " + vnf_id + " not found";
 
@@ -499,6 +525,7 @@ public class ServiceInstanceManager {
 
             }
         } else if (action == ACTION_TYPE.DELETE_INSTANCE) {
+            logger.debug("Delete instance of function "+vnf_id+" with name "+vnf_name);
             if (instance.function_list.get(vnf_id) == null) {
                 logger.error("Virtual Network Function " + vnf_id + " not found");
             } else {

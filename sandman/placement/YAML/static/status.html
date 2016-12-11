@@ -201,6 +201,17 @@ function undeploy() {
     ajax("GET", "/undeploy", null, "json", onUndeploy);
 }
 
+function scaleout(){
+    document.getElementById("scaleoutbtn").disabled = true;
+    ajax("GET", "/scaleout", null, "json", function(){
+        (monitorLoop, 2000);
+        setTimeout(function(){
+                document.getElementById("scaleoutbtn").disabled = false;
+                location.reload(true);
+            }, 5000);
+        });
+}
+
 function onDeploy(status, response){
     if(status == 201) {        
     } else {
@@ -495,7 +506,15 @@ function addGraph(graph){
     })
     .size([svgSizes.w/2,svgSizes.h/2]);
 
-    d3cola.nodes(nodes).links(links);
+    var colalinks = [];
+    for (var i=0; i<links.length; i++) {
+        console.log(links[i]);
+        if (links[i].source.name != "mgmt" && links[i].target.name != "mgmt") {
+            colalinks.push(links[i]);
+        }
+    }
+
+    d3cola.nodes(nodes).links(colalinks);
 
     d3cola.on('tick',function(){
         window.requestAnimationFrame(function(){
@@ -844,6 +863,7 @@ function init() {
 <span>Status: <strong><span id="status"></span></strong></span>
 <button id="statusbtn" onclick="checkStatus();">Check</button>
 <button id="undeploybtn" onclick="undeploy();" disabled="true">Undeploy</button>
+<button id="scaleoutbtn" onclick="scaleout();" >ScaleOut</button>
 </div>
 <div id="graphdiv"></div>
 <h3>Monitoring</h3>

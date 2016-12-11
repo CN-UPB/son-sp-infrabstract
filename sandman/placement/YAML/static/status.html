@@ -737,15 +737,17 @@ function updateD3Svg(svg, name, data, dataKey, limit, format, thresholds) {
         var lowerkey = "mem_lower_l";
     }
 
-    svg.select(".thresholdupper")
-        .datum([{time:xextent[0],data:yextent[1]*0.01*thresholds[upperkey]},
-                {time:xextent[1],data:yextent[1]*0.01*thresholds[upperkey]}])
-        .attr("d", thresholdline);
+    if (thresholds != null) {
+        svg.select(".thresholdupper")
+            .datum([{time:xextent[0],data:yextent[1]*0.01*thresholds[upperkey]},
+                    {time:xextent[1],data:yextent[1]*0.01*thresholds[upperkey]}])
+            .attr("d", thresholdline);
 
-    svg.select(".thresholdlower")
-        .datum([{time:xextent[0],data:yextent[1]*0.01*thresholds[lowerkey]},
-                {time:xextent[1],data:yextent[1]*0.01*thresholds[lowerkey]}])
-        .attr("d", thresholdline);
+        svg.select(".thresholdlower")
+            .datum([{time:xextent[0],data:yextent[1]*0.01*thresholds[lowerkey]},
+                    {time:xextent[1],data:yextent[1]*0.01*thresholds[lowerkey]}])
+            .attr("d", thresholdline);
+    }
 
     svg.select(".plotline")
         .datum(data)

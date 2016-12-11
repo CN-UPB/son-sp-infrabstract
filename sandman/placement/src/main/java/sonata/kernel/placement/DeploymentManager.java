@@ -214,37 +214,39 @@ public class DeploymentManager implements Runnable{
     public static void undeploy(MessageQueue.MessageQueueUnDeployData message){
 
         try {
-            try {
-                MonitorManager.stopAndRemoveAllMonitors();
-            } catch (Exception e) {
-                logger.error(e);
-                logger.trace(e);
-            }
+            if (currentInstance != null) {
+                try {
+                    MonitorManager.stopAndRemoveAllMonitors();
+                } catch (Exception e) {
+                    logger.error(e);
+                    logger.trace(e);
+                }
 
-            try {
-                unchain(currentChaining);
-            } catch (Exception e) {
-                logger.error(e);
-                logger.trace(e);
-            }
+                try {
+                    unchain(currentChaining);
+                } catch (Exception e) {
+                    logger.error(e);
+                    logger.trace(e);
+                }
 
-            // Loadbalancing
-            try {
-                unloadbalance(currentLoadbalanceMap.values());
-            } catch (Exception e) {
-                logger.error(e);
-                logger.trace(e);
-            }
+                // Loadbalancing
+                try {
+                    unloadbalance(currentLoadbalanceMap.values());
+                } catch (Exception e) {
+                    logger.error(e);
+                    logger.trace(e);
+                }
 
-            if (currentMapping != null) {
-                List<PopResource> popList = new ArrayList<PopResource>();
-                popList.addAll(currentMapping.popMapping.values());
-                for (PopResource pop : popList) {
-                    String stackName = dcStackMap.get(pop.getPopName());
-                    try {
-                        undeployStack(pop, stackName);
-                    } catch (Exception e) {
-                        logger.error(e);
+                if (currentMapping != null) {
+                    List<PopResource> popList = new ArrayList<PopResource>();
+                    popList.addAll(currentMapping.popMapping.values());
+                    for (PopResource pop : popList) {
+                        String stackName = dcStackMap.get(pop.getPopName());
+                        try {
+                            undeployStack(pop, stackName);
+                        } catch (Exception e) {
+                            logger.error(e);
+                        }
                     }
                 }
             }
@@ -274,6 +276,9 @@ public class DeploymentManager implements Runnable{
         // TODO: For ... reasons don't do anything at this moment
         //if(true)
         //    return;
+
+        if(currentInstance == null)
+            return;
 
         PlacementConfig config = PlacementConfigLoader.loadPlacementConfig();
         PlacementPlugin plugin = PlacementPluginLoader.placementPlugin;

@@ -12,8 +12,12 @@ import org.apache.log4j.Logger;
 import org.jaxen.Function;
 import org.openstack4j.api.Builders;
 import org.openstack4j.api.OSClient;
+import org.openstack4j.model.common.ActionResponse;
 import org.openstack4j.model.heat.Stack;
+import org.openstack4j.model.heat.StackUpdate;
+import org.openstack4j.model.heat.builder.StackUpdateBuilder;
 import org.openstack4j.openstack.OSFactory;
+import org.openstack4j.openstack.heat.domain.HeatStackUpdate;
 import sonata.kernel.VimAdaptor.commons.DeployServiceData;
 import sonata.kernel.VimAdaptor.commons.heat.HeatResource;
 import sonata.kernel.VimAdaptor.commons.heat.HeatTemplate;
@@ -210,6 +214,28 @@ public class DeploymentManager implements Runnable{
                     .name(stackName)
                     .template(templateJsonString)
                     .timeoutMins(5L).build());
+
+        } catch (Exception e) {
+            e.printStackTrace();
+            logger.error(e);
+            logger.trace(e);
+        }
+    }
+
+    public static void updateStack(PopResource pop, String stackName, String templateJsonString){
+        try {
+            OSClient.OSClientV2 os = OSFactory.builderV2()
+                    .endpoint(pop.getEndpoint())
+                    .credentials(pop.getUserName(), pop.getPassword())
+                    .tenantName(pop.getTenantName())
+                    .authenticate();
+
+            // First get stack id
+            Stack stack = os.heat().stacks().getStackByName(stackName);
+            // Send updated template
+            ActionResponse x = os.heat().stacks().update(stackName, stack.getId(),
+                    Builders.stackUpdate().template(templateJsonString).timeoutMins(5L).build());
+
         } catch (Exception e) {
             e.printStackTrace();
             logger.error(e);
@@ -363,7 +389,7 @@ public class DeploymentManager implements Runnable{
             logger.debug("Template for datacenter: "+popName+" Stack name: "+stackName);
             logger.debug(templateStr);
 
-            deployStack(pop, stackName, templateStr);
+            updateStack(pop, stackName, templateStr);
 
             List<String> popNodes = new ArrayList<String>();
             dcStackMap.put(popName, stackName);

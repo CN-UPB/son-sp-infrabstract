@@ -50,6 +50,8 @@ public class DeploymentManager implements Runnable{
     static List<String> currentNodes;
 
 
+    static MonitorMessage.SCALE_TYPE nextScale = null;
+
     public void run(){
         while (true) {
 
@@ -79,8 +81,10 @@ public class DeploymentManager implements Runnable{
                     MessageQueue.MessageQueueMonitorData monitorMessage = (MessageQueue.MessageQueueMonitorData) message;
                     monitor(monitorMessage);
                 }
-            } catch (InterruptedException e) {
+            } catch (Exception e) {
                 e.printStackTrace();
+                logger.error(e);
+                logger.trace(e);
             }
         }
     }
@@ -268,16 +272,29 @@ public class DeploymentManager implements Runnable{
     public static void monitor(MessageQueue.MessageQueueMonitorData message){
 
         // TODO: For ... reasons don't do anything at this moment
-        if(true)
-            return;
+        //if(true)
+        //    return;
 
         PlacementConfig config = PlacementConfigLoader.loadPlacementConfig();
         PlacementPlugin plugin = PlacementPluginLoader.placementPlugin;
 
-        MonitorMessage monitorMessage = new MonitorMessage(MonitorMessage.SCALE_TYPE.MONITOR_STATS, message.statsMap, message.statsHistoryMap);
+        MonitorMessage monitorMessage;
+
+        if (message.fakeScaleType != null) {
+            nextScale = message.fakeScaleType;
+            return;
+        }
+
+        if (nextScale == null)
+            monitorMessage = new MonitorMessage(MonitorMessage.SCALE_TYPE.MONITOR_STATS, message.statsMap, message.statsHistoryMap);
+        else {
+            monitorMessage = new MonitorMessage(nextScale, message.statsMap, message.statsHistoryMap);
+            nextScale = null;
+        }
+
         ServiceInstance instance = plugin.updateScaling(currentDeployData, currentInstance, monitorMessage);
 
-        if (monitorMessage.type == MonitorMessage.SCALE_TYPE.NO_SCALE) {
+        if (instance == null || monitorMessage.type == MonitorMessage.SCALE_TYPE.MONITOR_STATS || monitorMessage.type == MonitorMessage.SCALE_TYPE.NO_SCALE) {
             return;
         }
 

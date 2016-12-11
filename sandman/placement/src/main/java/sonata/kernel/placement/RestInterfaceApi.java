@@ -31,7 +31,9 @@ import com.fasterxml.jackson.dataformat.yaml.YAMLFactory;
 import sonata.kernel.VimAdaptor.commons.nsd.ServiceDescriptor;
 import sonata.kernel.VimAdaptor.commons.vnfd.Unit;
 import sonata.kernel.VimAdaptor.commons.vnfd.UnitDeserializer;
+import sonata.kernel.placement.monitor.MonitorManager;
 import sonata.kernel.placement.pd.SonataPackage;
+import sonata.kernel.placement.service.MonitorMessage;
 
 class RestInterfaceServerApi extends NanoHTTPD implements Runnable {
     final Logger logger = Logger.getLogger(RestInterfaceServerApi.class);
@@ -172,6 +174,48 @@ class RestInterfaceServerApi extends NanoHTTPD implements Runnable {
                 }
                 else
                     return newFixedLengthResponse(new Status(message.responseId, message.responseMessage), null, null);
+            }
+            else
+            if("/scaleout".equals(uri) && session.getMethod().equals(Method.GET)) {
+                logger.info("Fake Scale Out Message");
+
+                MessageQueue.MessageQueueMonitorData message = new MessageQueue.MessageQueueMonitorData(null, null);
+                message.fakeScaleType = MonitorMessage.SCALE_TYPE.SCALE_OUT;
+                MessageQueue.get_deploymentQ().put(message);
+                /*
+                synchronized(message) {
+                    message.wait(10000);
+                }
+
+                if(message.responseId == -1) {
+                    logger.debug("Undeployment timed out.");
+                    return newFixedLengthResponse(new Status(504, "Undeployment is pending"), null, null);
+                }
+                else
+                    return newFixedLengthResponse(new Status(message.responseId, message.responseMessage), null, null);
+                */
+                return newFixedLengthResponse(new Status(200, "OK"), null, null);
+            }
+            else
+            if("/scalein".equals(uri) && session.getMethod().equals(Method.GET)) {
+                logger.info("Fake Scale In Message");
+
+                MessageQueue.MessageQueueMonitorData message = new MessageQueue.MessageQueueMonitorData(null, null);
+                message.fakeScaleType = MonitorMessage.SCALE_TYPE.SCALE_IN;
+                MessageQueue.get_deploymentQ().put(message);
+                /*
+                synchronized(message) {
+                    message.wait(10000);
+                }
+
+                if(message.responseId == -1) {
+                    logger.debug("Undeployment timed out.");
+                    return newFixedLengthResponse(new Status(504, "Undeployment is pending"), null, null);
+                }
+                else
+                    return newFixedLengthResponse(new Status(message.responseId, message.responseMessage), null, null);
+                */
+                return newFixedLengthResponse(new Status(200, "OK"), null, null);
             }
             else
             if(req_uri.equals(uri) && session.getMethod().equals(Method.POST)) {

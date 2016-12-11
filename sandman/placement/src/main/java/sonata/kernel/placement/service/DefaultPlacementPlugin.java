@@ -150,9 +150,10 @@ public class DefaultPlacementPlugin implements PlacementPlugin {
     }
 
     @Override
-    public PlacementMapping updatePlacement(DeployServiceData serviceData, ServiceInstance instance, List<PopResource> ressources, PlacementMapping mapping) {
+    public PlacementMapping updatePlacement(DeployServiceData serviceData, ServiceInstance instance, List<PopResource> resources, PlacementMapping mapping) {
 
         // TODO: implement placement update for scale out/in
-        return null;
+        //return null;
+        return initialPlacement(serviceData, instance, resources);
     }
 }

@@ -10,6 +10,7 @@ import java.util.concurrent.LinkedBlockingDeque;
 import org.apache.log4j.Logger;
 import sonata.kernel.placement.monitor.MonitorHistory;
 import sonata.kernel.placement.monitor.MonitorStats;
+import sonata.kernel.placement.service.MonitorMessage;
 
 
 public class MessageQueue
@@ -61,6 +62,8 @@ public class MessageQueue
 
         public final Map<String, MonitorStats> statsMap;
         public final Map<String,List<MonitorStats>> statsHistoryMap;
+
+        public MonitorMessage.SCALE_TYPE fakeScaleType = null;
 
         public MessageQueueMonitorData(Map<String, MonitorStats> statsMap, Map<String,List<MonitorStats>> statsHistoryMap){
             super(MessageType.MONITOR_MESSAGE);

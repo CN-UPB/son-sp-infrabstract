@@ -1,16 +1,11 @@
 package sonata.kernel.placement.service;
 
 import com.google.common.collect.Lists;
-import com.google.common.util.concurrent.Service;
-import org.apache.commons.chain.web.MapEntry;
 import org.apache.commons.lang3.tuple.ImmutablePair;
 import org.apache.commons.lang3.tuple.Pair;
-import org.jaxen.Function;
-import org.openstack4j.model.identity.v2.ServiceEndpoint;
 import sonata.kernel.VimAdaptor.commons.DeployServiceData;
 import sonata.kernel.VimAdaptor.commons.nsd.*;
 
-import java.lang.reflect.Array;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -18,12 +13,9 @@ import java.util.Map;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import org.apache.log4j.Logger;
-import sonata.kernel.VimAdaptor.commons.vnfd.Network;
 import sonata.kernel.VimAdaptor.commons.vnfd.VnfDescriptor;
 import sonata.kernel.VimAdaptor.commons.vnfd.VnfVirtualLink;
 import sonata.kernel.placement.Catalogue;
-
-import javax.ws.rs.core.Link;
 
 /*
 ServiceInstanceManager enables addition/deletion/updation of resources
@@ -132,8 +124,9 @@ public class ServiceInstanceManager {
                 //linkInstance.interfaceList.put(f_instance, ref);
                 linkInstance.interfaceList.put(f_instance, ref);
             }
-            if (is_outerlink)
+            if (is_outerlink) {
                 f_instance.links.put(link.getId(), linkInstance);
+            }
 
         }
     }
@@ -197,6 +190,85 @@ public class ServiceInstanceManager {
         }
         return;
     }
+
+    protected void update_ns_link(FunctionInstance f_inst)
+    {
+        ArrayList<VirtualLink> virtual_links = Lists.newArrayList(instance.service.getVirtualLinks());
+
+        for (VirtualLink link : virtual_links) {
+            LinkInstance linkInstance = new LinkInstance(link, "nslink:" + link.getId());
+
+            boolean do_not = true;
+            boolean is_nslink = false;
+
+            for (String cp_ref : link.getConnectionPointsReference()) {
+
+                String[] cp_ref_str = cp_ref.split(":");
+                assert cp_ref_str != null && cp_ref_str.length == 2 : "Virtual Link " + link.getId() + " uses odd vnf reference " + cp_ref;
+                String vnfid = cp_ref_str[0];
+                String connectionPointName = cp_ref_str[1];
+
+                if ("ns".equals(vnfid)) {
+                    is_nslink = true;
+                    continue;
+                }
+
+                if (f_inst.function.getVnfId().equals(vnfid) == true) {
+                    LinkInstance vnf_LinkInstance = f_inst.links.get(connectionPointName);
+                    assert vnf_LinkInstance != null : "In Service " + instance.service.getName() + " Virtual Link "
+                            + link.getId() + " connects to function " + f_inst.name
+                            + " that does not contain link for connection point " + connectionPointName;
+                    linkInstance.interfaceList.put(f_inst, cp_ref);
+                    do_not = false; //Do not add to outerlink list. Not a NS link.
+                } else {
+                    break;
+                }
+
+            }
+            if(do_not)
+                continue;
+
+            if(linkInstance.isMgmtLink())
+                continue;
+
+            int id;
+            if (is_nslink) {
+                if (instance.outerlink_list.get(link.getId()) == null) {
+                    AtomicInteger vnf_vlinkid = new AtomicInteger(0);
+                    id = vnf_vlinkid.addAndGet(1);
+                    vnf_vlinkid.set(id);
+                    instance.vnf_vlinkid.put(link.getId(), vnf_vlinkid);
+                    Map<String, LinkInstance> map = new HashMap<String, LinkInstance>();
+                    map.put(link.getId() + ":" + id, linkInstance);
+                    instance.outerlink_list.put(link.getId(), map);
+                } else {
+                    id = instance.vnf_vlinkid.get(link.getId()).addAndGet(1);
+                    instance.vnf_vlinkid.get(link.getId()).set(id);
+                    instance.outerlink_list.get(link.getId()).put(link.getId() + ":" + id, linkInstance);
+                }
+            }
+        }
+
+    }
+
+    protected void delete_ns_link(String f_inst)
+    {
+        String key="";
+        for(Map.Entry<String, Map<String, LinkInstance>> link_ll : instance.outerlink_list.entrySet())
+        {
+            for(Map.Entry<String, LinkInstance> link_e : link_ll.getValue().entrySet())
+            {
+                for(Map.Entry<FunctionInstance, String> finst : link_e.getValue().interfaceList.entrySet()){
+                    if(finst.getKey().name.equals(f_inst)) {
+                        key = link_e.getKey();
+                    }
+                }
+            }
+        }
+
+        instance.outerlink_list.get((key.split(":"))[0]).remove(key);
+        return;
+}
 
     protected void initialize_link(VirtualLink link, LinkInstance linkInstance) {
         boolean is_nslink = false;
@@ -418,14 +490,19 @@ public class ServiceInstanceManager {
 
                 initialize_vnfvlink_list(function_instance, descriptor);
 
+                update_ns_link(function_instance);
+
                 instance.function_list.get(n_function.getVnfId()).put(n_function.getVnfId() +
                         id, function_instance);
+
+
 
             }
         } else if (action == ACTION_TYPE.DELETE_INSTANCE) {
             if (instance.function_list.get(vnf_id) == null) {
                 logger.error("Virtual Network Function " + vnf_id + " not found");
             } else {
+                delete_ns_link((vnf_name.split("_"))[1]);
                 int id = instance.vnf_uid.get(vnf_id).decrementAndGet();
                 instance.vnf_uid.get(vnf_id).set(id);
                 instance.function_list.get(vnf_id).remove(vnf_name);

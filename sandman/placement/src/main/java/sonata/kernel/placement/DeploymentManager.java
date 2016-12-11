@@ -199,16 +199,22 @@ public class DeploymentManager implements Runnable{
     }
 
     public static void deployStack(PopResource pop, String stackName, String templateJsonString){
-        OSClient.OSClientV2 os = OSFactory.builderV2()
-                .endpoint( pop.getEndpoint())
-                .credentials(pop.getUserName(),pop.getPassword())
-                .tenantName(pop.getTenantName())
-                .authenticate();
+        try {
+            OSClient.OSClientV2 os = OSFactory.builderV2()
+                    .endpoint(pop.getEndpoint())
+                    .credentials(pop.getUserName(), pop.getPassword())
+                    .tenantName(pop.getTenantName())
+                    .authenticate();
 
-        Stack stack = os.heat().stacks().create(Builders.stack()
-                .name(stackName)
-                .template(templateJsonString)
-                .timeoutMins(5L).build());
+            Stack stack = os.heat().stacks().create(Builders.stack()
+                    .name(stackName)
+                    .template(templateJsonString)
+                    .timeoutMins(5L).build());
+        } catch (Exception e) {
+            e.printStackTrace();
+            logger.error(e);
+            logger.trace(e);
+        }
     }
 
     public static void undeploy(MessageQueue.MessageQueueUnDeployData message){
@@ -343,6 +349,7 @@ public class DeploymentManager implements Runnable{
         for (int i = 0; i < popList.size(); i++) {
             PopResource pop = popList.get(i);
             String popName = pop.getPopName();
+            System.out.println("Check pop "+popName);
 
             String stackName = dcStackMap.get(popName); // get old stack name
 
@@ -368,6 +375,7 @@ public class DeploymentManager implements Runnable{
                     FunctionMonitor monitor = new FunctionMonitor(pop, stackName, h.getResourceName());
                     monitor.instance = functionMap.get(functionInstanceName);
                     vnfMonitors.add(monitor);
+                    System.out.println("Found monitor "+monitor.function);
                     nodeList.add(h.getResourceName());
                     popNodes.add(h.getResourceName());
                 }
@@ -383,13 +391,16 @@ public class DeploymentManager implements Runnable{
         List<FunctionMonitor> removedFunctions = new ArrayList<FunctionMonitor>();
 
         for(FunctionMonitor monitor:MonitorManager.monitors){
-            if(removedNodes.contains(monitor.function))
+            if(removedNodes.contains(monitor.function)) {
                 removedFunctions.add(monitor);
-
+                System.out.println("Removed monitor "+monitor.function);
+            }
         }
         for(FunctionMonitor monitor:vnfMonitors){
-            if(!vnfMonitors.contains(monitor))
+            if(!MonitorManager.monitors.contains(monitor)) {
                 addedFunctions.add(monitor);
+                System.out.println("New monitor "+monitor.function);
+            }
         }
 
         // Chaining

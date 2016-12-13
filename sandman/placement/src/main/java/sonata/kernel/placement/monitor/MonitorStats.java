@@ -5,20 +5,21 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 public class MonitorStats {
 
     /* example
-    {"CPU_cores": 4, "SYS_time": 1480931732998331904, "PIDS": 2,
-    "NET_in/s": 303, "BLOCK_read": 0, "MEM_limit": 16827117568,
-    "NET_out/s": 396, "BLOCK_write": 0, "CPU_%": 0.003207987403821142,
-    "MEM_used": 643072, "MEM_%": 3.821640856797275e-05}
-     */
+    {"BLOCK_write/s": 0, "CPU_cores": 4,
+    "SYS_time": 1481665658589828864, "PIDS": 2,
+    "CPU_%": 0.0056449892973778545, "MEM_limit": 16827117568,
+    "NET_out/s": 0, "NET_in/s": 0, "MEM_used": 704512,
+    "BLOCK_read/s": 0, "MEM_%": 4.1867657794212184e-05}
+    */
 
     // Network traffic of all network interfaces within the controller
     @JsonProperty("NET_out/s")
     long netOut;
     @JsonProperty("NET_in/s")
     long netIn;
-    @JsonProperty("BLOCK_write") // Disk - write in Bytes
+    @JsonProperty("BLOCK_write/s") // Disk - write in Bytes
     String blockOut;
-    @JsonProperty("BLOCK_read") // Disk - read in Bytes
+    @JsonProperty("BLOCK_read/s") // Disk - read in Bytes
     String blockIn;
     @JsonProperty("MEM_used") // Bytes of memory used from the docker container
     long memoryUsed;
@@ -34,12 +35,6 @@ public class MonitorStats {
     int cpuCores;
     @JsonProperty("SYS_time")
     long sysTime;
-    @JsonProperty("NET_systime")
-    long netSysTime;
-    @JsonProperty("CPU_used_systime")
-    long cpuUsedSysTime;
-    @JsonProperty("CPU_used")
-    long cpuUsed;
 
     public long getNetOut() {
         return netOut;
@@ -128,30 +123,5 @@ public class MonitorStats {
     public void setCpuCores(int cpuCores) {
         this.cpuCores = cpuCores;
     }
-
-    public long getNetSysTime() {
-        return netSysTime;
-    }
-
-    public void setNetSysTime(long netSysTime) {
-        this.netSysTime = netSysTime;
-    }
-
-    public long getCpuUsedSysTime() {
-        return cpuUsedSysTime;
-    }
-
-    public void setCpuUsedSysTime(long cpuUsedSysTime) {
-        this.cpuUsedSysTime = cpuUsedSysTime;
-    }
-
-    public long getCpuUsed() {
-        return cpuUsed;
-    }
-
-    public void setCpuUsed(long cpuUsed) {
-        this.cpuUsed = cpuUsed;
-    }
-
 
 }

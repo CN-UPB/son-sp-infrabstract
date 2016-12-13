@@ -1,7 +1,11 @@
 package sonata.kernel.placement.config;
 
 
+import org.apache.log4j.Logger;
+
 public class PerformanceThreshold {
+
+    final static Logger logger = Logger.getLogger(PerformanceThreshold.class);
 
     public double getCpu_upper_l() {
         return cpu_upper_l;
@@ -67,6 +71,19 @@ public class PerformanceThreshold {
         this.history_check = history_check;
     }
 
+    @Override
+    public String toString() {
+        StringBuilder builder = new StringBuilder();
+        builder.append("CPU Upper Limit: " + cpu_upper_l + "\n");
+        builder.append("CPU Lower Limit: " + cpu_lower_l + "\n");
+        builder.append("Memory Upper Limit: " + mem_upper_l + "\n");
+        builder.append("Memory Lower Limit: " + mem_lower_l + "\n");
+        builder.append("Scale Out Upper Limit: " + scale_out_upper_l + "\n");
+        builder.append("Scale In Lower Limit: " + scale_in_lower_l + "\n");
+        builder.append("Number of history checks: " + history_check + "\n");
+        builder.append("VNF ID: " + vnfId);
+        return builder.toString();
+    }
 
     double cpu_upper_l;
     double cpu_lower_l;

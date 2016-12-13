@@ -75,7 +75,7 @@ public class FunctionMonitor implements FutureCallback<HttpResponse> {
         } catch (IOException e) {
             e.printStackTrace();
         }
-
+        //logger.debug(json);
         stats = readJsonMonitoring(json);
 
         if(stats != null) {

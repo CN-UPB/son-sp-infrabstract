@@ -36,7 +36,7 @@ public class DefaultPlacementPlugin implements PlacementPlugin {
         List<String> overload_l = new ArrayList<String>();
         List<String> underload_l = new ArrayList<String>();
 
-        ComputeMetrics c_metrics = new ComputeMetrics(instance, message.stats, message.stats_history);
+        ComputeMetrics c_metrics = new ComputeMetrics(instance, message.stats_history);
         c_metrics.compute_vnf_load(overload_l, underload_l);
 
         //Do something with this monitoring data.

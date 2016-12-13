@@ -323,9 +323,9 @@ public class DeploymentManager implements Runnable{
         }
 
         if (nextScale == null)
-            monitorMessage = new MonitorMessage(MonitorMessage.SCALE_TYPE.MONITOR_STATS, message.statsMap, message.statsHistoryMap);
+            monitorMessage = new MonitorMessage(MonitorMessage.SCALE_TYPE.MONITOR_STATS, message.statsHistoryMap);
         else {
-            monitorMessage = new MonitorMessage(nextScale, message.statsMap, message.statsHistoryMap);
+            monitorMessage = new MonitorMessage(nextScale, message.statsHistoryMap);
             nextScale = null;
         }
 

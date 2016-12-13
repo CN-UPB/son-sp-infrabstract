@@ -1,7 +1,5 @@
 package sonata.kernel.placement.config;
 
-import sun.misc.Perf;
-
 import java.util.ArrayList;
 
 public class PlacementConfig {
@@ -10,7 +8,11 @@ public class PlacementConfig {
     public String placementPlugin;
     public ArrayList<PopResource> resources;
     public RestInterface restApi;
-    public  ArrayList<PerformanceThreshold> perfThreshold;
+    public ArrayList<PerformanceThreshold> perfThreshold;
+
+    public long monitorHistoryLimit;
+
+    public long monitorIntervalMs;
 
     public String internalFunctionsPath;
 
@@ -57,5 +59,21 @@ public class PlacementConfig {
 
     public void setInternalFunctionsPath(String internalFunctionsPath) {
         this.internalFunctionsPath = internalFunctionsPath;
+    }
+
+    public long getMonitorHistoryLimit() {
+        return monitorHistoryLimit;
+    }
+
+    public void setMonitorHistoryLimit(long monitorHistoryLimit) {
+        this.monitorHistoryLimit = monitorHistoryLimit;
+    }
+
+    public long getMonitorIntervalMs() {
+        return monitorIntervalMs;
+    }
+
+    public void setMonitorIntervalMs(long monitorIntervalMs) {
+        this.monitorIntervalMs = monitorIntervalMs;
     }
 }

@@ -54,9 +54,8 @@ public class DefaultPlacementPluginTest {
         // add first node as example
         nodeList.add(mapping.mapping.keySet().iterator().next());
 
-        HashMap<String, MonitorStats> stats = new HashMap<String, MonitorStats>();
         HashMap<String, List<MonitorStats>> stats_history = new HashMap<String, List<MonitorStats>>();
-        MonitorMessage trigger = new MonitorMessage(MonitorMessage.SCALE_TYPE.SCALE_OUT, stats, stats_history);
+        MonitorMessage trigger = new MonitorMessage(MonitorMessage.SCALE_TYPE.SCALE_OUT, stats_history);
 
         instance = plugin.updateScaling(data, instance, trigger);
 
@@ -92,7 +91,7 @@ public class DefaultPlacementPluginTest {
                 e.printStackTrace();
             }
         }
-        MonitorMessage trigger_down = new MonitorMessage(MonitorMessage.SCALE_TYPE.SCALE_IN, stats, stats_history);
+        MonitorMessage trigger_down = new MonitorMessage(MonitorMessage.SCALE_TYPE.SCALE_IN, stats_history);
 
         instance = plugin.updateScaling(data, instance, trigger_down);
 

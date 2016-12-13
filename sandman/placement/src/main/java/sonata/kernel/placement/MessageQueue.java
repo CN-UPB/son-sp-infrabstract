@@ -60,14 +60,12 @@ public class MessageQueue
     }
     public static class MessageQueueMonitorData extends MessageQueueData{
 
-        public final Map<String, MonitorStats> statsMap;
         public final Map<String,List<MonitorStats>> statsHistoryMap;
 
         public MonitorMessage.SCALE_TYPE fakeScaleType = null;
 
-        public MessageQueueMonitorData(Map<String, MonitorStats> statsMap, Map<String,List<MonitorStats>> statsHistoryMap){
+        public MessageQueueMonitorData(Map<String,List<MonitorStats>> statsHistoryMap){
             super(MessageType.MONITOR_MESSAGE);
-            this.statsMap = statsMap;
             this.statsHistoryMap = statsHistoryMap;
         }
     }

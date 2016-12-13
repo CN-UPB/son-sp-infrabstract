@@ -16,14 +16,12 @@ public class MonitorMessage {
 
     public SCALE_TYPE type;
 
-    public final Map<String, MonitorStats> stats;
     public final Map<String, List<MonitorStats>> stats_history;
 
-    public MonitorMessage(SCALE_TYPE type, Map<String, MonitorStats> stats, Map<String, List<MonitorStats>> stats_history)
+    public MonitorMessage(SCALE_TYPE type, Map<String, List<MonitorStats>> stats_history)
     {
         this.type = type;
         this.stats_history = stats_history;
-        this.stats = stats;
     }
 
 

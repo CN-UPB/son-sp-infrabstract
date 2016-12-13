@@ -29,6 +29,10 @@ placementPlugin: "sonata.kernel.placement.service.DefaultPlacementPlugin"
 
 internalFunctionsPath: "./sandman/placement/YAML/internal"
 
+monitorHistoryLimit: 300
+
+monitorIntervalMs: 2000
+
 resources:
   - popName: "datacenter1"
     endpoint: "http://131.234.31.45:5001/v2.0"

@@ -179,7 +179,7 @@ class RestInterfaceServerApi extends NanoHTTPD implements Runnable {
             if("/scaleout".equals(uri) && session.getMethod().equals(Method.GET)) {
                 logger.info("Fake Scale Out Message");
 
-                MessageQueue.MessageQueueMonitorData message = new MessageQueue.MessageQueueMonitorData(null, null);
+                MessageQueue.MessageQueueMonitorData message = new MessageQueue.MessageQueueMonitorData(null);
                 message.fakeScaleType = MonitorMessage.SCALE_TYPE.SCALE_OUT;
                 MessageQueue.get_deploymentQ().put(message);
                 /*
@@ -200,7 +200,7 @@ class RestInterfaceServerApi extends NanoHTTPD implements Runnable {
             if("/scalein".equals(uri) && session.getMethod().equals(Method.GET)) {
                 logger.info("Fake Scale In Message");
 
-                MessageQueue.MessageQueueMonitorData message = new MessageQueue.MessageQueueMonitorData(null, null);
+                MessageQueue.MessageQueueMonitorData message = new MessageQueue.MessageQueueMonitorData(null);
                 message.fakeScaleType = MonitorMessage.SCALE_TYPE.SCALE_IN;
                 MessageQueue.get_deploymentQ().put(message);
                 /*

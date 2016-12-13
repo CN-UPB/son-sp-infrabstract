@@ -13,6 +13,7 @@ import org.apache.http.impl.nio.client.CloseableHttpAsyncClient;
 import org.apache.log4j.Logger;
 import sonata.kernel.VimAdaptor.commons.vnfd.Unit;
 import sonata.kernel.VimAdaptor.commons.vnfd.UnitDeserializer;
+import sonata.kernel.placement.PlacementConfigLoader;
 import sonata.kernel.placement.config.PopResource;
 import sonata.kernel.placement.service.FunctionInstance;
 
@@ -41,7 +42,7 @@ public class FunctionMonitor implements FutureCallback<HttpResponse> {
 
     public List<MonitorStats> statsList;
     public MonitorStats statsLast;
-    public int historySize = 100;
+    public long historyLimit = PlacementConfigLoader.loadPlacementConfig().getMonitorHistoryLimit();
 
     public FunctionMonitor(PopResource datacenter, String stack, String function){
         this.dc = datacenter;
@@ -81,6 +82,8 @@ public class FunctionMonitor implements FutureCallback<HttpResponse> {
 
             statsLast = stats;
             statsList.add(stats);
+            if(statsList.size()>historyLimit)
+                statsList.remove(0);
         }
 
         MonitorManager.requestFinished();

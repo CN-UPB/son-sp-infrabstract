@@ -18,14 +18,11 @@ public class ComputeMetrics {
     public final ServiceInstance instance;
 
     //Threshold levels Network-function <-> Threshold
-    public final Map<String, MonitorStats> stats;
     public final Map<String, List<MonitorStats>> stats_history;
     public final HashMap<String, PerformanceThreshold> threshold_m;
 
-    public ComputeMetrics(ServiceInstance instance, Map<String, MonitorStats> stats,
-                          Map<String, List<MonitorStats>> stats_history) {
+    public ComputeMetrics(ServiceInstance instance, Map<String, List<MonitorStats>> stats_history) {
         this.instance = instance;
-        this.stats = stats;
         this.stats_history = stats_history;
         threshold_m = new HashMap<String, PerformanceThreshold>();
         initialize_threshold();
@@ -67,8 +64,8 @@ public class ComputeMetrics {
                     continue;
                 }
 
-                MonitorStats stats_t = stats.get(finst_t.getKey());
-                List<MonitorStats> stats_history_t = stats_history.get(finst_t.getKey());
+                List<MonitorStats> stats_history_t = stats_history.get(finst_t.getValue().getName());
+                MonitorStats stats_t = stats_history_t != null ? stats_history_t.get(stats_history_t.size()-1) : null;
 
                 if(stats_t == null)
                     continue;

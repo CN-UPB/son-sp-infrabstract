@@ -11,6 +11,7 @@ import org.apache.http.nio.reactor.ConnectingIOReactor;
 import org.apache.http.nio.reactor.IOReactorException;
 import org.apache.log4j.Logger;
 import sonata.kernel.placement.MessageQueue;
+import sonata.kernel.placement.PlacementConfigLoader;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -26,7 +27,7 @@ public class MonitorManager implements Runnable {
 
     public static List<FunctionMonitor> monitors = new ArrayList<FunctionMonitor>();
 
-    public static int intervalMillis = 2000;
+    public static long intervalMillis = 2000;
     public static volatile boolean active = false;
 
     public static ConnectingIOReactor ioreactor;
@@ -42,6 +43,9 @@ public class MonitorManager implements Runnable {
     public static Thread monitorThread;
 
     static {
+
+        intervalMillis = PlacementConfigLoader.loadPlacementConfig().getMonitorIntervalMs();
+
         try {
             ioreactor = new DefaultConnectingIOReactor(IOReactorConfig.custom().setIoThreadCount(4).build());
         } catch (IOReactorException e) {
@@ -144,23 +148,20 @@ public class MonitorManager implements Runnable {
     }
 
     public static MessageQueue.MessageQueueMonitorData getMonitorData(){
-        Map<String, MonitorStats> statsMap;
         Map<String,List<MonitorStats>> statsHistoryMap;
         synchronized (monitors) {
             statsHistoryMap = new HashMap<String,List<MonitorStats>>();
-            statsMap = new HashMap<String,MonitorStats>();
             FunctionMonitor monitor;
             List<MonitorStats> statsHistory;
 
             for (int i=0; i<monitors.size(); i++){
                 monitor = monitors.get(i);
-                statsMap.put(monitor.function, monitor.statsLast);
                 statsHistory = new ArrayList<MonitorStats>();
                 statsHistory.addAll(monitor.statsList);
-                statsHistoryMap.put(monitor.function, statsHistory);
+                statsHistoryMap.put(monitor.instanceName, statsHistory);
             }
         }
-        return new MessageQueue.MessageQueueMonitorData(statsMap, statsHistoryMap);
+        return new MessageQueue.MessageQueueMonitorData(statsHistoryMap);
     }
 
     private MonitorManager(){
@@ -198,7 +199,8 @@ public class MonitorManager implements Runnable {
 
                 Thread.sleep(intervalMillis);
             } catch (InterruptedException e) {
-                //e.printStackTrace();
+                e.printStackTrace();
+                logger.error(e);
                 logger.error(e);
                 for(int i=0; i<monitors.size(); i++) {
                     FunctionMonitor monitor = monitors.get(i);

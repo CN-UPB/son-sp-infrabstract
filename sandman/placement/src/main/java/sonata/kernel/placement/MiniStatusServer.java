@@ -103,7 +103,7 @@ public class MiniStatusServer {
                 //Map<String,String> functionMap = new HashMap<String,String>();
                 // Deployed instance monitor information
                 MessageQueue.MessageQueueMonitorData monitorData = MonitorManager.getMonitorData();
-                statusObj.put("monitorFunctions", monitorData.statsMap.keySet());
+                statusObj.put("monitorFunctions", monitorData.statsHistoryMap.keySet());
                 // Clear unnecessary data
                 for(List<MonitorStats> list : monitorData.statsHistoryMap.values()){
                     if(list.size()>maxHistory) {

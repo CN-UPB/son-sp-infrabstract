@@ -100,7 +100,6 @@ public class MiniStatusServer {
         if(uri.equals("/monitor")) {
             if(DeploymentManager.currentInstance != null) {
                 Map<String,Object> statusObj = new HashMap<String, Object>();
-                //Map<String,String> functionMap = new HashMap<String,String>();
                 // Deployed instance monitor information
                 MessageQueue.MessageQueueMonitorData monitorData = MonitorManager.getMonitorData();
                 statusObj.put("monitorFunctions", monitorData.statsHistoryMap.keySet());
@@ -111,21 +110,10 @@ public class MiniStatusServer {
                             list.remove(i);
                     }
                 }
-                /*
-                for(String key:monitorData.statsMap.keySet()) {
-                    functionMap.put(key, key.substring(0,key.lastIndexOf(":")));
-                }
-                */
-                // function instance list
-                // templateName ->
-                //      instanceName
-                //      vnfId
-                //      vnfName
-                //
 
                 // Key of nodeMap is normal name like firewall2
                 Map<String,Map<String,String>> nodeMap = new HashMap<String,Map<String,String>>();
-                // Key of instanceMap is template name like firewall2:asdfasdfadsf
+                // Key of instanceMap is normal name like firewall2
                 Map<String,Map<String,String>> instanceMap = new HashMap<String,Map<String,String>>();
                 List<FunctionMonitor> monitors = MonitorManager.getMonitorListCopy();
                 for(FunctionMonitor monitor: monitors) {
@@ -133,17 +121,16 @@ public class MiniStatusServer {
                         System.out.println("");
                     Map<String,String> fMap = new HashMap<String,String>();
                     fMap.put("instanceName", monitor.instance.name);
+                    fMap.put("templateName", monitor.function);
                     fMap.put("vnfId", monitor.instance.function.getVnfId());
                     fMap.put("vnfName", monitor.instance.descriptor.getName());
-                    instanceMap.put(monitor.function, fMap);
+                    instanceMap.put(monitor.instance.name, fMap);
                     nodeMap.put(monitor.instance.name, fMap);
                 }
                 // instance graph
                 List<String> nsPoints = new ArrayList<String>();
                 List<List<String>> nsPointToNode = new ArrayList<List<String>>();
-                //Map<String,String> nsPointToNode = new HashMap<String,String>();
                 List<List<String>> nodeToNode = new ArrayList<List<String>>();
-                //Map<String,String> nodeToNode = new HashMap<String,String>();
                 ServiceInstance serviceInstance = DeploymentManager.currentInstance;
 
                 // Get nsPoints and nsPointToNode links
@@ -152,7 +139,6 @@ public class MiniStatusServer {
                     for(Map.Entry<String, LinkInstance> link : linkMap.getValue().entrySet()) {
                         Set<FunctionInstance> functions = link.getValue().interfaceList.keySet();
                         for(FunctionInstance f: functions) {
-                            //nsPointToNode.put(nsPointName, f.name);
                             List<String> linkPair = new ArrayList<String>();
                             linkPair.add(nsPointName);
                             linkPair.add(f.name);
@@ -167,7 +153,6 @@ public class MiniStatusServer {
                     for(Map.Entry<String, LinkInstance> link : linkMap.getValue().entrySet()) {
                         // Assume one to one connections
                         List<FunctionInstance> functions = new ArrayList<FunctionInstance>(link.getValue().interfaceList.keySet());
-                        //nodeToNode.put(functions.get(0).name, functions.get(1).name);
                         List<String> linkPair = new ArrayList<String>();
                         linkPair.add(functions.get(0).name);
                         linkPair.add(functions.get(1).name);
@@ -184,9 +169,7 @@ public class MiniStatusServer {
 
                 statusObj.put("thresholds",PlacementConfigLoader.loadPlacementConfig().getThreshold());
 
-                //statusObj.put("names",functionMap);
                 statusObj.put("functions", instanceMap);
-                //statusObj.put("monitorLastData", monitorData.statsMap);
                 statusObj.put("monitorHistoryData", monitorData.statsHistoryMap);
 
                 jsonObj = statusObj;

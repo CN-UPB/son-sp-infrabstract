@@ -44,7 +44,7 @@ public class ComputeMetrics {
 
     public void update_threshold(String vnf_id, PerformanceThreshold threshold) {
         logger.debug("ComputeMetrics::update_threshold ENTER");
-        logger.info("ComputeMetrics::update_threshold: Updating VNF type: " + vnf_id + " with " + threshold.toString());
+        logger.info("ComputeMetrics::update_threshold: Updating VNF type: " + vnf_id + " with " + threshold);
         if (null != threshold_m.get(vnf_id)) {
             threshold_m.remove(vnf_id);
             threshold_m.put(vnf_id, threshold);

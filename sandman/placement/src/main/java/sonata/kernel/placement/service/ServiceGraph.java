@@ -20,7 +20,7 @@ public class ServiceGraph {
     }
 
     private void initialize() {
-
+        logger.debug("ServiceGraph::initialize ENTER");
         for (Map.Entry<String, Map<String, FunctionInstance>> finst_list : s_instance.function_list.entrySet()) {
             for (Map.Entry<String, FunctionInstance> finst : finst_list.getValue().entrySet()) {
                 Node node = new Node();
@@ -44,12 +44,13 @@ public class ServiceGraph {
         ns_mgmt.is_service_endpoint = true;
         m_nodes.put("ns:mgmt", ns_mgmt);
 
+        logger.debug("ServiceGraph::initialize EXIT");
         return;
 
     }
 
     public Node generate_graph() {
-
+        logger.debug("ServiceGraph::generate_graph ENTER");
         for (Map.Entry<String, Map<String, LinkInstance>> link_m : s_instance.outerlink_list.entrySet()) {
 
             for (LinkInstance link : link_m.getValue().values()) {
@@ -94,6 +95,7 @@ public class ServiceGraph {
 
             }
         }
+        logger.debug("ServiceGraph::generate_graph EXIT");
         return m_nodes.get("ns:input");
     }
 }

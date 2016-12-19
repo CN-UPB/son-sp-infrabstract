@@ -1,6 +1,10 @@
 package sonata.kernel.placement.service;
 
 import org.apache.log4j.Logger;
+import sonata.kernel.VimAdaptor.commons.nsd.ConnectionPoint;
+import sonata.kernel.VimAdaptor.commons.nsd.ForwardingGraph;
+import sonata.kernel.VimAdaptor.commons.nsd.NetworkForwardingPath;
+import sonata.kernel.VimAdaptor.commons.vnfd.ConnectionPointReference;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -12,10 +16,14 @@ public class ServiceGraph {
 
     public final ServiceInstance s_instance;
     private final Map<String, Node> m_nodes;
+    private final Map<String, Map<String, Node>> f_graph;
+    private final Map<String, Node> m_vnf_node;
 
     public ServiceGraph(ServiceInstance instance) {
         this.s_instance = instance;
         m_nodes = new HashMap<String, Node>();
+        f_graph = new HashMap<String, Map<String, Node>>();
+        m_vnf_node = new HashMap<String, Node>();
         initialize();
     }
 
@@ -24,28 +32,67 @@ public class ServiceGraph {
         for (Map.Entry<String, Map<String, FunctionInstance>> finst_list : s_instance.function_list.entrySet()) {
             for (Map.Entry<String, FunctionInstance> finst : finst_list.getValue().entrySet()) {
                 Node node = new Node();
-                node.set_name(finst.getValue().name);
+                node.set_instance_name(finst.getValue().name);
+                node.set_vnf_id(finst.getValue().function.getVnfId());
+                node.set_vnf_name(finst.getValue().function.getVnfName());
                 m_nodes.put(finst.getValue().name, node);
             }
         }
 
-        Node ns_input = new Node();
-        ns_input.set_name("ns:input");
-        ns_input.is_service_endpoint = true;
-        m_nodes.put("ns:input", ns_input);
+        for(ConnectionPoint p : s_instance.service.getConnectionPoints())
+        {
+            logger.debug("ServiceGraph::initialize: Adding connection point " + p.getId());
+            Node node = new Node();
+            node.set_instance_name(p.getId());
+            node.set_vnf_id(p.getId());
+            node.set_vnf_name(p.getId());
+            node.is_service_endpoint = true;
+            m_nodes.put(p.getId(), node);
+        }
 
-        Node ns_output = new Node();
-        ns_output.set_name("ns:output");
-        ns_output.is_service_endpoint = true;
-        m_nodes.put("ns:output", ns_output);
 
-        Node ns_mgmt = new Node();
-        ns_mgmt.set_name("ns:mgmt");
-        ns_mgmt.is_service_endpoint = true;
-        m_nodes.put("ns:mgmt", ns_mgmt);
+        for(ForwardingGraph ff : s_instance.service.getForwardingGraphs())
+        {
+            Map<String, Node> f_path_m = new HashMap<String, Node>();
+            for(NetworkForwardingPath np : ff.getNetworkForwardingPaths())
+            {
+                Node root = null;
+                Node temp = null;
+                for(ConnectionPointReference ref : np.getConnectionPoints())
+                {
+                    Node node = new Node();
+                    node.set_instance_name(ref.getConnectionPointRef());
+                    if(null == root) {
+                        root = node;
+                    }
+                    if(null != temp) {
+                        temp.add_output_link(node);
+                        node.add_input_link(temp);
+                    }
+                    m_vnf_node.put(ref.getConnectionPointRef(), node);
+                    temp = node;
+                }
+                f_path_m.put(np.getFpId(), root);
 
+            }
+            f_graph.put(ff.getFgId(), f_path_m);
+        }
         logger.debug("ServiceGraph::initialize EXIT");
         return;
+
+    }
+
+    public Node get_forwarding_path(String f_graph_id, String f_path_id)
+    {
+        logger.debug("ServiceGraph::get_forwarding_path ENTER");
+        logger.info("ServiceGraph::get_forwarding_path: Processing forwarding path request for : " + f_graph_id + "(" + f_path_id + ")");
+        if(f_graph.get(f_graph_id) == null)
+            logger.error("ServiceGraph::get_forwarding_path: Forwarding path: " + f_graph_id + " not found");
+        if(f_graph.get(f_graph_id).get(f_path_id) == null)
+            logger.error("ServiceGraph::get_forwarding_path: Forwarding path: " + f_graph_id+ "(" + f_path_id + ") not found");
+
+        logger.debug("ServiceGraph::get_forwarding_path EXIT");
+        return f_graph.get(f_graph_id).get(f_path_id);
 
     }
 
@@ -61,12 +108,18 @@ public class ServiceGraph {
                 Object[] listt = link.interfaceList.entrySet().toArray();
 
                 if(((HashMap.Entry<FunctionInstance, String>) listt[0]).getValue().contains("input")) {
-                    m_nodes.get("ns:input").add_output_link(m_nodes.get(((HashMap.Entry<FunctionInstance, String>) listt[0]).getKey().name));
-                    m_nodes.get(((HashMap.Entry<FunctionInstance, String>) listt[0]).getKey().name).add_input_link(m_nodes.get("ns:input"));
+                    Node ns_conn_p = m_nodes.get(m_vnf_node.get(((HashMap.Entry<FunctionInstance, String>) listt[0]).getValue())
+                            .get_input_links().get(0).get_instance_name());
+
+                    ns_conn_p.add_output_link(m_nodes.get(((HashMap.Entry<FunctionInstance, String>) listt[0]).getKey().name));
+                    m_nodes.get(((HashMap.Entry<FunctionInstance, String>) listt[0]).getKey().name).add_input_link(ns_conn_p);
                 }
                 else if(((HashMap.Entry<FunctionInstance, String>) listt[0]).getValue().contains("output")) {
-                    m_nodes.get("ns:output").add_input_link(m_nodes.get(((HashMap.Entry<FunctionInstance, String>) listt[0]).getKey().name));
-                    m_nodes.get(((HashMap.Entry<FunctionInstance, String>) listt[0]).getKey().name).add_output_link(m_nodes.get("ns:output"));
+                    Node ns_conn_p = m_nodes.get(m_vnf_node.get(((HashMap.Entry<FunctionInstance, String>) listt[0]).getValue())
+                            .get_output_links().get(0).get_instance_name());
+
+                    ns_conn_p.add_input_link(m_nodes.get(((HashMap.Entry<FunctionInstance, String>) listt[0]).getKey().name));
+                    m_nodes.get(((HashMap.Entry<FunctionInstance, String>) listt[0]).getKey().name).add_output_link(ns_conn_p);
                 }
 
             }
@@ -101,12 +154,12 @@ public class ServiceGraph {
 }
 
 class Node {
-    public String get_name() {
-        return name;
+    public String get_instance_name() {
+        return vnf_instance_name;
     }
 
-    public void set_name(String name) {
-        this.name = name;
+    public void set_instance_name(String name) {
+        this.vnf_instance_name = name;
     }
 
     public List<Node> get_output_links() {
@@ -137,11 +190,38 @@ class Node {
         return is_service_endpoint;
     }
 
-    String name;
+    public String get_vnf_id() {
+        return this.vnf_id;
+    }
 
-    List<Node> output_links = new ArrayList<Node>();
-    List<Node> input_links = new ArrayList<Node>();
-    List<Node> mgmt_links = new ArrayList<Node>();
+    public void set_vnf_id(String vnf_id) {
+        this.vnf_id = vnf_id;
+    }
+
+    public String get_vnf_name() {
+        return this.vnf_name;
+    }
+
+    public void set_vnf_name(String vnf_name) {
+        this.vnf_name = vnf_name;
+    }
+
+    public String get_data_center() {
+        return this.data_center;
+    }
+
+    public void set_data_center(String data_center) {
+        this.data_center = data_center;
+    }
+
+    private String vnf_instance_name;
+    private String vnf_id;
+    private String vnf_name;
+    private String data_center;
+
+    private List<Node> output_links = new ArrayList<Node>();
+    private List<Node> input_links = new ArrayList<Node>();
+    private List<Node> mgmt_links = new ArrayList<Node>();
 
     boolean is_service_endpoint = false;
 }

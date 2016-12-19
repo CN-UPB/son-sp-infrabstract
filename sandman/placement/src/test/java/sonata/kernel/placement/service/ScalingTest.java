@@ -18,18 +18,17 @@ import sonata.kernel.placement.PlacementConfigLoader;
 import sonata.kernel.placement.config.PerformanceThreshold;
 import sonata.kernel.placement.config.PlacementConfig;
 import sonata.kernel.placement.monitor.MonitorStats;
-import sonata.kernel.placement.service.*;
+import org.apache.log4j.Logger;
 
 import java.io.File;
 import java.nio.file.Paths;
-import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
 public class ScalingTest {
 
-
+    final static Logger logger = Logger.getLogger(ScalingTest.class);
     @Test
     public void UpdateThresholdTest()
     {
@@ -47,7 +46,7 @@ public class ScalingTest {
         Map<String, List<MonitorStats>> stats_history = new HashMap<String, List<MonitorStats>>();
         ComputeMetrics metrics = new ComputeMetrics(instance, stats_history);
 
-        System.out.println("Adding new performance threshold: " + threshold);
+        logger.info("Adding new performance threshold: " + threshold);
         metrics.update_threshold("vnf_world_domination", threshold);
     }
 
@@ -58,7 +57,7 @@ public class ScalingTest {
         PlacementConfig config = PlacementConfigLoader.loadPlacementConfig();
 
         PerformanceThreshold threshold = config.getThreshold().get(0);
-        System.out.println("Threshold level for " + threshold.getVnfId() + " : " + threshold);
+        logger.info("Threshold level for " + threshold.getVnfId() + " : " + threshold);
 
         PerformanceThreshold threshold_new = new PerformanceThreshold();
         threshold_new.setCpu_lower_l(40);
@@ -74,7 +73,7 @@ public class ScalingTest {
         Map<String, List<MonitorStats>> stats_history = new HashMap<String, List<MonitorStats>>();
         ComputeMetrics metrics = new ComputeMetrics(instance, stats_history);
 
-        System.out.println("Updating new performance threshold: " + threshold_new);
+        logger.info("Updating new performance threshold: " + threshold_new);
         metrics.update_threshold("vnf_world_domination", threshold_new);
     }
 
@@ -89,20 +88,34 @@ public class ScalingTest {
 
         ServiceInstance instance = plugin.initialScaling(data);
 
-        System.out.println("Service Graph pre-scale out.");
+        logger.info("Service Graph pre-scale out.");
         ServiceGraph graph1 = new ServiceGraph(instance);
         Node node1 = graph1.generate_graph();
         traverseGraph(node1);
+
+        logger.info("Forwarding Graph: ns:fg01 Forwarding Path ns:fg01:fp01");
+        Node forwarding_path_1 = graph1.get_forwarding_path("ns:fg01",  "ns:fg01:fp01");
+        if(null!=forwarding_path_1)
+            traverseGraph(forwarding_path_1);
+        else
+            logger.error("Forwarding Graph: ns:fg01 Forwarding Path ns:fg01:fp01 not found");
 
         HashMap<String, List<MonitorStats>> stats_history = new HashMap<String, List<MonitorStats>>();
         MonitorMessage trigger = new MonitorMessage(MonitorMessage.SCALE_TYPE.SCALE_OUT, stats_history);
 
         instance = plugin.updateScaling(data, instance, trigger);
 
-        System.out.println("Service Graph post-scale out.");
+        logger.info("Service Graph post-scale out.");
         ServiceGraph graph2 = new ServiceGraph(instance);
         Node node2 = graph2.generate_graph();
         traverseGraph(node2);
+
+        logger.info("Forwarding Graph: ns:fg01 Forwarding Path ns:fg01:fp02");
+        Node forwarding_path_2 = graph2.get_forwarding_path("ns:fg01",  "ns:fg01:fp02");
+        if(null!=forwarding_path_2)
+        {
+            logger.error("Forwarding Graph: ns:fg01 Forwarding Path ns:fg01:fp02 should NOT exist");
+        }
 
         return;
 
@@ -111,16 +124,16 @@ public class ScalingTest {
     private void traverseGraph(Node root)
     {
         StringBuilder str = new StringBuilder();
-        str.append(root.name);
+        str.append(root.get_instance_name());
         if(root.get_output_links().size()==0)
             return;
         str.append("->[");
         for(Node nn : root.get_output_links())
         {
-            str.append(" " + nn.name );
+            str.append(" " + nn.get_instance_name());
         }
         str.append(" ]");
-        System.out.println(str.toString());
+        logger.info(str.toString());
 
         for(Node nn : root.get_output_links())
         {
@@ -129,6 +142,7 @@ public class ScalingTest {
 
         return;
     }
+
 
     //@Test
     public void ScaleOut_1() {

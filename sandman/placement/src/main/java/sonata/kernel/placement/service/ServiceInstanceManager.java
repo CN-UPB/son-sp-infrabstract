@@ -457,7 +457,7 @@ System.out.println("update_ns_link "+link.getId()+"  "+cp_ref);
     In case of vnf instance addition, vnf_name = null
     In case of vnf instance deletion, vnf_name must be the name associated with the vnf instance.
      */
-    public ServiceInstance update_functions_list(String vnf_id, String vnf_name, ACTION_TYPE action) {
+    public String update_functions_list(String vnf_id, String vnf_name, ACTION_TYPE action) {
 
         if (action == ACTION_TYPE.ADD_INSTANCE) {
 
@@ -501,6 +501,8 @@ System.out.println("update_ns_link "+link.getId()+"  "+cp_ref);
 
                 internal_add_mgmt_link(function_instance);
 
+                return n_function.getVnfId() + id;
+
             } else {
                 logger.debug("Add instance of known function "+vnf_id);
                 VnfDescriptor descriptor = nw_function_desc_map.get(network_functions_db.get(vnf_id).getVnfName());
@@ -521,7 +523,7 @@ System.out.println("update_ns_link "+link.getId()+"  "+cp_ref);
                 instance.function_list.get(n_function.getVnfId()).put(n_function.getVnfId() +
                         id, function_instance);
 
-
+                return n_function.getVnfId() + id;
 
             }
         } else if (action == ACTION_TYPE.DELETE_INSTANCE) {
@@ -535,7 +537,7 @@ System.out.println("update_ns_link "+link.getId()+"  "+cp_ref);
                 instance.function_list.get(vnf_id).remove(vnf_name);
             }
         }
-        return instance;
+        return null;
 
     }
 
@@ -681,6 +683,7 @@ System.out.println("update_ns_link "+link.getId()+"  "+cp_ref);
 
         return this.instance;
     }
+
 
 
 }

@@ -33,6 +33,8 @@ public class FunctionInstance {
 
     public String name;
 
+    public String data_center;
+
     //public final Map<String,LinkInstance> links;
 
     /**

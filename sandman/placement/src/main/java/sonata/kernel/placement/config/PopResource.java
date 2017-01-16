@@ -14,6 +14,15 @@ public class PopResource {
 
     ArrayList<NodeResource> nodes;
     ArrayList<NetworkResource> networks;
+    SystemResource resource;
+
+    public SystemResource getResource() {
+        return resource;
+    }
+
+    public void setResource(SystemResource resource) {
+        this.resource = resource;
+    }
 
     public String getPopName() {
         return popName;

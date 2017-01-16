@@ -62,6 +62,9 @@ resources:
     password: "bla"
     tenantName: "fc394f2ab2df4114bde39905f800dc57"
 
+    resource:
+      cpu: 100
+      memory: 100
     nodes:
       - name: "NodeSet1"
         quantity: 100
@@ -106,4 +109,3 @@ resources:
         subnet: "192.1.0.0/29"
         gateway: "192.1.0.1"
         prefer: "mgmt"
-

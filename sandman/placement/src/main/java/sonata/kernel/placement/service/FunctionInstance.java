@@ -33,6 +33,8 @@ public class FunctionInstance {
 
     public String name;
 
+    public String data_center;
+
     //public final Map<String,LinkInstance> links;
 
     /**
@@ -58,7 +60,7 @@ public class FunctionInstance {
      */
     //public final Map<String, LinkInstance> innerLinks;
 
-    public FunctionInstance(NetworkFunction function, VnfDescriptor descriptor, String name){
+    public FunctionInstance(NetworkFunction function, VnfDescriptor descriptor, String name, String PopName){
     	logger.debug("Function Instance Name: "+ name);
         this.function = function;
         this.descriptor = descriptor;
@@ -69,6 +71,7 @@ public class FunctionInstance {
         //this.innerLinks = new HashMap<String, LinkInstance>();
         //this.links = new HashMap<String, LinkInstance>();
         this.deploymentUnits = descriptor.getVirtualDeploymentUnits();
+        this.data_center = PopName;
     }
 
 //    public UnitInstance searchUnitInstanceByConnectionPointId(String conPointId){

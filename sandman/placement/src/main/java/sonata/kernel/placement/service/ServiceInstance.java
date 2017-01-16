@@ -80,6 +80,29 @@ public class ServiceInstance {
 
     }
 
+    public String findVnfIdFromVnfInstanceName(String VnfName)
+    {
+        for(Map.Entry<String, Map<String, FunctionInstance>> entry_m: function_list.entrySet())
+        {
+            if(entry_m.getValue().get(VnfName) != null)
+                return entry_m.getKey();
+        }
+        return null;
+    }
+
+    public boolean updateDataCenterForVnfInstance(String VnfName, String DataCenter)
+    {
+        for(Map.Entry<String, Map<String, FunctionInstance>> entry_m: function_list.entrySet())
+        {
+            FunctionInstance f_inst = entry_m.getValue().get(VnfName);
+            if(f_inst != null)
+            {
+                f_inst.data_center = DataCenter;
+                return true;
+            }
+        }
+        return false;
+    }
     /*
     public LinkInstance findLinkInstanceByUnit(UnitInstance unit, String conPoint){
 

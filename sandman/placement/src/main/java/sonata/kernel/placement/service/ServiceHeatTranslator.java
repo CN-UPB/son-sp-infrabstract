@@ -1,5 +1,6 @@
 package sonata.kernel.placement.service;
 
+import org.apache.bcel.generic.POP;
 import org.apache.commons.net.util.SubnetUtils;
 import sonata.kernel.VimAdaptor.commons.DeployServiceData;
 import sonata.kernel.VimAdaptor.commons.heat.HeatModel;
@@ -75,6 +76,8 @@ public class ServiceHeatTranslator {
             for (Map.Entry<String, FunctionInstance> finst : finst_list.getValue().entrySet()) {
                 HeatResource server = new HeatResource();
 
+                if(!dataCenter.getPopName().equals(finst.getValue().data_center))
+                    continue;
 
                 server.setType("OS::Nova::Server");
                 //server.setName(finst.getValue().function.getVnfName() /*+":"+unit.name */ + ":" + instance.service.getInstanceUuid());
@@ -154,7 +157,7 @@ public class ServiceHeatTranslator {
 
     protected static int populate_neutron_routers_E_LINE(ServiceInstance instance, HeatModel model,
                                                          List<NetworkResourceUnit> networkResources,
-                                                         int subnetIndex) {
+                                                         int subnetIndex, PopResource dataCenter) {
 
         for (Map.Entry<String, Map<String, FunctionInstance>> finst_list : instance.function_list.entrySet()) {
 
@@ -170,6 +173,10 @@ public class ServiceHeatTranslator {
 
 
                 for (Map.Entry<FunctionInstance, String> entry : link.interfaceList.entrySet()) {
+
+                    if(!entry.getKey().data_center.equals(dataCenter.getPopName()))
+                        continue;
+
                     FunctionInstance entryUnit = entry.getKey();
                     String portName = entry.getValue();
 
@@ -213,7 +220,7 @@ public class ServiceHeatTranslator {
 
     protected static int populate_neutron_routers_E_LAN(ServiceInstance instance, HeatModel model,
                                                         List<NetworkResourceUnit> networkResources,
-                                                        int subnetIndex) {
+                                                        int subnetIndex, PopResource dataCenter) {
         for (Map.Entry<String, Map<String, LinkInstance>> link_m : instance.outerlink_list.entrySet()) {
             //for (LinkInstance link : instance.outerLinks.values()) {
             for (LinkInstance link : link_m.getValue().values()) {
@@ -221,8 +228,12 @@ public class ServiceHeatTranslator {
                     continue;
 
                 for (Map.Entry<FunctionInstance, String> entry : link.interfaceList.entrySet()) {
+
                     FunctionInstance entryUnit = entry.getKey();
                     String portName = entry.getValue();
+
+                    if(!entryUnit.data_center.equals(dataCenter.getPopName()))
+                        continue;
 
                     HeatResource network = new HeatResource();
                     network.setType("OS::Neutron::Net");
@@ -269,6 +280,9 @@ public class ServiceHeatTranslator {
                 model.addResource(router);
 
                 for (Map.Entry<FunctionInstance, String> entry : link.getValue().interfaceList.entrySet()) {
+
+                    if(!entry.getKey().data_center.equals(dataCenter.getPopName()))
+                        continue;
 
                     if ((link.getValue().isBuild_in() == false && entry.getValue().split(":")[1].equals("input"))
                             || (link.getValue().isBuild_out() == false && entry.getValue().split(":")[1].equals("output")))
@@ -327,7 +341,7 @@ public class ServiceHeatTranslator {
     protected static void populate_neutron_nsd_mgmt(ServiceInstance instance,
                                                     HeatModel model,
                                                     List<NetworkResourceUnit> networkResources,
-                                                    int subnetIndex) {
+                                                    int subnetIndex, PopResource dataCenter) {
         // Add Mgmt stuff
         HeatResource mgmtNetwork = new HeatResource();
         mgmtNetwork.setType("OS::Neutron::Net");
@@ -387,13 +401,13 @@ public class ServiceHeatTranslator {
 
             populate_nova_server(instance, vimFlavors, model, datacenter, mgmtPortNames);
 
-            int newIndex = populate_neutron_routers_E_LINE(instance, model, networkResources, subnetIndex);
+            int newIndex = populate_neutron_routers_E_LINE(instance, model, networkResources, subnetIndex, datacenter);
 
-            populate_neutron_routers_E_LAN(instance, model, networkResources, newIndex);
+            populate_neutron_routers_E_LAN(instance, model, networkResources, newIndex, datacenter);
 
             populate_neutron_floatingip(mgmtPortNames, model);
 
-            populate_neutron_nsd_mgmt(instance, model, networkResources, newIndex);
+            populate_neutron_nsd_mgmt(instance, model, networkResources, newIndex, datacenter);
 
             model.prepare();
 

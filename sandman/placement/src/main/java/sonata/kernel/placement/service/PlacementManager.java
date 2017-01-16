@@ -7,12 +7,13 @@ import sonata.kernel.placement.config.PlacementConfig;
 import sonata.kernel.placement.config.PopResource;
 
 import java.util.ArrayList;
+import java.util.List;
 
 
 public class PlacementManager {
     final static Logger logger = Logger.getLogger(PlacementManager.class);
     final private ServiceInstanceManager instance_manager;
-    final PlacementConfig config;
+    final private PlacementConfig config;
 
     public PlacementManager() {
         this.instance_manager = new ServiceInstanceManager();
@@ -110,14 +111,15 @@ public class PlacementManager {
     /**
      * This method adds a new instance of a VNF.
      * @param VnfId String identifying the VNF ID if the VNF instance to be added.
+     * @param PopName String identifying the PoP where the instance must be deployed.
      * @return String The name of the VNF instance.
      */
-    public String AddNetworkFunctionInstance(String VnfId)
+    public String AddNetworkFunctionInstance(String VnfId, String PopName)
     {
         logger.debug("PlacementManager::AddNetworkFunctionInstance ENTRY");
         logger.info("PlacementManager::AddNetworkFunctionInstance: VnfId: " + VnfId);
 
-        String VnfInstanceName = this.instance_manager.update_functions_list(VnfId, null, ServiceInstanceManager.ACTION_TYPE.ADD_INSTANCE);
+        String VnfInstanceName = this.instance_manager.update_functions_list(VnfId, null, PopName, ServiceInstanceManager.ACTION_TYPE.ADD_INSTANCE);
         if(VnfInstanceName == null)
         {
             logger.fatal("PlacementManager::AddNetworkFunctionInstance: Failed to add instance for Network Function " + VnfId);
@@ -140,7 +142,7 @@ public class PlacementManager {
 
         String VnfId = this.instance_manager.get_instance().findVnfIdFromVnfInstanceName(VnfInstance);
         if(VnfId != null)
-            this.instance_manager.update_functions_list(VnfId, VnfInstance, ServiceInstanceManager.ACTION_TYPE.DELETE_INSTANCE);
+            this.instance_manager.update_functions_list(VnfId, VnfInstance, null, ServiceInstanceManager.ACTION_TYPE.DELETE_INSTANCE);
         else {
             logger.fatal("PlacementManager::DeleteNetworkFunctionInstance: Unable to delete function instance "
                     + VnfInstance + ". Unknown VnfId.");
@@ -176,6 +178,25 @@ public class PlacementManager {
     }
 
     /**
+     * This method returns the total available PoP's.
+     * @return List<String> List of available PoP names.
+     */
+    public List<String> GetAvailablePoP()
+    {
+        logger.debug("PlacementManager::GetAvailablePoP ENTRY");
+        List<String> PopList = new ArrayList<String>();
+
+        ArrayList<PopResource> resource_list = config.getResources();
+        for(PopResource resource : resource_list)
+        {
+            PopList.add(resource.getPopName());
+        }
+        logger.info("PlacementManager::GetAvailablePoP: Found " + PopList.size() + " PoP's");
+        logger.debug("PlacementManager::GetAvailablePoP EXIT");
+        return PopList;
+    }
+
+    /**
      * This method returns the total VNF instance capacity on the PoP.
      * @param PopName String identifying the PoP.
      * @return int Total VNF capacity of the PoP.
@@ -189,12 +210,12 @@ public class PlacementManager {
         for(PopResource resource : resource_list)
         {
             if(resource.getPopName().equals(PopName)) {
-                logger.info("PlacementManager::GetTotoalPopCapacity: Capacity = " + resource.getNodes().size());
+                logger.info("PlacementManager::GetTotalPopCapacity: Capacity = " + resource.getNodes().size());
                 logger.debug("PlacementManager::GetTotalPoPCapacity EXIT");
                 return resource.getNodes().size();
             }
         }
-        logger.error("PlacementManager::GetTotoalPoPCapacity: Cannot find PoP: " + PopName);
+        logger.error("PlacementManager::GetTotalPoPCapacity: Cannot find PoP: " + PopName);
         logger.debug("PlacementManager::GetTotalPoPCapacity EXIT");
         return 0;
     }

@@ -54,8 +54,41 @@ public class DefaultPlacementPluginTest {
         // add first node as example
         nodeList.add(mapping.mapping.keySet().iterator().next());
 
+        /*
+        {"CPU_cores": 4,
+         "SYS_time": 1480936009023641088,
+         "PIDS": 2,
+         "NET_in/s": 394,
+         "BLOCK_read": 0,
+         "MEM_limit": 16827117568,
+         "NET_out/s": 383,
+         "BLOCK_write": 0,
+         "CPU_%": 0.0032249413036155128,
+         "MEM_used": 618496,
+         "MEM_%": 3.675590887747698e-05}
+        */
+
+
+        MonitorStats stat1 = new MonitorStats();
+        stat1.setCpuCores(4);
+        stat1.setCpu(3.5);
+        stat1.setMemoryLimit(16827117568L);
+        stat1.setMemoryPercentage(3.675590887747698e-05f);
+
+        MonitorStats stat2 = new MonitorStats();
+        stat2.setCpuCores(2);
+        stat2.setCpu(1);
+        stat2.setMemoryLimit(16827117568L);
+        stat2.setMemoryPercentage(99.999997284145676e-02f);
+
+
+        HashMap<String, MonitorStats> stats = new HashMap<String, MonitorStats>();
+        stats.put("firewall1", stat1);
+        stats.put("firewall2", stat2);
+
         HashMap<String, List<MonitorStats>> stats_history = new HashMap<String, List<MonitorStats>>();
         MonitorMessage trigger = new MonitorMessage(MonitorMessage.SCALE_TYPE.SCALE_OUT, stats_history);
+        //MonitorMessage trigger = new MonitorMessage(MonitorMessage.SCALE_TYPE.MONITOR_STATS, stats, stats_history);
 
         instance = plugin.updateScaling(data, instance, trigger);
 

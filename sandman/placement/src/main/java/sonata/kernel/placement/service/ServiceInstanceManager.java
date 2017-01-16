@@ -16,6 +16,8 @@ import org.apache.log4j.Logger;
 import sonata.kernel.VimAdaptor.commons.vnfd.VnfDescriptor;
 import sonata.kernel.VimAdaptor.commons.vnfd.VnfVirtualLink;
 import sonata.kernel.placement.Catalogue;
+import sonata.kernel.placement.PlacementConfigLoader;
+import sonata.kernel.placement.config.PlacementConfig;
 
 /*
 ServiceInstanceManager enables addition/deletion/updation of resources
@@ -42,6 +44,8 @@ public class ServiceInstanceManager {
     private ServiceInstance instance;
     private Map<String, VnfDescriptor> nw_function_desc_map;
     private Map<String, NetworkFunction> network_functions_db;
+    private String default_pop;
+    private PlacementConfig config;
 
     public ServiceInstance initialize_service_instance(DeployServiceData service_data) {
         ServiceDescriptor service = service_data.getNsd();
@@ -49,6 +53,8 @@ public class ServiceInstanceManager {
         instance = new ServiceInstance();
         instance.service = service;
 
+        config = PlacementConfigLoader.loadPlacementConfig();
+        default_pop = config.getResources().get(0).getPopName();
 
         String uuid = service.getUuid();
         String instance_uuid = service.getInstanceUuid();
@@ -58,6 +64,7 @@ public class ServiceInstanceManager {
 
         initialize_function_instance(service_data);
         initialize_vlinks_list(service_data);
+
 
         return instance;
 
@@ -81,7 +88,7 @@ public class ServiceInstanceManager {
             VnfDescriptor descriptor = nw_function_desc_map.get(function.getVnfName());
             assert descriptor != null : "Virtual Network Function " + function.getVnfName() + " not found";
 
-            FunctionInstance function_instance = new FunctionInstance(function, descriptor, function.getVnfId());
+            FunctionInstance function_instance = new FunctionInstance(function, descriptor, function.getVnfId(), default_pop);
 
             int id;
 
@@ -457,7 +464,7 @@ System.out.println("update_ns_link "+link.getId()+"  "+cp_ref);
     In case of vnf instance addition, vnf_name = null
     In case of vnf instance deletion, vnf_name must be the name associated with the vnf instance.
      */
-    public String update_functions_list(String vnf_id, String vnf_name, ACTION_TYPE action) {
+    public String update_functions_list(String vnf_id, String vnf_name, String PopName, ACTION_TYPE action) {
 
         if (action == ACTION_TYPE.ADD_INSTANCE) {
 
@@ -491,7 +498,7 @@ System.out.println("update_ns_link "+link.getId()+"  "+cp_ref);
                 instance.vnf_uid.put(n_function.getVnfId(), vnf_uid);
 
                 FunctionInstance function_instance = new FunctionInstance(n_function, descriptor,
-                        n_function.getVnfName().split("-")[0] + id);
+                        n_function.getVnfName().split("-")[0] + id, PopName);
 
                 initialize_vnfvlink_list(function_instance, descriptor);
 
@@ -514,7 +521,7 @@ System.out.println("update_ns_link "+link.getId()+"  "+cp_ref);
                 int id = instance.vnf_uid.get(n_function.getVnfId()).addAndGet(1);
                 instance.vnf_uid.get(n_function.getVnfId()).set(id);
                 FunctionInstance function_instance = new FunctionInstance(n_function, descriptor,
-                        n_function.getVnfName().split("-")[0] + id);
+                        n_function.getVnfName().split("-")[0] + id, PopName);
 
                 initialize_vnfvlink_list(function_instance, descriptor);
 

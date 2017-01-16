@@ -5,6 +5,7 @@ import org.apache.log4j.Logger;
 import sonata.kernel.placement.PlacementConfigLoader;
 import sonata.kernel.placement.config.PlacementConfig;
 import sonata.kernel.placement.config.PopResource;
+import sonata.kernel.placement.config.SystemResource;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -179,7 +180,7 @@ public class PlacementManager {
 
     /**
      * This method returns the total available PoP's.
-     * @return List<String> List of available PoP names.
+     * @return List String List of available PoP names.
      */
     public List<String> GetAvailablePoP()
     {
@@ -200,7 +201,7 @@ public class PlacementManager {
      * This method returns the total VNF instance capacity on the PoP.
      * @param PopName String identifying the PoP.
      * @return int Total VNF capacity of the PoP.
-     */
+
     public int GetTotalPoPCapacity(String PopName)
     {
         logger.debug("PlacementManager::GetTotalPoPCapacity ENTRY");
@@ -218,13 +219,113 @@ public class PlacementManager {
         logger.error("PlacementManager::GetTotalPoPCapacity: Cannot find PoP: " + PopName);
         logger.debug("PlacementManager::GetTotalPoPCapacity EXIT");
         return 0;
+    }*/
+
+    /**
+     * This method returns the total CPU capacity on the PoP.
+     * @param PopName String identifying the PoP.
+     * @return int Total CPU capacity of the PoP.
+     */
+    public int GetTotalCPU(String PopName)
+    {
+        logger.debug("PlacementManager::GetTotalCPU ENTRY");
+        logger.info("PlacementManager::GetTotalCPU: PopName: " + PopName);
+
+        ArrayList<PopResource> resource_list = config.getResources();
+        for(PopResource resource : resource_list)
+        {
+            if(resource.getPopName().equals(PopName)) {
+                logger.info("PlacementManager::GetTotalCPU: TotalCPU = " + resource.getResource().cpu);
+                logger.debug("PlacementManager::GetTotalCPU EXIT");
+                return resource.getResource().cpu;
+            }
+        }
+        logger.error("PlacementManager::GetTotalCPU: Cannot find PoP: " + PopName);
+        logger.debug("PlacementManager::GetTotalCPU EXIT");
+        return 0;
+
     }
 
     /**
+     * This method returns the unused CPU capacity on the PoP.
+     * @param PopName String identifying the PoP.
+     * @return int Unused CPU capacity of the PoP.
+     */
+    public int GetAvailableCPU(String PopName)
+    {
+        logger.debug("PlacementManager::GetAvailableCPU ENTRY");
+        logger.info("PlacementManager::GetAvailableCPU: PopName: " + PopName);
+
+        ArrayList<PopResource> resource_list = config.getResources();
+        for(PopResource resource : resource_list)
+        {
+            if(resource.getPopName().equals(PopName)) {
+                logger.info("PlacementManager::GetAvailableCPU: AvailableCPU = " + (resource.getResource().cpu - resource.getResource().getCpu_used()));
+                logger.debug("PlacementManager::GetAvailableCPU EXIT");
+                return resource.getResource().cpu;
+            }
+        }
+        logger.error("PlacementManager::GetAvailableCPU: Cannot find PoP: " + PopName);
+        logger.debug("PlacementManager::GetAvailableCPU EXIT");
+        return 0;
+
+    }
+
+    /**
+     * This method returns the total memory capacity on the PoP.
+     * @param PopName String identifying the PoP.
+     * @return int Unused memory capacity of the PoP.
+     */
+    public int GetAvailableMemory(String PopName)
+    {
+        logger.debug("PlacementManager::GetAvailableMemory ENTRY");
+        logger.info("PlacementManager::GetAvailableMemory: PopName: " + PopName);
+
+        ArrayList<PopResource> resource_list = config.getResources();
+        for(PopResource resource : resource_list)
+        {
+            if(resource.getPopName().equals(PopName)) {
+                logger.info("PlacementManager::GetAvailableMemory: TotalMemory = " + (resource.getResource().memory - resource.getResource().getMemory_used()));
+                logger.debug("PlacementManager::GetAvailableMemory EXIT");
+                return resource.getResource().memory;
+            }
+        }
+        logger.error("PlacementManager::GetAvailableMemory: Cannot find PoP: " + PopName);
+        logger.debug("PlacementManager::GetAvailableMemory EXIT");
+        return 0;
+    }
+
+    /**
+     * This method returns the total memory capacity on the PoP.
+     * @param PopName String identifying the PoP.
+     * @return int Total memory capacity of the PoP.
+     */
+    public int GetTotalMemory(String PopName)
+    {
+        logger.debug("PlacementManager::GetTotalMemory ENTRY");
+        logger.info("PlacementManager::GetTotalMemory: PopName: " + PopName);
+
+        ArrayList<PopResource> resource_list = config.getResources();
+        for(PopResource resource : resource_list)
+        {
+            if(resource.getPopName().equals(PopName)) {
+                logger.info("PlacementManager::GetTotalMemory: TotalMemory = " + resource.getResource().memory);
+                logger.debug("PlacementManager::GetTotalMemory EXIT");
+                return resource.getResource().memory;
+            }
+        }
+        logger.error("PlacementManager::GetTotalMemory: Cannot find PoP: " + PopName);
+        logger.debug("PlacementManager::GetTotalMemory EXIT");
+        return 0;
+
+    }
+
+
+    /*
      * This method returns the free VNF instance capacity on the PoP.
      * @param PopName String identifying the PoP.
      * @return int Total VNF capacity of the PoP.
-     */
+     *
     public int GetAvailablePoPCapacity(String PopName)
     {
         logger.debug("PlacementManager::GetAvailablePoPCapacity ENTRY");
@@ -233,18 +334,13 @@ public class PlacementManager {
         ArrayList<PopResource> resource_list = config.getResources();
         for(PopResource resource : resource_list)
         {
-            /*TODO **********************************
-            if(resource.getPopName().equals(PopName)) {
-                logger.info("PlacementManager::GetAvailablePoPCapacity: Capacity = " + resource.getNodes().size());
-                logger.debug("PlacementManager::GetAvailablePoPCapacity EXIT");
-                return resource.getNodes().size();
-            }
-            TODO ********************************** */
+
         }
 
         logger.error("PlacementManager::GetAvailablePoPCapacity: Cannot find PoP: " + PopName);
         logger.debug("PlacementManager::GetAvailablePoPCapacity EXIT");
         return 0;
-    }
+    }*/
+
 
 }

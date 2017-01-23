@@ -12,6 +12,7 @@ import org.apache.http.impl.client.HttpClients;
 import org.apache.log4j.Logger;
 import sonata.kernel.VimAdaptor.commons.vnfd.Unit;
 import sonata.kernel.VimAdaptor.commons.vnfd.UnitDeserializer;
+import sonata.kernel.placement.service.NetworkTopologyGraph;
 
 import java.io.IOException;
 
@@ -19,7 +20,7 @@ public class TranslatorTopo {
 
     final static Logger logger = Logger.getLogger(TranslatorTopo.class);
 
-    public static NetworkTopology topo(String topoEndpoint){
+    public static NetworkTopologyGraph.NetworkTopology_J topo(String topoEndpoint){
 
         // Same chaining port for both datacenters
         String topoPath = topoEndpoint;
@@ -27,7 +28,7 @@ public class TranslatorTopo {
             topoPath += "/";
         String requestUri;
         String json = null;
-        NetworkTopology topology;
+        NetworkTopologyGraph.NetworkTopology_J topology;
 
         requestUri = topoPath+"v1/topo/";
 
@@ -60,16 +61,16 @@ public class TranslatorTopo {
         return null;
     }
 
-    public static NetworkTopology readJsonTopology(String text){
+    public static NetworkTopologyGraph.NetworkTopology_J readJsonTopology(String text){
         ObjectMapper mapper = new ObjectMapper(new JsonFactory());
         SimpleModule module = new SimpleModule();
 
         module.addDeserializer(Unit.class, new UnitDeserializer());
         mapper.registerModule(module);
         mapper.enable(DeserializationFeature.READ_ENUMS_USING_TO_STRING);
-        NetworkTopology topo = null;
+        NetworkTopologyGraph.NetworkTopology_J topo = null;
         try {
-            topo = mapper.readValue(text, NetworkTopology.class);
+            topo = mapper.readValue(text, NetworkTopologyGraph.NetworkTopology_J.class);
         } catch (IOException e) {
             logger.debug("Topology JSON parsing failure",e);
         }

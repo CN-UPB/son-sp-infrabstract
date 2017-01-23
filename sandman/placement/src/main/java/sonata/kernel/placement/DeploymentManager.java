@@ -161,7 +161,6 @@ public class DeploymentManager implements Runnable{
                 for(HeatResource h: col){
                     if(h.getType().equals("OS::Nova::Server")) {
                         String functionInstanceName = h.getResourceName();
-                        functionInstanceName = functionInstanceName.substring(0,functionInstanceName.lastIndexOf(":"));
                         FunctionMonitor monitor = new FunctionMonitor(pop, stackName, h.getResourceName());
                         monitor.instance = functionMap.get(functionInstanceName);
                         vnfMonitors.add(monitor);

@@ -56,8 +56,6 @@ public class ServiceInstanceManager {
         config = PlacementConfigLoader.loadPlacementConfig();
         default_pop = config.getResources().get(0).getPopName();
 
-        String uuid = service.getUuid();
-        String instance_uuid = service.getInstanceUuid();
         String service_name = service.getName();
         ArrayList<ConnectionPoint> connection_points = Lists.newArrayList(service.getConnectionPoints());
         ArrayList<ForwardingGraph> forwarding_graph = Lists.newArrayList(service.getForwardingGraphs());
@@ -415,10 +413,8 @@ System.out.println("update_ns_link "+link.getId()+"  "+cp_ref);
                 }
             }
             port[i] = ((HashMap.Entry<FunctionInstance, String>) finst_t[i]).getKey().getName() + ":" + intf[i]
-                    + ":" + ((HashMap.Entry<FunctionInstance, String>) finst_t[i]).getValue().split(":")[1]
-                    + ":" + instance.service.getInstanceUuid();
-            server[i] = ((HashMap.Entry<FunctionInstance, String>) finst_t[i]).getKey().getName() + ":" +
-                    instance.service.getInstanceUuid();
+                    + ":" + ((HashMap.Entry<FunctionInstance, String>) finst_t[i]).getValue().split(":")[1];
+            server[i] = ((HashMap.Entry<FunctionInstance, String>) finst_t[i]).getKey().getName();
         }
 
 

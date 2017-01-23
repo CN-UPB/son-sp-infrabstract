@@ -23,6 +23,27 @@ public class PlacementManager {
 
 
     /**
+     * This method returns the current Network Topology graph.
+     * @return NetworkNode The root node of the topology graph.
+     */
+    public NetworkNode GenerateNetworkTopologyGraph()
+    {
+        logger.debug("PlacementManager::GenerateServiceGraph ENTER");
+        String graph_text = "";
+
+        NetworkTopologyGraph t_graph = new NetworkTopologyGraph();
+        NetworkNode root = t_graph.generate_graph();
+        if(null == root)
+        {
+            logger.error("PlacementManager::GenerateNetworkTopologyGraph: Topology Graph unavailable");
+            logger.debug("PlacementManager::GenerateServiceGraph EXIT");
+            return null;
+        }
+        logger.debug("PlacementManager::GenerateServiceGraph EXIT");
+        return root;
+    }
+
+    /**
      * This method generates the service graph associated with the current Service Instance.
      * @return Node the root of the service graph.
      */
@@ -39,9 +60,10 @@ public class PlacementManager {
      * This method adds a link between two VNF instances.
      * @param SourceVnfInstance The Source VNF instance.
      * @param TargetVnfInstance The Target VNF instance.
+     * @param viaPath The customized routing path (Eg: tcpdump1-s1-s2-firwall1 viaPath = s1:s2).
      * @return Boolean Status of the link addition.
      */
-    public boolean AddVirtualLink(String SourceVnfInstance, String TargetVnfInstance)
+    public boolean AddVirtualLink(String SourceVnfInstance, String TargetVnfInstance, String viaPath)
     {
         logger.debug("PlacementManager::AddVirtualLink ENTER");
         logger.info("PlacementManager::AddVirtualLink: Source VnfInstance: " + SourceVnfInstance
@@ -68,6 +90,11 @@ public class PlacementManager {
 
         instance_manager.update_vlink_list("vnf_firewall", "vnf_tcpdump", "vnf_firewall1", "vnf_tcpdump1",
                 ServiceInstanceManager.ACTION_TYPE.ADD_INSTANCE);
+
+        if(viaPath != null || !viaPath.equals(""))
+        {
+            //Delete the default chaining rule and add the customized chaining rule.
+        }
 
         logger.debug("PlacementManager::AddVirtualLink EXIT");
         return true;
@@ -319,6 +346,7 @@ public class PlacementManager {
         return 0;
 
     }
+
 
 
     /*

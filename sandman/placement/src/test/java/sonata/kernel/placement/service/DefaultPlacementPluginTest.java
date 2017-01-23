@@ -7,6 +7,7 @@ import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
 import com.fasterxml.jackson.databind.module.SimpleModule;
+import org.apache.log4j.Logger;
 import org.junit.Test;
 import org.openstack4j.api.Builders;
 import org.openstack4j.api.OSClient;
@@ -33,7 +34,7 @@ import java.util.List;
 import static org.junit.Assert.*;
 
 public class DefaultPlacementPluginTest {
-
+    final static Logger logger = Logger.getLogger(DefaultPlacementPluginTest.class);
 
     @Test
     public void testTwo()
@@ -157,6 +158,14 @@ public class DefaultPlacementPluginTest {
             }
         }
 
+    }
+
+    @Test
+    public void testThree(){
+
+        NetworkTopologyGraph graph = new NetworkTopologyGraph();
+        NetworkNode node = graph.generate_graph();
+        return;
     }
 
     @Test

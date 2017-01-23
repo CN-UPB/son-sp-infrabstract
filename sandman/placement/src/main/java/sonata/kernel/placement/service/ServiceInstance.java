@@ -46,6 +46,10 @@ public class ServiceInstance {
 
     public final List<Pair<Pair<String, String>, Pair<String, String>>> delete_chain;
 
+    public List<Pair<Pair<String, String>, List<String>>> getCustomized_chains() {return customized_chains;}
+
+    public final List<Pair<Pair<String, String>, List<String>>> customized_chains;
+
 
 
 
@@ -75,6 +79,8 @@ public class ServiceInstance {
 
         create_chain = new ArrayList<Pair<Pair<String, String>, Pair<String, String>>>();
         delete_chain = new ArrayList<Pair<Pair<String, String>, Pair<String, String>>>();
+
+        customized_chains = new ArrayList<Pair<Pair<String, String>, List<String>>>();
 
 
 

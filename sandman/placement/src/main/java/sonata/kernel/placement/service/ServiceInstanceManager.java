@@ -368,7 +368,7 @@ System.out.println("update_ns_link "+link.getId()+"  "+cp_ref);
 
         }
 
-        add_chaining_rules(linkInstance, instance.create_chain);
+        add_chaining_rules(linkInstance, instance.create_chain, null);
 
 
         return;
@@ -378,16 +378,18 @@ System.out.println("update_ns_link "+link.getId()+"  "+cp_ref);
     {
         instance.create_chain.clear();
         instance.delete_chain.clear();
+        instance.customized_chains.clear();
     }
 
     protected void delete_chaining_rules(String link_id, String link_name) {
 
         LinkInstance linkInstance = instance.innerlink_list.get(link_id).get(link_name);
-        add_chaining_rules(linkInstance, instance.delete_chain);
+        add_chaining_rules(linkInstance, instance.delete_chain, null);
         return;
     }
 
-    protected void add_chaining_rules(LinkInstance linkInstance, List<Pair<Pair<String, String>, Pair<String, String>>> chain) {
+    protected void add_chaining_rules(LinkInstance linkInstance,
+                                      List<Pair<Pair<String, String>, Pair<String, String>>> chain, List<String> viaPath) {
         Object[] finst_t = linkInstance.interfaceList.entrySet().toArray();
 
         if (linkInstance.isMgmtLink())
@@ -424,6 +426,17 @@ System.out.println("update_ns_link "+link.getId()+"  "+cp_ref);
             chain.add(new ImmutablePair<Pair<String,String>,Pair<String,String>>(new ImmutablePair<String,String>(server[1],port[1]), new ImmutablePair<String,String>(server[0],port[0])));
         }
 
+        if(viaPath != null && viaPath.size()!=0)
+        {
+            if (((HashMap.Entry<FunctionInstance, String>) finst_t[1]).getValue().split(":")[1].equals("input")) {
+                instance.customized_chains.add(new ImmutablePair<Pair<String, String>, List<String>>
+                        (new ImmutablePair<String, String>(server[0], server[1]), viaPath));
+            } else {
+                instance.customized_chains.add(new ImmutablePair<Pair<String, String>, List<String>>
+                        (new ImmutablePair<String, String>(server[1], server[0]), viaPath));
+            }
+
+        }
         return;
 
     }
@@ -544,7 +557,7 @@ System.out.println("update_ns_link "+link.getId()+"  "+cp_ref);
 
     }
 
-    public ServiceInstance update_vlink_list(String s_vnfid, String d_vnfid, String endpoint_src, String endpoint_target, ACTION_TYPE action) {
+    public ServiceInstance update_vlink_list(String s_vnfid, String d_vnfid, String endpoint_src, String endpoint_target, List<String> viaPath, ACTION_TYPE action) {
 
         assert instance.function_list.get(s_vnfid) != null : "Virtual Network Function " + s_vnfid + " not found";
         assert instance.function_list.get(s_vnfid).get(endpoint_src) != null : "Virtual Network Function instance "
@@ -580,7 +593,7 @@ System.out.println("update_ns_link "+link.getId()+"  "+cp_ref);
             logger.error("ServiceInstanceManager::update_vlink_list: " + action.toString()
                     + " link between " + endpoint_src + " and " + endpoint_target + " failed");
 
-            add_chaining_rules(linkInstance, instance.create_chain);
+            add_chaining_rules(linkInstance, instance.create_chain, viaPath);
 
 
         } else if (action == ACTION_TYPE.DELETE_INSTANCE) {

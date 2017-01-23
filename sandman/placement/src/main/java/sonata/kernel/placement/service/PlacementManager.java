@@ -36,10 +36,10 @@ public class PlacementManager {
         if(null == root)
         {
             logger.error("PlacementManager::GenerateNetworkTopologyGraph: Topology Graph unavailable");
-            logger.debug("PlacementManager::GenerateServiceGraph EXIT");
+            logger.debug("PlacementManager::GenerateNetworkTopologyGraph EXIT");
             return null;
         }
-        logger.debug("PlacementManager::GenerateServiceGraph EXIT");
+        logger.debug("PlacementManager::GenerateNetworkTopologyGraph EXIT");
         return root;
     }
 
@@ -52,6 +52,13 @@ public class PlacementManager {
         logger.debug("PlacementManager::GenerateServiceGraph ENTER");
         ServiceGraph graph = new ServiceGraph(instance_manager.get_instance());
         Node node = graph.generate_graph();
+
+        if(node == null)
+        {
+            logger.error("PlacementManager::GenerateServiceGraph: Service Graph unavailable");
+            logger.debug("PlacementManager::GenerateServiceGraph EXIT");
+            return null;
+        }
         logger.debug("PlacementManager::GenerateServiceGraph EXIT");
         return node;
     }
@@ -60,10 +67,10 @@ public class PlacementManager {
      * This method adds a link between two VNF instances.
      * @param SourceVnfInstance The Source VNF instance.
      * @param TargetVnfInstance The Target VNF instance.
-     * @param viaPath The customized routing path (Eg: tcpdump1-s1-s2-firwall1 viaPath = s1:s2).
+     * @param ViaPath The customized routing path (Eg: tcpdump1-s1-s2-firwall1 viaPath = [s1,s2]).
      * @return Boolean Status of the link addition.
      */
-    public boolean AddVirtualLink(String SourceVnfInstance, String TargetVnfInstance, String viaPath)
+    public boolean AddVirtualLink(String SourceVnfInstance, String TargetVnfInstance, List<String> ViaPath)
     {
         logger.debug("PlacementManager::AddVirtualLink ENTER");
         logger.info("PlacementManager::AddVirtualLink: Source VnfInstance: " + SourceVnfInstance
@@ -88,13 +95,9 @@ public class PlacementManager {
             return false;
         }
 
-        instance_manager.update_vlink_list("vnf_firewall", "vnf_tcpdump", "vnf_firewall1", "vnf_tcpdump1",
+        instance_manager.update_vlink_list("vnf_firewall", "vnf_tcpdump", "vnf_firewall1", "vnf_tcpdump1", ViaPath,
                 ServiceInstanceManager.ACTION_TYPE.ADD_INSTANCE);
 
-        if(viaPath != null || !viaPath.equals(""))
-        {
-            //Delete the default chaining rule and add the customized chaining rule.
-        }
 
         logger.debug("PlacementManager::AddVirtualLink EXIT");
         return true;
@@ -130,7 +133,7 @@ public class PlacementManager {
             return false;
         }
 
-        this.instance_manager.update_vlink_list(SourceVnfId, TargetVnfId, SourceVnfInstance, TargetVnfInstance,
+        this.instance_manager.update_vlink_list(SourceVnfId, TargetVnfId, SourceVnfInstance, TargetVnfInstance, null,
                 ServiceInstanceManager.ACTION_TYPE.DELETE_INSTANCE);
         logger.debug("PlacementManager::DeleteVirtualLink EXIT");
         return true;

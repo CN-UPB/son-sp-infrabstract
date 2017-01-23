@@ -238,11 +238,15 @@ function setPkgList(status, response){
         for (var i=0; i<response.length; i++) {
             var node = response[i];
             var li = document.createElement("li");
-            var name = document.createTextNode(node.name+"  ");
+            var val = document.createElement("a");
+            val.setAttribute("href","/status/packageValidation?package="+i);
+            val.appendChild(document.createTextNode("(v)"));
+            var name = document.createTextNode("\u00A0"+node.name+"\u00A0\u00A0");
             var btn = document.createElement("button");
             btn.appendChild(document.createTextNode("Deploy"));
             btn.addEventListener('click',deployPkg.bind(this,i));
             btn.class="deploybtn";
+            li.appendChild(val);
             li.appendChild(name);
             li.appendChild(btn);
             ul.appendChild(li);

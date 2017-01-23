@@ -19,6 +19,7 @@ import sonata.kernel.placement.config.PlacementConfig;
 import sonata.kernel.placement.pd.PackageContentObject;
 import sonata.kernel.placement.pd.PackageDescriptor;
 import sonata.kernel.placement.pd.SonataPackage;
+import sonata.kernel.placement.pd.Validation;
 
 import java.io.File;
 import java.io.FilenameFilter;
@@ -38,11 +39,13 @@ public class Catalogue {
     public final static String[] INTERNAL_VNF_FOLDERS = new String[]{"sandman\\placement\\YAML\\internal", "sandman/placement/YAML/internal", "YAML/internal", "placement/YAML/internal"};
 
     static public int addPackage(SonataPackage sPackage){
+        // Validate package
+        sPackage.validation.validate();
         int newIndex = -1;
         int oldIndex = -1;
         for(int i=0; i<packages.size(); i++) {
         	SonataPackage  existPackage = packages.get(i);
-            if(existPackage.descriptor.getName().equals(sPackage)) {
+            if(existPackage.descriptor.getName().equals(sPackage.descriptor.getName())) {
                 oldIndex = i;
                 break;
             }

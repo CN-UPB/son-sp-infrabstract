@@ -176,6 +176,18 @@ public class MiniStatusServer {
             }
         }
 
+        if(uri.startsWith("/packageValidation")) {
+            String packageId = session.getParms().get("package");
+            int id = -1;
+            try {
+                id = Integer.parseInt(packageId);
+                SonataPackage pkg = Catalogue.packages.get(id);
+                String validationLog = pkg.validation.getValidationLog();
+                return newFixedLengthResponse(NanoHTTPD.Response.Status.OK, "text/plain", validationLog);
+            } catch (Exception e) {
+            }
+        }
+
         if(uri.equals("/packages")) {
             List<PackageDescriptor> packageList = new ArrayList<PackageDescriptor>();
             for(SonataPackage p:Catalogue.packages)

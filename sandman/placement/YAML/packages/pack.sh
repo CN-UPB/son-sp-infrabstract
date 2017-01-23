@@ -8,4 +8,4 @@ zip -r "$packagename.zip" META-INF function_descriptors service_descriptors
 
 echo "Rename $packagename.zip to $packagename.son"
 
-mv -n "$packagename.zip" "$packagename.son"
+mv -i "$packagename.zip" "$packagename.son"

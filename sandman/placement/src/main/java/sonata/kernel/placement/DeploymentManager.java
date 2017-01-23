@@ -135,7 +135,12 @@ public class DeploymentManager implements Runnable{
 
             List<String> nodeList = new ArrayList<String>();
             List<PopResource> popList = new ArrayList<PopResource>();
-            popList.addAll(mapping.popMapping.values());
+            /*
+            for(PopResource pop:mapping.popMapping.values())
+                if(!popList.contains(pop))
+                    popList.add(pop);
+            */
+            popList.addAll(config.getResources());
             for (int i = 0; i < popList.size(); i++) {
                 PopResource pop = popList.get(i);
                 String popName = pop.getPopName();

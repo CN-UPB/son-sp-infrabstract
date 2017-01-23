@@ -155,7 +155,7 @@ public class DefaultPlacementPlugin implements PlacementPlugin {
 
         for (Map.Entry<String, Map<String, FunctionInstance>> vnf_instances : instance.function_list.entrySet()) {
             for (Map.Entry<String, FunctionInstance> finst : vnf_instances.getValue().entrySet()) {
-                unitNodeNames.add(finst.getValue().deploymentUnits.get(0).getId());
+                unitNodeNames.add(finst.getValue().getName());
             }
         }
 

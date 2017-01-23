@@ -108,6 +108,30 @@ public final class PackageLoader {
         return null;
     }
 
+    public static SonataPackage loadSonataPackageFromDisk(String packagePath) {
+        logger.debug("Loading sonata package from disk");
+        File packageFile = new File(packagePath);
+        if (!packageFile.exists())
+            return null;
+
+        byte[] data;
+
+        try {
+
+            data = Files.readAllBytes(Paths.get(packagePath));
+
+            SonataPackage pack = zipByteArrayToSonataPackage(data);
+
+
+            return pack;
+
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+
+        return null;
+    }
+
     public static SonataPackage zipByteArrayToSonataPackage(byte[] data){
 
         List<byte[]> servicesDataList = new ArrayList<byte[]>();
@@ -115,6 +139,7 @@ public final class PackageLoader {
 
         List<ServiceDescriptor> services = new ArrayList<ServiceDescriptor>();
         List<VnfDescriptor> functions = new ArrayList<VnfDescriptor>();
+        SonataPackage pack = new SonataPackage();
         PackageDescriptor pd = null;
 
         try {
@@ -124,83 +149,84 @@ public final class PackageLoader {
         }
 
         for(byte[] serviceBytes : servicesDataList) {
-            services.add(byteArrayToServiceDescriptor(serviceBytes));
+            try {
+                services.add(byteArrayToServiceDescriptor(serviceBytes));
+            } catch (Exception e){
+                e.printStackTrace();
+                pack.validation.exceptions.add(e);
+            }
         }
 
         for(byte[] functionBytes : functionsDataList) {
-            functions.add(byteArrayToVnfDescriptor(functionBytes));
+            try {
+                functions.add(byteArrayToVnfDescriptor(functionBytes));
+            } catch (Exception e){
+                e.printStackTrace();
+                pack.validation.exceptions.add(e);
+            }
         }
 
         if(pd == null)
             return null;
 
-        SonataPackage pack = new SonataPackage(pd);
+        pack.descriptor = pd;
         pack.functions.addAll(functions);
         pack.services.addAll(services);
         return pack;
     }
 
-    public static ServiceDescriptor byteArrayToServiceDescriptor(byte[] data){
+    public static ServiceDescriptor byteArrayToServiceDescriptor(byte[] data) throws Exception {
         ObjectMapper mapper = new ObjectMapper(new YAMLFactory());
         SimpleModule module = new SimpleModule();
 
         ServiceDescriptor sd;
 
-        try {
 
-            StringBuilder bodyBuilder = new StringBuilder();
-            BufferedReader in = new BufferedReader(new InputStreamReader(
-                    new ByteArrayInputStream(data), Charset.forName("UTF-8")));
-            String line;
+        StringBuilder bodyBuilder = new StringBuilder();
+        BufferedReader in = new BufferedReader(new InputStreamReader(
+                new ByteArrayInputStream(data), Charset.forName("UTF-8")));
+        String line;
 
-            while ((line = in.readLine()) != null)
-                bodyBuilder.append(line + "\n\r");
+        while ((line = in.readLine()) != null)
+            bodyBuilder.append(line + "\n\r");
 
-            module.addDeserializer(Unit.class, new UnitDeserializer());
-            mapper.registerModule(module);
-            mapper.enable(DeserializationFeature.READ_ENUMS_USING_TO_STRING);
-            sd = mapper.readValue(bodyBuilder.toString(), ServiceDescriptor.class);
+        module.addDeserializer(Unit.class, new UnitDeserializer());
+        mapper.registerModule(module);
+        mapper.enable(DeserializationFeature.READ_ENUMS_USING_TO_STRING);
+        sd = mapper.readValue(bodyBuilder.toString(), ServiceDescriptor.class);
 
-        } catch (IOException e) {
-            e.printStackTrace();
-            return null;
-        }
+
         return sd;
     }
 
     public static VnfDescriptor fileToVnfDescriptor(File vnfFile){
         try {
             return byteArrayToVnfDescriptor(IOUtils.toByteArray(new FileInputStream(vnfFile)));
-        } catch (IOException e) {
+        } catch (Exception e) {
             e.printStackTrace();
             return null;
         }
     }
 
-    public static VnfDescriptor byteArrayToVnfDescriptor(byte[] data){
+    public static VnfDescriptor byteArrayToVnfDescriptor(byte[] data) throws Exception {
     	logger.debug("Byte array to VNF descriptor");
         ObjectMapper mapper = new ObjectMapper(new YAMLFactory());
         SimpleModule module = new SimpleModule();
 
         VnfDescriptor vnfd;
 
-        try{
-            StringBuilder bodyBuilder = new StringBuilder();
-            BufferedReader in = new BufferedReader(new InputStreamReader(
-                    new ByteArrayInputStream(data), Charset.forName("UTF-8")));
-            String line = null;
-            while ((line = in.readLine()) != null)
-                bodyBuilder.append(line + "\n\r");
+        StringBuilder bodyBuilder = new StringBuilder();
+        BufferedReader in = new BufferedReader(new InputStreamReader(
+                new ByteArrayInputStream(data), Charset.forName("UTF-8")));
+        String line = null;
+        while ((line = in.readLine()) != null)
+            bodyBuilder.append(line + "\n\r");
 
-            module.addDeserializer(Unit.class, new UnitDeserializer());
-            mapper.registerModule(module);
-            mapper.enable(DeserializationFeature.READ_ENUMS_USING_TO_STRING);
-            vnfd = mapper.readValue(bodyBuilder.toString(), VnfDescriptor.class);
+        module.addDeserializer(Unit.class, new UnitDeserializer());
+        mapper.registerModule(module);
+        mapper.enable(DeserializationFeature.READ_ENUMS_USING_TO_STRING);
+        vnfd = mapper.readValue(bodyBuilder.toString(), VnfDescriptor.class);
 
-        } catch (IOException e) {
-            e.printStackTrace();
-            return null;
-        }
         return vnfd;
     }
 

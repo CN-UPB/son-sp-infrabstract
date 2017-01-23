@@ -2,7 +2,6 @@ package sonata.kernel.placement.service;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 import org.apache.log4j.Logger;
-import sonata.kernel.placement.BlaTest;
 
 import java.util.ArrayList;
 import java.util.HashMap;

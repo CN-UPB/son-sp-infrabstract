@@ -109,6 +109,19 @@ public class ServiceInstance {
         }
         return false;
     }
+    
+    public String getDataCenterForVnf(String VnfName)
+    {
+        for(Map.Entry<String, Map<String, FunctionInstance>> entry_m: function_list.entrySet())
+        {
+            FunctionInstance f_inst = entry_m.getValue().get("vnf_" + VnfName);
+            if(f_inst != null)
+            {
+                return f_inst.data_center;
+            }
+        }
+        return null;
+    }
     /*
     public LinkInstance findLinkInstanceByUnit(UnitInstance unit, String conPoint){
 

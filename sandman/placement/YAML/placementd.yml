@@ -65,6 +65,7 @@ resources:
     resource:
       cpu: 100
       memory: 100
+      storage: 100
     nodes:
       - name: "NodeSet1"
         quantity: 100

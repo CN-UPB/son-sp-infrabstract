@@ -754,6 +754,24 @@ System.out.println("update_ns_link "+link.getId()+"  "+cp_ref);
             return false;
         }
 
+        multiplier =
+                function_instance.deploymentUnits.get(0).getResourceRequirements().getStorage().getSizeUnit().getMultiplier();
+        boolean storage_status = DatacenterManager.consume_storage(function_instance.data_center,
+                function_instance.deploymentUnits.get(0).getResourceRequirements().getStorage().getSize() * multiplier);
+
+        if(storage_status == false)
+        {
+            logger.error("ServiceInstanceManager::initialize_function_instance: Insufficient storage resource on "
+                    + function_instance.data_center + ". Required: " + function_instance.deploymentUnits.get(0).getResourceRequirements().getStorage().getSize() * multiplier
+                    + " Available: " + DatacenterManager.get_available_storage(function_instance.data_center));
+            DatacenterManager.relinquish_memory(function_instance.data_center,
+                    function_instance.deploymentUnits.get(0).getResourceRequirements().getMemory().getSize() * multiplier);
+            DatacenterManager.relinquish_cpu(function_instance.data_center,
+                    function_instance.deploymentUnits.get(0).getResourceRequirements().getCpu().getVcpus());
+            return false;
+
+        }
+
         return true;
     }
 
@@ -763,6 +781,11 @@ System.out.println("update_ns_link "+link.getId()+"  "+cp_ref);
                 function_instance.deploymentUnits.get(0).getResourceRequirements().getMemory().getSizeUnit().getMultiplier();
         DatacenterManager.relinquish_memory(function_instance.data_center,
                 function_instance.deploymentUnits.get(0).getResourceRequirements().getMemory().getSize() * multiplier);
+
+        multiplier =
+                function_instance.deploymentUnits.get(0).getResourceRequirements().getStorage().getSizeUnit().getMultiplier();
+        DatacenterManager.relinquish_storage(function_instance.data_center,
+                function_instance.deploymentUnits.get(0).getResourceRequirements().getStorage().getSize() * multiplier);
 
         DatacenterManager.relinquish_cpu(function_instance.data_center,
                 function_instance.deploymentUnits.get(0).getResourceRequirements().getCpu().getVcpus());

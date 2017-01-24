@@ -26,7 +26,10 @@ public class DatacenterManager {
         for(PopResource resource : config.getResources())
         {
             m_datacenters.put(resource.getPopName(),
-                    new DatacenterResource(resource.getPopName(), resource.getResource().cpu, resource.getResource().memory));
+                    new DatacenterResource(resource.getPopName(),
+                            resource.getResource().cpu,
+                            resource.getResource().memory,
+                            resource.getResource().storage));
         }
     }
 
@@ -53,6 +56,17 @@ public class DatacenterManager {
 
     }
 
+    public static double get_total_storage(String datacenter)
+    {
+        if(null == DatacenterManager.m_datacenters.get(datacenter)) {
+            logger.error("DatacenterManager::get_total_storage: Unknown datacenter: " + datacenter);
+            return 0;
+        }
+        else
+            return DatacenterManager.m_datacenters.get(datacenter).total_storage;
+
+    }
+
     public static int get_available_cpu(String datacenter)
     {
         if(null == DatacenterManager.m_datacenters.get(datacenter)) {
@@ -73,6 +87,35 @@ public class DatacenterManager {
         else
             return DatacenterManager.m_datacenters.get(datacenter).available_memory;
 
+    }
+
+    public static double get_available_storage(String datacenter)
+    {
+        if(null == DatacenterManager.m_datacenters.get(datacenter)) {
+            logger.error("DatacenterManager::get_available_storage: Unknown datacenter: " + datacenter);
+            return 0;
+        }
+        else
+            return DatacenterManager.m_datacenters.get(datacenter).available_storage;
+
+    }
+
+    public static boolean consume_storage(String datacenter, double amount)
+    {
+        if(null == DatacenterManager.m_datacenters.get(datacenter)) {
+            logger.error("DatacenterManager::consume_storage: Unknown datacenter: " + datacenter);
+            return false;
+        }
+
+        if(DatacenterManager.m_datacenters.get(datacenter).available_storage < amount)
+        {
+            logger.error("DatacenterManager::consume_storage: Insufficient storage available on : " + datacenter);
+            return false;
+        } else {
+            DatacenterManager.m_datacenters.get(datacenter).available_storage
+                    = DatacenterManager.m_datacenters.get(datacenter).available_storage - amount;
+            return true;
+        }
     }
 
     public static boolean consume_memory(String datacenter, double amount)
@@ -114,7 +157,7 @@ public class DatacenterManager {
     public static void relinquish_cpu(String datacenter, int cpu)
     {
         if(null == DatacenterManager.m_datacenters.get(datacenter)) {
-            logger.error("DatacenterManager::reliquish_resource: Unknown datacenter: " + datacenter);
+            logger.error("DatacenterManager::relinquish_cpu: Unknown datacenter: " + datacenter);
             return;
         }
 
@@ -125,12 +168,23 @@ public class DatacenterManager {
     public static void relinquish_memory(String datacenter, double memory)
     {
         if(null == DatacenterManager.m_datacenters.get(datacenter)) {
-            logger.error("DatacenterManager::reliquish_resource: Unknown datacenter: " + datacenter);
+            logger.error("DatacenterManager::relinquish_memory: Unknown datacenter: " + datacenter);
             return;
         }
 
         DatacenterManager.m_datacenters.get(datacenter).available_memory =
                 DatacenterManager.m_datacenters.get(datacenter).available_memory + memory;
+    }
+
+    public static void relinquish_storage(String datacenter, double storage)
+    {
+        if(null == DatacenterManager.m_datacenters.get(datacenter)) {
+            logger.error("DatacenterManager::relinquish_storage: Unknown datacenter: " + datacenter);
+            return;
+        }
+
+        DatacenterManager.m_datacenters.get(datacenter).available_storage =
+                DatacenterManager.m_datacenters.get(datacenter).available_storage + storage;
     }
 }
 
@@ -142,14 +196,18 @@ class DatacenterResource
     double total_memory;
     double available_memory;
     int available_cpu;
+    double total_storage;
+    double available_storage;
 
-    public DatacenterResource(String label, int cpu, double memory)
+    public DatacenterResource(String label, int cpu, double memory, double storage)
     {
         this.label = label;
         this.total_cpu = cpu;
         this.total_memory = memory;
         this.available_cpu = cpu;
         this.available_memory = memory;
+        this.total_storage = storage;
+        this.available_storage = storage;
     }
 }
 

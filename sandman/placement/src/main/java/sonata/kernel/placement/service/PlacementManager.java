@@ -302,7 +302,7 @@ public class PlacementManager {
     }
 
     /**
-     * This method returns the total memory capacity on the PoP.
+     * This method returns the available memory capacity on the PoP.
      * @param PopName String identifying the PoP.
      * @return int Unused memory capacity of the PoP.
      */
@@ -328,6 +328,36 @@ public class PlacementManager {
 
         double memory =  DatacenterManager.get_total_memory(PopName);
         logger.debug("PlacementManager::GetTotalMemory EXIT");
+        return memory;
+    }
+
+    /**
+     * This method returns the available storage capacity on the PoP.
+     * @param PopName String identifying the PoP.
+     * @return int Unused storage capacity of the PoP.
+     */
+    public double GetAvailableStorage(String PopName)
+    {
+        logger.debug("PlacementManager::GetAvailableStorage ENTRY");
+        logger.info("PlacementManager::GetAvailableStorage: PopName: " + PopName);
+
+        double memory =  DatacenterManager.get_available_storage(PopName);
+        logger.debug("PlacementManager::GetAvailableStorage EXIT");
+        return memory;
+    }
+
+    /**
+     * This method returns the total storage capacity on the PoP.
+     * @param PopName String identifying the PoP.
+     * @return int Total storage capacity of the PoP.
+     */
+    public double GetTotalStorage(String PopName)
+    {
+        logger.debug("PlacementManager::GetTotalStorage ENTRY");
+        logger.info("PlacementManager::GetTotalStorage: PopName: " + PopName);
+
+        double memory =  DatacenterManager.get_total_storage(PopName);
+        logger.debug("PlacementManager::GetTotalStorage EXIT");
         return memory;
     }
 

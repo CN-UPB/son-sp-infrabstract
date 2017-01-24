@@ -1,6 +1,7 @@
 package sonata.kernel.placement.service;
 
 import com.google.common.collect.Lists;
+import org.apache.commons.chain.web.MapEntry;
 import org.apache.commons.lang3.tuple.ImmutablePair;
 import org.apache.commons.lang3.tuple.Pair;
 import org.jaxen.Function;
@@ -309,7 +310,7 @@ System.out.println("update_ns_link "+link.getId()+"  "+cp_ref);
 
         instance.outerlink_list.get((key.split(":"))[0]).remove(key);
         return;
-}
+    }
 
     protected void initialize_link(VirtualLink link, LinkInstance linkInstance) {
         boolean is_nslink = false;
@@ -450,7 +451,7 @@ System.out.println("update_ns_link "+link.getId()+"  "+cp_ref);
                 instance.customized_chains.add(new ImmutablePair<Pair<String, String>, List<String>>
                         (new ImmutablePair<String, String>(server[1], server[0]), viaPath));
             }
-
+            linkInstance.viaPath = viaPath;
         }
         return;
 
@@ -573,7 +574,7 @@ System.out.println("update_ns_link "+link.getId()+"  "+cp_ref);
 
                 FunctionInstance f_inst = instance.function_list.get(vnf_id).get(vnf_name);
                 relinquish_resource(f_inst);
-
+                delete_inner_links(f_inst);
                 delete_ns_link((vnf_name.split("_"))[1]);
                 int id = instance.vnf_uid.get(vnf_id).decrementAndGet();
                 instance.vnf_uid.get(vnf_id).set(id);
@@ -582,6 +583,30 @@ System.out.println("update_ns_link "+link.getId()+"  "+cp_ref);
         }
         return null;
 
+    }
+
+    protected void delete_inner_links(FunctionInstance f_instance)
+    {
+
+        for(Map.Entry<String, Map<String, LinkInstance>> link_m : instance.innerlink_list.entrySet())
+        {
+            List<String> link_names = new ArrayList<String>();
+            for(Map.Entry<String, LinkInstance> entry : link_m.getValue().entrySet())
+            {
+                for(Map.Entry<FunctionInstance, String> ee : entry.getValue().interfaceList.entrySet())
+                {
+                    if(f_instance.name.equals(ee.getKey().name))
+                    {
+                        link_names.add(entry.getKey());
+                    }
+                }
+            }
+
+            for(String vlinks : link_names)
+            {
+                link_m.getValue().remove(vlinks);
+            }
+        }
     }
 
     public ServiceInstance update_vlink_list(String s_vnfid, String d_vnfid, String endpoint_src, String endpoint_target, List<String> viaPath, ACTION_TYPE action) {

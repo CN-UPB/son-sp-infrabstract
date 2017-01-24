@@ -196,7 +196,7 @@ public class PlacementManager {
             this.instance_manager.update_functions_list(VnfId, VnfInstance, null, ServiceInstanceManager.ACTION_TYPE.DELETE_INSTANCE);
         else {
             logger.fatal("PlacementManager::DeleteNetworkFunctionInstance: Unable to delete function instance "
-                    + VnfInstance + ". Unknown VnfId.");
+                    + VnfInstance + ". Vnf does not exist.");
             logger.debug("PlacementManager::DeleteNetworkFunctionInstance EXIT");
             return false;
         }

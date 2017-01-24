@@ -47,6 +47,8 @@ public class LinkInstance {
 
     public boolean build_in;
 
+    public List<String> viaPath = new ArrayList<String>();
+
     public LinkInstance(Object link, String name){
     	logger.debug("Link Instance");
         this.link = link;

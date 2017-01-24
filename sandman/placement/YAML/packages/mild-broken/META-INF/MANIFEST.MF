@@ -1,0 +1,16 @@
+description: Mild broken (not meeting assumptions) but fixable service
+descriptor_version: '1.0'
+entry_service_template: /service_descriptors/nsd.yml
+maintainer: John Doe
+name: mild-broken
+package_content:
+- content-type: application/sonata.service_descriptors
+  md5: 607c5cef2cc7821c63e2367bd3151d5c
+  name: /service_descriptors/ns0.yml
+- content-type: application/sonata.function_descriptor
+  md5: 0f5c41d0e22583270229a9e1ae45c50d
+  name: /function_descriptors/vnfd0.yml
+schema: https://raw.githubusercontent.com/sonata-nfv/son-schema/master/package-descriptor/pd-schema.yml
+sealed: true
+vendor: eu.sonata-nfv.package
+version: '0.3'

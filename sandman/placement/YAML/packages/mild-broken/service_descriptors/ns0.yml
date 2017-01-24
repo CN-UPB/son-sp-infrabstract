@@ -1,0 +1,51 @@
+author: Name, Company, Contact
+connection_points:
+- id: ns:mgmt
+  type: interface
+- id: ns:input
+  type: interface
+- id: ns:output
+  type: interface
+description: A sample NSD
+descriptor_version: '1.0'
+forwarding_graphs:
+- constituent_vnfs:
+  - sample_vnf
+  fg_id: ns:fg1
+  network_forwarding_paths:
+  - connection_points:
+    - connection_point_ref: ns:input
+      position: 1
+    - connection_point_ref: sample_vnf:input
+      position: 2
+    - connection_point_ref: sample_vnf:output
+      position: 3
+    - connection_point_ref: ns:output
+      position: 4
+    fp_id: ns:fg1:fp1
+  number_of_endpoints: 2
+  number_of_virtual_links: 2
+name: mild-broken
+network_functions:
+- vnf_id: sample_vnf
+  vnf_name: vnf-sample
+  vnf_vendor: eu.sonata-nfv
+  vnf_version: '0.1'
+vendor: eu.sonata-nfv.service-descriptor
+version: '0.2'
+virtual_links:
+- connection_points_reference:
+  - sample_vnf:mgmt
+  - ns:mgmt
+  connectivity_type: E-LAN
+  id: mgmt
+- connection_points_reference:
+  - ns:input
+  - sample_vnf:input
+  connectivity_type: E-Line
+  id: ns:input-2-sample_vnf
+- connection_points_reference:
+  - sample_vnf:output
+  - ns:output
+  connectivity_type: E-Line
+  id: sample_vnf-2-ns:output

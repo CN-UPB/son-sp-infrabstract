@@ -8,6 +8,7 @@ import sonata.kernel.placement.Catalogue;
 
 import java.io.ByteArrayOutputStream;
 import java.io.PrintStream;
+import java.nio.CharBuffer;
 import java.nio.charset.StandardCharsets;
 import java.util.HashMap;
 import java.util.List;
@@ -78,20 +79,29 @@ public class Validation {
     SonataPackage pkg;
     List<String> functions = new ArrayList<String>();
 
-    protected ByteArrayOutputStream os;
-    protected PrintStream ps;
+    protected ByteArrayOutputStream osError;
+    protected PrintStream psError;
+    protected ByteArrayOutputStream osFix;
+    protected PrintStream psFix;
     public final List<Exception> exceptions = new ArrayList<Exception>();
 
 
     public Validation(SonataPackage pkg){
         this.pkg = pkg;
-        this.os = new ByteArrayOutputStream();
-        this.ps = new PrintStream(os);
+        this.osError = new ByteArrayOutputStream();
+        this.psError = new PrintStream(osError);
+        this.osFix = new ByteArrayOutputStream();
+        this.psFix = new PrintStream(osFix);
     }
 
     protected void error(String errorMessage){
         logger.error(errorMessage);
-        ps.println(errorMessage);
+        psError.println(errorMessage);
+    }
+
+    protected void fix(String fixMessage){
+        logger.debug(fixMessage);
+        psFix.println(fixMessage);
     }
 
     public String getValidationLog(){
@@ -104,9 +114,14 @@ public class Validation {
                 log += e.getMessage();
                 log += "\n\n";
             }
-            log += "Other errors: \n\n";
         }
-        return log + new String(os.toByteArray(), StandardCharsets.UTF_8);
+        String errorLog = new String(osError.toByteArray(), StandardCharsets.UTF_8);
+        String fixLog = new String(osFix.toByteArray(), StandardCharsets.UTF_8);
+        if (errorLog.length()>0)
+            log += "Other errors: \n\n"+errorLog+"\n\n";
+        if (fixLog.length()>0)
+            log += "Fix attempts: \n\n"+fixLog+"\n\n";
+        return log;
     }
 
     public void validate(){
@@ -607,4 +622,254 @@ public class Validation {
         //TODO: Check monitoring rules (optional)
     }
 
+    /**
+     * Checks custom assumptions only and fixes deviations
+     */
+    public void fixCustomAssumptions() {
+
+        for (ServiceDescriptor sd : pkg.services) {
+            if (sd == null)
+                continue;
+
+            if(sd.getConnectionPoints() != null){
+                for (ConnectionPoint scp : sd.getConnectionPoints()) {
+                    if(scp.getId() != null) {
+
+                        String oldId = scp.getId();
+                        String newId;
+                        if(!oldId.startsWith("ns:"))
+                            newId = "ns:"+oldId.replace(':','-');
+                        else if(countChar(oldId,':')>1)
+                            newId = replaceSkip(oldId, ':', '-', 1);
+                        else
+                            continue;
+                        fix("Fix networks service connection point id "+oldId);
+
+                        // Add "ns:" prefix and fix occurences of old id
+                        // Connection Point
+                        scp.setId(newId);
+                        // Forwarding Graphs
+                        if(sd.getForwardingGraphs() != null)
+                            for(ForwardingGraph fg : sd.getForwardingGraphs()) {
+                                if(fg.getNetworkForwardingPaths() != null)
+                                    for(NetworkForwardingPath nfp : fg.getNetworkForwardingPaths()) {
+                                        if(nfp.getConnectionPoints() != null)
+                                            for(ConnectionPointReference cpr : nfp.getConnectionPoints()) {
+                                                if(oldId.equals(cpr.getConnectionPointRef())) {
+                                                    String old = cpr.getConnectionPointRef();
+                                                    cpr.setConnectionPointRef(newId);
+                                                    fix("--> forwarding graph connection point reference \""+old+"\" replaced with \""+newId+"\"");
+                                                }
+                                            }
+                                    }
+                            }
+                        // Virtual Links
+                        if(sd.getVirtualLinks() != null)
+                            for(VirtualLink vl : sd.getVirtualLinks()) {
+                                if(vl.getConnectionPointsReference() != null)
+                                    for(int i=0; i<vl.getConnectionPointsReference().size(); i++) {
+                                        if (oldId.equals(vl.getConnectionPointsReference().get(i))) {
+                                            String old = vl.getConnectionPointsReference().get(i);
+                                            vl.getConnectionPointsReference().add(i,newId);
+                                            vl.getConnectionPointsReference().remove(i+1);
+                                            fix("--> virtual link connection point reference \""+old+"\" replaced with \""+newId+"\"");
+                                        }
+                                    }
+                            }
+                    }
+                }
+            }
+            // Forwarding graphs id
+            if(sd.getForwardingGraphs() != null)
+                for(ForwardingGraph fg : sd.getForwardingGraphs()) {
+                    if(fg.getFgId() != null) {
+                        String oldId = fg.getFgId();
+                        String newId;
+                        if(!oldId.startsWith("ns:"))
+                            newId = "ns:" + fg.getFgId().replace(':','-');
+                        else if(countChar(oldId, ':') > 1)
+                            newId = replaceSkip(oldId, ':', '-', 1);
+                        else
+                            continue;
+                        fix("Fix networks service forward graph id \""+oldId+"\" replaced with \""+newId+"\"");
+                        fg.setFgId(newId);
+                    }
+                }
+            // Network Functions id
+            if(sd.getNetworkFunctions() != null)
+                for(NetworkFunction nf: sd.getNetworkFunctions()) {
+                    if(nf.getVnfId() != null) {
+
+                        String oldId = nf.getVnfId();
+                        String newId;
+
+                        if(!oldId.startsWith("vnf_"))
+                            newId = "vnf_"+oldId.replace('_','-');
+                        else if(countChar(oldId, '_') > 1)
+                            newId = replaceSkip(oldId, '_', '-', 1);
+                        else
+                            continue;
+
+                        fix("Fix networks service network function id "+oldId);
+                        // Fix initial defintion
+                        nf.setVnfId(newId);
+                        // Fix Forwarding graph
+                        if(sd.getForwardingGraphs() != null)
+                            for(ForwardingGraph fg: sd.getForwardingGraphs()) {
+                                // Constituent vnfs
+                                if(fg.getConstituentVnfs() != null) {
+                                    for(int i=0; i<fg.getConstituentVnfs().size(); i++) {
+                                        if(oldId.equals(fg.getConstituentVnfs().get(i))) {
+                                            String old = fg.getConstituentVnfs().get(i);
+                                            fg.getConstituentVnfs().add(i, newId);
+                                            fg.getConstituentVnfs().remove(i+1);
+                                            fix("--> forwarding graph constituent vnf \""+old+"\" replaced with \""+newId+"\"");
+                                        }
+                                    }
+                                }
+                                // Forwarding path
+                                if(fg.getNetworkForwardingPaths() != null) {
+                                    for(NetworkForwardingPath nfp: fg.getNetworkForwardingPaths()) {
+                                        if(nfp.getConnectionPoints() != null)
+                                            for(ConnectionPointReference cpr: nfp.getConnectionPoints()) {
+                                                if(cpr.getConnectionPointRef().startsWith(oldId)) {
+                                                    String old = cpr.getConnectionPointRef();
+                                                    cpr.setConnectionPointRef(newId + cpr.getConnectionPointRef().substring(oldId.length()));
+                                                    fix("--> forwarding graph forwarding path connection point reference \""+old+"\" replaced with \""+cpr.getConnectionPointRef()+"\"");
+                                                }
+                                            }
+                                    }
+                                }
+                            }
+                        // Fix virtual links
+                        if(sd.getVirtualLinks() != null)
+                            for(VirtualLink vl: sd.getVirtualLinks()) {
+                                if(vl.getConnectionPointsReference() != null)
+                                    for(int i=0; i<vl.getConnectionPointsReference().size(); i++) {
+                                        if(vl.getConnectionPointsReference().get(i) != null && vl.getConnectionPointsReference().get(i).startsWith(oldId)) {
+                                            String old = vl.getConnectionPointsReference().get(i);
+                                            vl.getConnectionPointsReference().add(i, newId + vl.getConnectionPointsReference().get(i).substring(oldId.length()));
+                                            vl.getConnectionPointsReference().remove(i+1);
+                                            fix("--> virtual link \""+old+"\" replace with \""+vl.getConnectionPointsReference().get(i)+"\"");
+                                        }
+                                    }
+                            }
+                    }
+                }
+        }
+
+        for(VnfDescriptor vnfd: pkg.functions) {
+            if(vnfd == null)
+                continue;
+
+            if(vnfd.getConnectionPoints() != null)
+                for(ConnectionPoint vnfcp: vnfd.getConnectionPoints()) {
+                    if(vnfcp.getId() != null) {
+
+                        String oldId = vnfcp.getId();
+                        String newId;
+
+                        if(!oldId.startsWith("vnf:"))
+                            newId = "vnf:"+vnfcp.getId().replace(':','-');
+                        else if(countChar(oldId, ':') > 1)
+                            newId = replaceSkip(oldId, ':', '-', 1);
+                        else
+                            continue;
+
+                        fix("Fix vnf connection point id "+oldId);
+                        // Fix initial defintion
+                        vnfcp.setId(newId);
+
+                        // Fix virtual links
+                        if(vnfd.getVirtualLinks() != null)
+                            for(VnfVirtualLink vl: vnfd.getVirtualLinks()) {
+                                if(vl.getConnectionPointsReference() != null)
+                                    for(int i=0; i<vl.getConnectionPointsReference().size(); i++) {
+                                        if(vl.getConnectionPointsReference().get(i) != null && vl.getConnectionPointsReference().get(i).equals(oldId)) {
+                                            String old = vl.getConnectionPointsReference().get(i);
+                                            vl.getConnectionPointsReference().add(i, newId);
+                                            vl.getConnectionPointsReference().remove(i);
+                                            fix("--> virtual link connection point reference \""+old+"\" replaced with \""+vl.getConnectionPointsReference().get(i)+"\"");
+                                        }
+                                    }
+                            }
+                    }
+                }
+
+            if(vnfd.getVirtualDeploymentUnits() != null)
+                for(VirtualDeploymentUnit vdu: vnfd.getVirtualDeploymentUnits()) {
+                    if(vdu.getId() == null)
+                        continue;
+                    if(vdu.getConnectionPoints() != null)
+                        for(ConnectionPoint vducp: vdu.getConnectionPoints()) {
+                            if(vducp.getId() != null) {
+
+                                String oldId = vducp.getId();
+                                String newId;
+
+                                if(!oldId.startsWith(vdu.getId()))
+                                    newId = vdu.getId()+":"+vducp.getId().replace(':','-');
+                                else if(countChar(oldId, ':') > 1)
+                                    newId = replaceSkip(oldId, ':', '-', 1);
+                                else
+                                    continue;
+
+                                fix("Fix vnf vdu connection point id "+oldId);
+                                // Fix initial definition
+                                vducp.setId(newId);
+                                // Fix virtual links
+                                if(vnfd.getVirtualLinks() != null)
+                                    for(VnfVirtualLink vl: vnfd.getVirtualLinks()) {
+                                        if(vl.getConnectionPointsReference() != null)
+                                            for(int i=0; i<vl.getConnectionPointsReference().size(); i++) {
+                                                if(vl.getConnectionPointsReference().get(i) != null && vl.getConnectionPointsReference().get(i).equals(oldId)) {
+                                                    String old = vl.getConnectionPointsReference().get(i);
+                                                    vl.getConnectionPointsReference().add(i, newId);
+                                                    vl.getConnectionPointsReference().remove(i+1);
+                                                    fix("--> virtual deployment unit virtual link connection point reference \""+old+"\" replaced with \""+vl.getConnectionPointsReference().get(i)+"\"");
+                                                }
+                                            }
+                                    }
+                            }
+                        }
+                }
+
+        }
+    }
+
+    /**
+     * Count occurences of character in String
+     * @param input
+     * @param c
+     * @return
+     */
+    public static int countChar(String input, char c){
+        int count = 0;
+        for(int i=0; i<input.length(); i++)
+            if(input.charAt(i) == c)
+                count++;
+        return count;
+    }
+
+    /**
+     * Replaces characters in String but skips certain amount of occurences
+     * @param input
+     * @param c
+     * @param skip
+     * @return
+     */
+    public static String replaceSkip(String input, char c, char r, int skip) {
+        StringBuilder output = new StringBuilder(input);
+        int current = input.indexOf(c, 0);
+        while(current < input.length() && current != -1) {
+            if (skip > 0)
+                skip--;
+            else {
+                output.setCharAt(current, r);
+                current++;
+            }
+            current = input.indexOf(c, current);
+        }
+        return output.toString();
+    }
 }

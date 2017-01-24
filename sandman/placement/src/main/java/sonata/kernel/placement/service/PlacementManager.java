@@ -1,7 +1,10 @@
 package sonata.kernel.placement.service;
 
 
+import org.apache.bcel.generic.POP;
 import org.apache.log4j.Logger;
+import sonata.kernel.VimAdaptor.commons.DeployServiceData;
+import sonata.kernel.placement.DatacenterManager;
 import sonata.kernel.placement.PlacementConfigLoader;
 import sonata.kernel.placement.config.PlacementConfig;
 import sonata.kernel.placement.config.PopResource;
@@ -13,7 +16,7 @@ import java.util.List;
 
 public class PlacementManager {
     final static Logger logger = Logger.getLogger(PlacementManager.class);
-    final private ServiceInstanceManager instance_manager;
+    private ServiceInstanceManager instance_manager;
     final private PlacementConfig config;
 
     public PlacementManager() {
@@ -21,7 +24,24 @@ public class PlacementManager {
         config = PlacementConfigLoader.loadPlacementConfig();
     }
 
+    public PlacementManager(ServiceInstance instance)
+    {
+        this.instance_manager = new ServiceInstanceManager();
+        this.instance_manager.set_instance(instance);
+        this.instance_manager.flush_chaining_rules();
+        config = PlacementConfigLoader.loadPlacementConfig();
 
+    }
+
+    public ServiceInstance InitializeService(DeployServiceData serviceData)
+    {
+        return this.instance_manager.initialize_service_instance(serviceData);
+    }
+
+    public ServiceInstance GetServiceInstance()
+    {
+        return this.instance_manager.get_instance();
+    }
     /**
      * This method returns the current Network Topology graph.
      * @return NetworkNode The root node of the topology graph.
@@ -95,7 +115,7 @@ public class PlacementManager {
             return false;
         }
 
-        instance_manager.update_vlink_list("vnf_firewall", "vnf_tcpdump", "vnf_firewall1", "vnf_tcpdump1", ViaPath,
+        instance_manager.update_vlink_list(SourceVnfId, TargetVnfId, SourceVnfInstance, TargetVnfInstance, ViaPath,
                 ServiceInstanceManager.ACTION_TYPE.ADD_INSTANCE);
 
 
@@ -256,24 +276,14 @@ public class PlacementManager {
      * @param PopName String identifying the PoP.
      * @return int Total CPU capacity of the PoP.
      */
-    public int GetTotalCPU(String PopName)
+    public double GetTotalCPU(String PopName)
     {
         logger.debug("PlacementManager::GetTotalCPU ENTRY");
         logger.info("PlacementManager::GetTotalCPU: PopName: " + PopName);
 
-        ArrayList<PopResource> resource_list = config.getResources();
-        for(PopResource resource : resource_list)
-        {
-            if(resource.getPopName().equals(PopName)) {
-                logger.info("PlacementManager::GetTotalCPU: TotalCPU = " + resource.getResource().cpu);
-                logger.debug("PlacementManager::GetTotalCPU EXIT");
-                return resource.getResource().cpu;
-            }
-        }
-        logger.error("PlacementManager::GetTotalCPU: Cannot find PoP: " + PopName);
+        int cpu =  DatacenterManager.get_total_cpu(PopName);
         logger.debug("PlacementManager::GetTotalCPU EXIT");
-        return 0;
-
+        return cpu;
     }
 
     /**
@@ -281,24 +291,14 @@ public class PlacementManager {
      * @param PopName String identifying the PoP.
      * @return int Unused CPU capacity of the PoP.
      */
-    public int GetAvailableCPU(String PopName)
+    public double GetAvailableCPU(String PopName)
     {
         logger.debug("PlacementManager::GetAvailableCPU ENTRY");
         logger.info("PlacementManager::GetAvailableCPU: PopName: " + PopName);
 
-        ArrayList<PopResource> resource_list = config.getResources();
-        for(PopResource resource : resource_list)
-        {
-            if(resource.getPopName().equals(PopName)) {
-                logger.info("PlacementManager::GetAvailableCPU: AvailableCPU = " + (resource.getResource().cpu - resource.getResource().getCpu_used()));
-                logger.debug("PlacementManager::GetAvailableCPU EXIT");
-                return resource.getResource().cpu;
-            }
-        }
-        logger.error("PlacementManager::GetAvailableCPU: Cannot find PoP: " + PopName);
+        int cpu =  DatacenterManager.get_available_cpu(PopName);
         logger.debug("PlacementManager::GetAvailableCPU EXIT");
-        return 0;
-
+        return cpu;
     }
 
     /**
@@ -306,23 +306,14 @@ public class PlacementManager {
      * @param PopName String identifying the PoP.
      * @return int Unused memory capacity of the PoP.
      */
-    public int GetAvailableMemory(String PopName)
+    public double GetAvailableMemory(String PopName)
     {
         logger.debug("PlacementManager::GetAvailableMemory ENTRY");
         logger.info("PlacementManager::GetAvailableMemory: PopName: " + PopName);
 
-        ArrayList<PopResource> resource_list = config.getResources();
-        for(PopResource resource : resource_list)
-        {
-            if(resource.getPopName().equals(PopName)) {
-                logger.info("PlacementManager::GetAvailableMemory: TotalMemory = " + (resource.getResource().memory - resource.getResource().getMemory_used()));
-                logger.debug("PlacementManager::GetAvailableMemory EXIT");
-                return resource.getResource().memory;
-            }
-        }
-        logger.error("PlacementManager::GetAvailableMemory: Cannot find PoP: " + PopName);
+        double memory =  DatacenterManager.get_available_memory(PopName);
         logger.debug("PlacementManager::GetAvailableMemory EXIT");
-        return 0;
+        return memory;
     }
 
     /**
@@ -330,24 +321,14 @@ public class PlacementManager {
      * @param PopName String identifying the PoP.
      * @return int Total memory capacity of the PoP.
      */
-    public int GetTotalMemory(String PopName)
+    public double GetTotalMemory(String PopName)
     {
         logger.debug("PlacementManager::GetTotalMemory ENTRY");
         logger.info("PlacementManager::GetTotalMemory: PopName: " + PopName);
 
-        ArrayList<PopResource> resource_list = config.getResources();
-        for(PopResource resource : resource_list)
-        {
-            if(resource.getPopName().equals(PopName)) {
-                logger.info("PlacementManager::GetTotalMemory: TotalMemory = " + resource.getResource().memory);
-                logger.debug("PlacementManager::GetTotalMemory EXIT");
-                return resource.getResource().memory;
-            }
-        }
-        logger.error("PlacementManager::GetTotalMemory: Cannot find PoP: " + PopName);
+        double memory =  DatacenterManager.get_total_memory(PopName);
         logger.debug("PlacementManager::GetTotalMemory EXIT");
-        return 0;
-
+        return memory;
     }
 
 

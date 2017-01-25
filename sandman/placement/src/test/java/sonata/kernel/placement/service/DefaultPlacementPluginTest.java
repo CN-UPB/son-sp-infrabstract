@@ -8,6 +8,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
 import com.fasterxml.jackson.databind.module.SimpleModule;
 import org.apache.log4j.Logger;
+import org.apache.velocity.tools.config.Data;
 import org.junit.Test;
 import org.openstack4j.api.Builders;
 import org.openstack4j.api.OSClient;
@@ -18,6 +19,7 @@ import sonata.kernel.VimAdaptor.commons.heat.HeatTemplate;
 import sonata.kernel.VimAdaptor.commons.vnfd.ResourceRequirements;
 import sonata.kernel.VimAdaptor.commons.vnfd.Unit;
 import sonata.kernel.VimAdaptor.commons.vnfd.UnitDeserializer;
+import sonata.kernel.placement.DatacenterManager;
 import sonata.kernel.placement.HeatStackCreate;
 import sonata.kernel.placement.PackageLoader;
 import sonata.kernel.placement.PlacementConfigLoader;
@@ -44,6 +46,8 @@ public class DefaultPlacementPluginTest {
         PlacementConfig config = PlacementConfigLoader.loadPlacementConfig();
 
         DeployServiceData data = PackageLoader.loadPackageFromDisk(Paths.get("YAML", "test.son").toString());
+
+        DatacenterManager.initialize();
 
         PlacementPlugin plugin = new DefaultPlacementPlugin();
 
@@ -88,10 +92,6 @@ public class DefaultPlacementPluginTest {
         instance = plugin.updateScaling(data, instance, trigger);
 
         //Add additional tcpdump vnfs
-
-
-
-
 
         List<HeatTemplate> templates = ServiceHeatTranslator.translatePlacementMappingToHeat(instance, config.getResources());
 
@@ -172,6 +172,8 @@ public class DefaultPlacementPluginTest {
         PlacementConfig config = PlacementConfigLoader.loadPlacementConfig();
 
         DeployServiceData data = PackageLoader.loadPackageFromDisk(Paths.get("YAML", "test.son").toString());
+
+        DatacenterManager.initialize();
 
         PlacementPlugin plugin = new DefaultPlacementPlugin();
 

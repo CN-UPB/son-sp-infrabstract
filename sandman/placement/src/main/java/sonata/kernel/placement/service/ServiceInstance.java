@@ -3,6 +3,7 @@ package sonata.kernel.placement.service;
 import org.apache.commons.collections.MultiHashMap;
 import org.apache.commons.collections.MultiMap;
 import org.apache.commons.lang3.tuple.Pair;
+import sonata.kernel.VimAdaptor.commons.nsd.NetworkFunction;
 import sonata.kernel.VimAdaptor.commons.nsd.ServiceDescriptor;
 
 import java.util.ArrayList;
@@ -12,6 +13,7 @@ import java.util.Map;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import org.apache.log4j.Logger;
+import sonata.kernel.VimAdaptor.commons.vnfd.VnfDescriptor;
 
 public class ServiceInstance {
 	final static Logger logger = Logger.getLogger(ServiceInstance.class);
@@ -50,6 +52,10 @@ public class ServiceInstance {
 
     public final List<Pair<Pair<String, String>, List<String>>> customized_chains;
 
+    protected Map<String, VnfDescriptor> nw_function_desc_map;
+    protected Map<String, NetworkFunction> network_functions_db;
+
+
 
 
 
@@ -86,6 +92,17 @@ public class ServiceInstance {
 
     }
 
+    public FunctionInstance getFunctionInstance(String VnfName)
+    {
+        for(Map.Entry<String, Map<String, FunctionInstance>> entry_m: function_list.entrySet())
+        {
+            if(entry_m.getValue().get(VnfName) != null){
+                return entry_m.getValue().get(VnfName);
+            }
+        }
+        return null;
+    }
+
     public String findVnfIdFromVnfInstanceName(String VnfName)
     {
         for(Map.Entry<String, Map<String, FunctionInstance>> entry_m: function_list.entrySet())
@@ -109,7 +126,7 @@ public class ServiceInstance {
         }
         return false;
     }
-    
+
     public String getDataCenterForVnf(String VnfName)
     {
         for(Map.Entry<String, Map<String, FunctionInstance>> entry_m: function_list.entrySet())

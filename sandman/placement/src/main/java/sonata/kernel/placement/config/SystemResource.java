@@ -4,26 +4,8 @@ package sonata.kernel.placement.config;
 public class SystemResource {
 
     public int cpu;
-    public int memory;
-
-    public int getCpu_used() {
-        return cpu_used;
-    }
-
-    public void setCpu_used(int cpu_used) {
-        this.cpu_used = cpu_used;
-    }
-
-    public int getMemory_used() {
-        return memory_used;
-    }
-
-    public void setMemory_used(int memory_used) {
-        this.memory_used = memory_used;
-    }
-
-    private int cpu_used;
-    private int memory_used;
+    public double memory;
+    public double storage;
 
     public int getCpu() {
         return cpu;
@@ -33,12 +15,22 @@ public class SystemResource {
         this.cpu = cpu;
     }
 
-    public int getMemory() {
+    public double getMemory() {
         return memory;
     }
 
-    public void setMemory(int memory) {
+    public void setMemory(double memory) {
         this.memory = memory;
+    }
+
+    public double getStorage()
+    {
+        return storage;
+    }
+
+    public void setStorage(double storage)
+    {
+        this.storage = storage;
     }
 
 

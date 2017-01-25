@@ -38,6 +38,7 @@ public class TranslatorCore {
         PlacementPluginLoader.loadPlacementPlugin(config.pluginPath,config.placementPlugin);
         logger.info("Loaded placement-plugin: "+PlacementPluginLoader.placementPlugin.getClass().getName());
 
+        DatacenterManager.initialize();
         // Start servers
         try {
 

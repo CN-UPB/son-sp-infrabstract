@@ -1,7 +1,10 @@
 package sonata.kernel.placement.service;
 
 
+import org.apache.bcel.generic.POP;
 import org.apache.log4j.Logger;
+import sonata.kernel.VimAdaptor.commons.DeployServiceData;
+import sonata.kernel.placement.DatacenterManager;
 import sonata.kernel.placement.PlacementConfigLoader;
 import sonata.kernel.placement.config.PlacementConfig;
 import sonata.kernel.placement.config.PopResource;
@@ -13,7 +16,7 @@ import java.util.List;
 
 public class PlacementManager {
     final static Logger logger = Logger.getLogger(PlacementManager.class);
-    final private ServiceInstanceManager instance_manager;
+    private ServiceInstanceManager instance_manager;
     final private PlacementConfig config;
 
     public PlacementManager() {
@@ -21,7 +24,24 @@ public class PlacementManager {
         config = PlacementConfigLoader.loadPlacementConfig();
     }
 
+    public PlacementManager(ServiceInstance instance)
+    {
+        this.instance_manager = new ServiceInstanceManager();
+        this.instance_manager.set_instance(instance);
+        this.instance_manager.flush_chaining_rules();
+        config = PlacementConfigLoader.loadPlacementConfig();
 
+    }
+
+    public ServiceInstance InitializeService(DeployServiceData serviceData)
+    {
+        return this.instance_manager.initialize_service_instance(serviceData);
+    }
+
+    public ServiceInstance GetServiceInstance()
+    {
+        return this.instance_manager.get_instance();
+    }
     /**
      * This method returns the current Network Topology graph.
      * @return NetworkNode The root node of the topology graph.
@@ -81,7 +101,7 @@ public class PlacementManager {
         if(SourceVnfId == null)
         {
             logger.fatal("PlacementManager::AddVirtualLink: Unable to add link to "
-                    + SourceVnfInstance + ". Unknown VnfId.");
+                    + SourceVnfInstance + ". Unknown VnfId or VNF does exist");
             logger.debug("PlacementManager::AddVirtualLink EXIT");
             return false;
         }
@@ -90,12 +110,12 @@ public class PlacementManager {
         if(TargetVnfId == null)
         {
             logger.fatal("PlacementManager::AddVirtualLink: Unable to add link to "
-                    + TargetVnfInstance + ". Unknown VnfId.");
+                    + TargetVnfInstance + ". Unknown VnfId or VNF does not exist.");
             logger.debug("PlacementManager::AddVirtualLink EXIT");
             return false;
         }
 
-        instance_manager.update_vlink_list("vnf_firewall", "vnf_tcpdump", "vnf_firewall1", "vnf_tcpdump1", ViaPath,
+        instance_manager.update_vlink_list(SourceVnfId, TargetVnfId, SourceVnfInstance, TargetVnfInstance, ViaPath,
                 ServiceInstanceManager.ACTION_TYPE.ADD_INSTANCE);
 
 
@@ -119,7 +139,7 @@ public class PlacementManager {
         if(SourceVnfId == null)
         {
             logger.fatal("PlacementManager::DeleteVirtualLink: Unable to delete link to "
-                    + SourceVnfInstance + ". Unknown VnfId.");
+                    + SourceVnfInstance + ". Unknown VnfId or VNF does not exist.");
             logger.debug("PlacementManager::DeleteVirtualLink EXIT");
             return false;
         }
@@ -128,7 +148,7 @@ public class PlacementManager {
         if(TargetVnfId == null)
         {
             logger.fatal("PlacementManager::DeleteVirtualLink: Unable to delete link to "
-                    + TargetVnfInstance + ". Unknown VnfId.");
+                    + TargetVnfInstance + ". Unknown VnfId or VNF does not exist.");
             logger.debug("PlacementManager::DeleteVirtualLink EXIT");
             return false;
         }
@@ -149,6 +169,13 @@ public class PlacementManager {
     {
         logger.debug("PlacementManager::AddNetworkFunctionInstance ENTRY");
         logger.info("PlacementManager::AddNetworkFunctionInstance: VnfId: " + VnfId);
+
+        if(!DatacenterManager.check_datacenter_exists(PopName))
+        {
+            logger.fatal("PlacementManager::AddNetworkFunctionInstance: Unknown datacenter: " + PopName);
+            logger.debug("PlacementManager::AddNetworkFunctionInstance EXIT");
+            return null;
+        }
 
         String VnfInstanceName = this.instance_manager.update_functions_list(VnfId, null, PopName, ServiceInstanceManager.ACTION_TYPE.ADD_INSTANCE);
         if(VnfInstanceName == null)
@@ -176,7 +203,7 @@ public class PlacementManager {
             this.instance_manager.update_functions_list(VnfId, VnfInstance, null, ServiceInstanceManager.ACTION_TYPE.DELETE_INSTANCE);
         else {
             logger.fatal("PlacementManager::DeleteNetworkFunctionInstance: Unable to delete function instance "
-                    + VnfInstance + ". Unknown VnfId.");
+                    + VnfInstance + ". Vnf does not exist.");
             logger.debug("PlacementManager::DeleteNetworkFunctionInstance EXIT");
             return false;
         }
@@ -196,6 +223,13 @@ public class PlacementManager {
         logger.debug("PlacementManager::MoveNetworkFunctionInstance ENTRY");
         logger.info("PlacementManager::MoveNetworkFunctionInstance: VnfInstance: " + VnfInstance + " PopName: " + PopName);
 
+        if(!DatacenterManager.check_datacenter_exists(PopName))
+        {
+            logger.fatal("PlacementManager::MoveNetworkFunctionInstance: Unknown datacenter: " + PopName);
+            logger.debug("PlacementManager::MoveNetworkFunctionInstance EXIT");
+            return false;
+        }
+
         String VnfId = this.instance_manager.get_instance().findVnfIdFromVnfInstanceName(VnfInstance);
         if(VnfId == null)
         {
@@ -204,8 +238,10 @@ public class PlacementManager {
             return false;
         }
 
+        boolean status = this.instance_manager.move_function_instance(VnfInstance, PopName);
         logger.debug("PlacementManager::MoveNetworkFunctionInstance EXIT");
-        return this.instance_manager.get_instance().updateDataCenterForVnfInstance(VnfInstance, PopName);
+        return status;
+
     }
 
     /**
@@ -256,24 +292,21 @@ public class PlacementManager {
      * @param PopName String identifying the PoP.
      * @return int Total CPU capacity of the PoP.
      */
-    public int GetTotalCPU(String PopName)
+    public double GetTotalCPU(String PopName)
     {
         logger.debug("PlacementManager::GetTotalCPU ENTRY");
         logger.info("PlacementManager::GetTotalCPU: PopName: " + PopName);
 
-        ArrayList<PopResource> resource_list = config.getResources();
-        for(PopResource resource : resource_list)
+        if(!DatacenterManager.check_datacenter_exists(PopName))
         {
-            if(resource.getPopName().equals(PopName)) {
-                logger.info("PlacementManager::GetTotalCPU: TotalCPU = " + resource.getResource().cpu);
-                logger.debug("PlacementManager::GetTotalCPU EXIT");
-                return resource.getResource().cpu;
-            }
+            logger.fatal("PlacementManager::GetTotalCPU: Unknown datacenter: " + PopName);
+            logger.debug("PlacementManager::GetTotalCPU EXIT");
+            return 0;
         }
-        logger.error("PlacementManager::GetTotalCPU: Cannot find PoP: " + PopName);
-        logger.debug("PlacementManager::GetTotalCPU EXIT");
-        return 0;
 
+        int cpu =  DatacenterManager.get_total_cpu(PopName);
+        logger.debug("PlacementManager::GetTotalCPU EXIT");
+        return cpu;
     }
 
     /**
@@ -281,48 +314,43 @@ public class PlacementManager {
      * @param PopName String identifying the PoP.
      * @return int Unused CPU capacity of the PoP.
      */
-    public int GetAvailableCPU(String PopName)
+    public double GetAvailableCPU(String PopName)
     {
         logger.debug("PlacementManager::GetAvailableCPU ENTRY");
         logger.info("PlacementManager::GetAvailableCPU: PopName: " + PopName);
 
-        ArrayList<PopResource> resource_list = config.getResources();
-        for(PopResource resource : resource_list)
+        if(!DatacenterManager.check_datacenter_exists(PopName))
         {
-            if(resource.getPopName().equals(PopName)) {
-                logger.info("PlacementManager::GetAvailableCPU: AvailableCPU = " + (resource.getResource().cpu - resource.getResource().getCpu_used()));
-                logger.debug("PlacementManager::GetAvailableCPU EXIT");
-                return resource.getResource().cpu;
-            }
+            logger.fatal("PlacementManager::GetAvailableCPU: Unknown datacenter: " + PopName);
+            logger.debug("PlacementManager::GetAvailableCPU EXIT");
+            return 0;
         }
-        logger.error("PlacementManager::GetAvailableCPU: Cannot find PoP: " + PopName);
-        logger.debug("PlacementManager::GetAvailableCPU EXIT");
-        return 0;
 
+        int cpu =  DatacenterManager.get_available_cpu(PopName);
+        logger.debug("PlacementManager::GetAvailableCPU EXIT");
+        return cpu;
     }
 
     /**
-     * This method returns the total memory capacity on the PoP.
+     * This method returns the available memory capacity on the PoP.
      * @param PopName String identifying the PoP.
      * @return int Unused memory capacity of the PoP.
      */
-    public int GetAvailableMemory(String PopName)
+    public double GetAvailableMemory(String PopName)
     {
         logger.debug("PlacementManager::GetAvailableMemory ENTRY");
         logger.info("PlacementManager::GetAvailableMemory: PopName: " + PopName);
 
-        ArrayList<PopResource> resource_list = config.getResources();
-        for(PopResource resource : resource_list)
+        if(!DatacenterManager.check_datacenter_exists(PopName))
         {
-            if(resource.getPopName().equals(PopName)) {
-                logger.info("PlacementManager::GetAvailableMemory: TotalMemory = " + (resource.getResource().memory - resource.getResource().getMemory_used()));
-                logger.debug("PlacementManager::GetAvailableMemory EXIT");
-                return resource.getResource().memory;
-            }
+            logger.fatal("PlacementManager::GetAvailableMemory: Unknown datacenter: " + PopName);
+            logger.debug("PlacementManager::GetAvailableMemory EXIT");
+            return 0;
         }
-        logger.error("PlacementManager::GetAvailableMemory: Cannot find PoP: " + PopName);
+
+        double memory =  DatacenterManager.get_available_memory(PopName);
         logger.debug("PlacementManager::GetAvailableMemory EXIT");
-        return 0;
+        return memory;
     }
 
     /**
@@ -330,24 +358,65 @@ public class PlacementManager {
      * @param PopName String identifying the PoP.
      * @return int Total memory capacity of the PoP.
      */
-    public int GetTotalMemory(String PopName)
+    public double GetTotalMemory(String PopName)
     {
         logger.debug("PlacementManager::GetTotalMemory ENTRY");
         logger.info("PlacementManager::GetTotalMemory: PopName: " + PopName);
 
-        ArrayList<PopResource> resource_list = config.getResources();
-        for(PopResource resource : resource_list)
+        if(!DatacenterManager.check_datacenter_exists(PopName))
         {
-            if(resource.getPopName().equals(PopName)) {
-                logger.info("PlacementManager::GetTotalMemory: TotalMemory = " + resource.getResource().memory);
-                logger.debug("PlacementManager::GetTotalMemory EXIT");
-                return resource.getResource().memory;
-            }
+            logger.fatal("PlacementManager::GetTotalMemory: Unknown datacenter: " + PopName);
+            logger.debug("PlacementManager::GetTotalMemory EXIT");
+            return 0;
         }
-        logger.error("PlacementManager::GetTotalMemory: Cannot find PoP: " + PopName);
-        logger.debug("PlacementManager::GetTotalMemory EXIT");
-        return 0;
 
+        double memory =  DatacenterManager.get_total_memory(PopName);
+        logger.debug("PlacementManager::GetTotalMemory EXIT");
+        return memory;
+    }
+
+    /**
+     * This method returns the available storage capacity on the PoP.
+     * @param PopName String identifying the PoP.
+     * @return int Unused storage capacity of the PoP.
+     */
+    public double GetAvailableStorage(String PopName)
+    {
+        logger.debug("PlacementManager::GetAvailableStorage ENTRY");
+        logger.info("PlacementManager::GetAvailableStorage: PopName: " + PopName);
+
+        if(!DatacenterManager.check_datacenter_exists(PopName))
+        {
+            logger.fatal("PlacementManager::GetAvailableStorage: Unknown datacenter: " + PopName);
+            logger.debug("PlacementManager::GetAvailableStorage EXIT");
+            return 0;
+        }
+
+        double memory =  DatacenterManager.get_available_storage(PopName);
+        logger.debug("PlacementManager::GetAvailableStorage EXIT");
+        return memory;
+    }
+
+    /**
+     * This method returns the total storage capacity on the PoP.
+     * @param PopName String identifying the PoP.
+     * @return int Total storage capacity of the PoP.
+     */
+    public double GetTotalStorage(String PopName)
+    {
+        logger.debug("PlacementManager::GetTotalStorage ENTRY");
+        logger.info("PlacementManager::GetTotalStorage: PopName: " + PopName);
+
+        if(!DatacenterManager.check_datacenter_exists(PopName))
+        {
+            logger.fatal("PlacementManager::GetTotalStorage: Unknown datacenter: " + PopName);
+            logger.debug("PlacementManager::GetTotalStorage EXIT");
+            return 0;
+        }
+
+        double storage =  DatacenterManager.get_total_storage(PopName);
+        logger.debug("PlacementManager::GetTotalStorage EXIT");
+        return storage;
     }
 
 

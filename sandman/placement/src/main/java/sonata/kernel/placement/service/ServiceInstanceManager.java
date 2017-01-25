@@ -1,8 +1,10 @@
 package sonata.kernel.placement.service;
 
 import com.google.common.collect.Lists;
+import org.apache.commons.chain.web.MapEntry;
 import org.apache.commons.lang3.tuple.ImmutablePair;
 import org.apache.commons.lang3.tuple.Pair;
+import org.jaxen.Function;
 import sonata.kernel.VimAdaptor.commons.DeployServiceData;
 import sonata.kernel.VimAdaptor.commons.nsd.*;
 
@@ -16,6 +18,7 @@ import org.apache.log4j.Logger;
 import sonata.kernel.VimAdaptor.commons.vnfd.VnfDescriptor;
 import sonata.kernel.VimAdaptor.commons.vnfd.VnfVirtualLink;
 import sonata.kernel.placement.Catalogue;
+import sonata.kernel.placement.DatacenterManager;
 import sonata.kernel.placement.PlacementConfigLoader;
 import sonata.kernel.placement.config.PlacementConfig;
 
@@ -42,19 +45,22 @@ public class ServiceInstanceManager {
     }
 
     private ServiceInstance instance;
-    private Map<String, VnfDescriptor> nw_function_desc_map;
-    private Map<String, NetworkFunction> network_functions_db;
+    //private Map<String, VnfDescriptor> nw_function_desc_map;
+    //private Map<String, NetworkFunction> network_functions_db;
     private String default_pop;
     private PlacementConfig config;
+
+    public ServiceInstanceManager()
+    {
+        config = PlacementConfigLoader.loadPlacementConfig();
+        default_pop = config.getResources().get(0).getPopName();
+    }
 
     public ServiceInstance initialize_service_instance(DeployServiceData service_data) {
         ServiceDescriptor service = service_data.getNsd();
 
         instance = new ServiceInstance();
         instance.service = service;
-
-        config = PlacementConfigLoader.loadPlacementConfig();
-        default_pop = config.getResources().get(0).getPopName();
 
         String service_name = service.getName();
         ArrayList<ConnectionPoint> connection_points = Lists.newArrayList(service.getConnectionPoints());
@@ -70,23 +76,28 @@ public class ServiceInstanceManager {
     }
 
     protected void initialize_function_instance(DeployServiceData service_data) {
-        nw_function_desc_map = new HashMap<String, VnfDescriptor>();
-        network_functions_db = new HashMap<String, NetworkFunction>();
+        instance.nw_function_desc_map = new HashMap<String, VnfDescriptor>();
+        instance.network_functions_db = new HashMap<String, NetworkFunction>();
         ArrayList<NetworkFunction> network_functions = Lists.newArrayList(instance.service.getNetworkFunctions());
 
         for (VnfDescriptor descriptor : service_data.getVnfdList()) {
-            nw_function_desc_map.put(descriptor.getName(), descriptor);
+            instance.nw_function_desc_map.put(descriptor.getName(), descriptor);
             logger.debug("VNF Descriptor " + descriptor);
         }
 
         for (NetworkFunction function : network_functions) {
 
 
-            network_functions_db.put(function.getVnfId(), function);
-            VnfDescriptor descriptor = nw_function_desc_map.get(function.getVnfName());
+            instance.network_functions_db.put(function.getVnfId(), function);
+            VnfDescriptor descriptor = instance.nw_function_desc_map.get(function.getVnfName());
             assert descriptor != null : "Virtual Network Function " + function.getVnfName() + " not found";
 
             FunctionInstance function_instance = new FunctionInstance(function, descriptor, function.getVnfId(), default_pop);
+
+            boolean resource_status = consume_resources(function_instance, function_instance.data_center);
+            if(!resource_status)
+                continue;
+
 
             int id;
 
@@ -111,6 +122,7 @@ public class ServiceInstanceManager {
             function_instance.setName(function.getVnfId().split("_")[1] + id);
 
             initialize_vnfvlink_list(function_instance, descriptor);
+
         }
     }
 
@@ -296,7 +308,7 @@ System.out.println("update_ns_link "+link.getId()+"  "+cp_ref);
 
         instance.outerlink_list.get((key.split(":"))[0]).remove(key);
         return;
-}
+    }
 
     protected void initialize_link(VirtualLink link, LinkInstance linkInstance) {
         boolean is_nslink = false;
@@ -435,7 +447,7 @@ System.out.println("update_ns_link "+link.getId()+"  "+cp_ref);
                 instance.customized_chains.add(new ImmutablePair<Pair<String, String>, List<String>>
                         (new ImmutablePair<String, String>(server[1], server[0]), viaPath));
             }
-
+            linkInstance.viaPath = viaPath;
         }
         return;
 
@@ -460,7 +472,7 @@ System.out.println("update_ns_link "+link.getId()+"  "+cp_ref);
             return;
         } else {
             VnfDescriptor descriptor = Catalogue.internalFunctions.get(vnf_id);
-            nw_function_desc_map.put(network_functions_db.get(vnf_id).getVnfName(), descriptor);
+            instance.nw_function_desc_map.put(instance.network_functions_db.get(vnf_id).getVnfName(), descriptor);
 
             logger.info("ServiceInstanceManager:update_vnfdescriptor updated for " + vnf_id + ". "
                     + "VnfDescriptor: " + descriptor.getName() + " Version: " + descriptor.getVendor());
@@ -495,11 +507,11 @@ System.out.println("update_ns_link "+link.getId()+"  "+cp_ref);
                 n_function.setDescription(descriptor.getDescription());
 
 
-                network_functions_db.put(vnf_id, n_function);
+                instance.network_functions_db.put(vnf_id, n_function);
 
-                String ss = network_functions_db.get(vnf_id).getVnfName();
+                String ss = instance.network_functions_db.get(vnf_id).getVnfName();
                 //nw_function_desc_map.put(descriptor.getName(), descriptor);
-                nw_function_desc_map.put(ss, descriptor);
+                instance.nw_function_desc_map.put(ss, descriptor);
 
                 AtomicInteger vnf_uid = new AtomicInteger(0);
                 int id = vnf_uid.addAndGet(1);
@@ -508,6 +520,10 @@ System.out.println("update_ns_link "+link.getId()+"  "+cp_ref);
 
                 FunctionInstance function_instance = new FunctionInstance(n_function, descriptor,
                         n_function.getVnfName().split("-")[0] + id, PopName);
+
+                boolean resource_status = consume_resources(function_instance, function_instance.data_center);
+                if(!resource_status)
+                    return null;
 
                 initialize_vnfvlink_list(function_instance, descriptor);
 
@@ -521,16 +537,20 @@ System.out.println("update_ns_link "+link.getId()+"  "+cp_ref);
 
             } else {
                 logger.debug("Add instance of known function "+vnf_id);
-                VnfDescriptor descriptor = nw_function_desc_map.get(network_functions_db.get(vnf_id).getVnfName());
+                VnfDescriptor descriptor = instance.nw_function_desc_map.get(instance.network_functions_db.get(vnf_id).getVnfName());
                 assert descriptor != null : "Virtual Network Function " + vnf_id + " not found";
 
-                NetworkFunction n_function = network_functions_db.get(vnf_id);
+                NetworkFunction n_function = instance.network_functions_db.get(vnf_id);
 
 
                 int id = instance.vnf_uid.get(n_function.getVnfId()).addAndGet(1);
                 instance.vnf_uid.get(n_function.getVnfId()).set(id);
                 FunctionInstance function_instance = new FunctionInstance(n_function, descriptor,
                         n_function.getVnfName().split("-")[0] + id, PopName);
+
+                boolean resource_status = consume_resources(function_instance, function_instance.data_center);
+                if(!resource_status)
+                    return null;
 
                 initialize_vnfvlink_list(function_instance, descriptor);
 
@@ -547,6 +567,10 @@ System.out.println("update_ns_link "+link.getId()+"  "+cp_ref);
             if (instance.function_list.get(vnf_id) == null) {
                 logger.error("Virtual Network Function " + vnf_id + " not found");
             } else {
+
+                FunctionInstance f_inst = instance.function_list.get(vnf_id).get(vnf_name);
+                relinquish_resource(f_inst);
+                delete_inner_links(f_inst);
                 delete_ns_link((vnf_name.split("_"))[1]);
                 int id = instance.vnf_uid.get(vnf_id).decrementAndGet();
                 instance.vnf_uid.get(vnf_id).set(id);
@@ -555,6 +579,30 @@ System.out.println("update_ns_link "+link.getId()+"  "+cp_ref);
         }
         return null;
 
+    }
+
+    protected void delete_inner_links(FunctionInstance f_instance)
+    {
+
+        for(Map.Entry<String, Map<String, LinkInstance>> link_m : instance.innerlink_list.entrySet())
+        {
+            List<String> link_names = new ArrayList<String>();
+            for(Map.Entry<String, LinkInstance> entry : link_m.getValue().entrySet())
+            {
+                for(Map.Entry<FunctionInstance, String> ee : entry.getValue().interfaceList.entrySet())
+                {
+                    if(f_instance.name.equals(ee.getKey().name))
+                    {
+                        link_names.add(entry.getKey());
+                    }
+                }
+            }
+
+            for(String vlinks : link_names)
+            {
+                link_m.getValue().remove(vlinks);
+            }
+        }
     }
 
     public ServiceInstance update_vlink_list(String s_vnfid, String d_vnfid, String endpoint_src, String endpoint_target, List<String> viaPath, ACTION_TYPE action) {
@@ -700,6 +748,112 @@ System.out.println("update_ns_link "+link.getId()+"  "+cp_ref);
         return this.instance;
     }
 
+    protected boolean consume_resources(FunctionInstance function_instance, String data_center)
+    {
+        double multiplier =
+                function_instance.deploymentUnits.get(0).getResourceRequirements().getMemory().getSizeUnit().getMultiplier();
+        boolean memory_status = DatacenterManager.consume_memory(data_center,
+                function_instance.deploymentUnits.get(0).getResourceRequirements().getMemory().getSize() * multiplier);
 
+        if(memory_status == false) {
+            logger.error("ServiceInstanceManager::initialize_function_instance: Insufficient memory resource on "
+                    + data_center + ". Required: " + function_instance.deploymentUnits.get(0).getResourceRequirements().getMemory().getSize() * multiplier
+                    + " " + function_instance.deploymentUnits.get(0).getResourceRequirements().getMemory().getSizeUnit().name()
+                    + ". Available: " + DatacenterManager.get_available_memory(data_center)
+            + " " + function_instance.deploymentUnits.get(0).getResourceRequirements().getMemory().getSizeUnit().name());
+            return false;
+        }
+
+        boolean cpu_status = DatacenterManager.consume_cpu(data_center,
+                function_instance.deploymentUnits.get(0).getResourceRequirements().getCpu().getVcpus());
+
+        if(cpu_status == false)
+        {
+            logger.error("ServiceInstanceManager::initialize_function_instance: Insufficient cpu resource on "
+                    + data_center + ". Required: " + function_instance.deploymentUnits.get(0).getResourceRequirements().getCpu().getVcpus()
+                    + " Available: " + DatacenterManager.get_available_cpu(data_center));
+            DatacenterManager.relinquish_memory(data_center,
+                    function_instance.deploymentUnits.get(0).getResourceRequirements().getMemory().getSize() * multiplier);
+            return false;
+        }
+
+        multiplier =
+                function_instance.deploymentUnits.get(0).getResourceRequirements().getStorage().getSizeUnit().getMultiplier();
+        boolean storage_status = DatacenterManager.consume_storage(data_center,
+                function_instance.deploymentUnits.get(0).getResourceRequirements().getStorage().getSize() * multiplier);
+
+        if(storage_status == false)
+        {
+            logger.error("ServiceInstanceManager::initialize_function_instance: Insufficient storage resource on "
+                    + data_center + ". Required: " + function_instance.deploymentUnits.get(0).getResourceRequirements().getStorage().getSize() * multiplier
+                    + " " + function_instance.deploymentUnits.get(0).getResourceRequirements().getStorage().getSizeUnit().name()
+                    + " Available: " + DatacenterManager.get_available_storage(data_center)
+                    + " " + function_instance.deploymentUnits.get(0).getResourceRequirements().getMemory().getSizeUnit().name());
+            DatacenterManager.relinquish_memory(data_center,
+                    function_instance.deploymentUnits.get(0).getResourceRequirements().getMemory().getSize() * multiplier);
+            DatacenterManager.relinquish_cpu(data_center,
+                    function_instance.deploymentUnits.get(0).getResourceRequirements().getCpu().getVcpus());
+            return false;
+
+        }
+
+        return true;
+    }
+
+    protected boolean relinquish_resource(FunctionInstance function_instance)
+    {
+        double multiplier =
+                function_instance.deploymentUnits.get(0).getResourceRequirements().getMemory().getSizeUnit().getMultiplier();
+        DatacenterManager.relinquish_memory(function_instance.data_center,
+                function_instance.deploymentUnits.get(0).getResourceRequirements().getMemory().getSize() * multiplier);
+
+        multiplier =
+                function_instance.deploymentUnits.get(0).getResourceRequirements().getStorage().getSizeUnit().getMultiplier();
+        DatacenterManager.relinquish_storage(function_instance.data_center,
+                function_instance.deploymentUnits.get(0).getResourceRequirements().getStorage().getSize() * multiplier);
+
+        DatacenterManager.relinquish_cpu(function_instance.data_center,
+                function_instance.deploymentUnits.get(0).getResourceRequirements().getCpu().getVcpus());
+
+        return true;
+
+    }
+
+    public boolean move_function_instance(String vnf_name, String pop_name)
+    {
+        FunctionInstance f_instance = instance.getFunctionInstance(vnf_name);
+        if(f_instance == null)
+            return false;
+
+        boolean status = consume_resources(f_instance, pop_name);
+        if(false == status)
+            return false;
+
+        relinquish_resource(f_instance);
+        f_instance.data_center = pop_name;
+
+        for(Map.Entry<String, Map<String, LinkInstance>> link_m : instance.innerlink_list.entrySet())
+        {
+            HashMap<String, LinkInstance> links = new HashMap<String, LinkInstance>();
+            for(Map.Entry<String, LinkInstance> entry : link_m.getValue().entrySet())
+            {
+                for(Map.Entry<FunctionInstance, String> ee : entry.getValue().interfaceList.entrySet())
+                {
+                    if(f_instance.name.equals(ee.getKey().name))
+                    {
+                        links.put(entry.getKey(),entry.getValue());
+                    }
+                }
+            }
+
+            for(Map.Entry<String,LinkInstance> vlinks : links.entrySet())
+            {
+                delete_chaining_rules(vlinks.getValue().getLinkId(), vlinks.getKey());
+                add_chaining_rules(vlinks.getValue(), instance.create_chain, vlinks.getValue().viaPath);
+            }
+        }
+
+        return true;
+    }
 
 }

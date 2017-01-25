@@ -124,6 +124,7 @@ public class DefaultPlacementPlugin implements PlacementPlugin {
 
             List<String> s1 = new ArrayList<String>();
             s1.add("s1");
+            s1.add("s2");
             ///ServiceInstance instance_t =  instance_manager.update_vlink_list("vnf_firewall", "vnf_tcpdump", "vnf_firewall1", "vnf_tcpdump3", s1,
                ///     ServiceInstanceManager.ACTION_TYPE.ADD_INSTANCE);
 
@@ -147,11 +148,12 @@ public class DefaultPlacementPlugin implements PlacementPlugin {
             ///instance_manager.update_vlink_list("vnf_firewall", "vnf_tcpdump", "vnf_firewall1", "vnf_tcpdump1", null,
                ///     ServiceInstanceManager.ACTION_TYPE.DELETE_INSTANCE);
 
-            pm.DeleteVirtualLink("vnf_firewall1", "vnf_tcpdump1");
+            //pm.DeleteVirtualLink("vnf_firewall1", "vnf_tcpdump1");
 
             ///instance_manager.update_functions_list("vnf_tcpdump", "vnf_tcpdump1", "datacenter1", ServiceInstanceManager.ACTION_TYPE.DELETE_INSTANCE);
 
-            pm.DeleteNetworkFunctionInstance("vnf_tcpdump1");
+            pm.DeleteNetworkFunctionInstance("vnf_firewall1");
+            pm.DeleteNetworkFunctionInstance("vnf_tcpdump3");
 
             return pm.GetServiceInstance();
         }

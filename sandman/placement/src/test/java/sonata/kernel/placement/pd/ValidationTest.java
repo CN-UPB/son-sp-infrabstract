@@ -21,9 +21,9 @@ public class ValidationTest {
     public void fix() {
         SonataPackage brokenPkg = PackageLoader.loadSonataPackageFromDisk(Paths.get("YAML","packages","mild-broken","mild-broken.son").toString());
         brokenPkg.validation.validate();
+        brokenPkg.validation.fixCustomAssumptions();
         String validationLog = brokenPkg.validation.getValidationLog();
         Validation v = new Validation(brokenPkg);
-        v.fixCustomAssumptions();
         v.validate();
         String validationLogFixed = v.getValidationLog();
         assert validationLogFixed.length() < validationLog.length();

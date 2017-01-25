@@ -1,14 +1,28 @@
 package sonata.kernel.placement.net;
 
+import com.fasterxml.jackson.annotation.JsonInclude;
+import com.fasterxml.jackson.core.JsonFactory;
+import com.fasterxml.jackson.databind.DeserializationFeature;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.SerializationFeature;
+import com.fasterxml.jackson.databind.module.SimpleModule;
+import org.apache.http.HttpEntity;
 import org.apache.http.client.methods.CloseableHttpResponse;
 import org.apache.http.client.methods.HttpDelete;
+import org.apache.http.client.methods.HttpPost;
 import org.apache.http.client.methods.HttpPut;
+import org.apache.http.entity.ContentType;
+import org.apache.http.entity.StringEntity;
 import org.apache.http.impl.client.CloseableHttpClient;
 import org.apache.http.impl.client.HttpClients;
 import org.apache.log4j.Logger;
+import sonata.kernel.VimAdaptor.commons.vnfd.Unit;
+import sonata.kernel.VimAdaptor.commons.vnfd.UnitDeserializer;
 import sonata.kernel.placement.config.PopResource;
 
 import java.io.IOException;
+import java.util.HashMap;
+import java.util.Map;
 
 public class TranslatorChain {
 
@@ -47,6 +61,50 @@ public class TranslatorChain {
         }
     }
 
+    public static void chainCustom(LinkChain chain){
+
+        // Same chaining port for both datacenters
+        String chainPath = chain.srcPort.pop.getChainingEndpoint();
+        if(!chainPath.endsWith("/"))
+            chainPath += "/";
+        String requestUri;
+
+        String srcDcName = chain.srcPort.pop.getPopName();
+        String dstDcName = chain.dstPort.pop.getPopName();
+
+        requestUri = chainPath+"v1/chain/"+srcDcName+"/"+chain.srcPort.stack+"/"+chain.srcPort.server+"/"+chain.srcPort.port+"/"
+                +dstDcName+"/"+chain.dstPort.stack+"/"+chain.dstPort.server+"/"+chain.dstPort.port;
+
+        CloseableHttpClient client = HttpClients.createDefault();
+        HttpPost postRequest = new HttpPost(requestUri);
+        CloseableHttpResponse response = null;
+
+        Map<String,Object> pathMap = new HashMap<String,Object>();
+        pathMap.put("path", chain.path);
+
+        String pathString;
+
+        try {
+
+            pathString = mapper.writeValueAsString(pathMap);
+
+            postRequest.setEntity(new StringEntity(pathString, ContentType.APPLICATION_JSON));
+
+            logger.info("Chaining custom "+postRequest.getRequestLine().getUri());
+
+
+            response = client.execute(postRequest);
+            if (response.getStatusLine().getStatusCode() == 500) {
+                logger.error("Chaining custom failed "+requestUri);
+            } else {
+                logger.info("Chaining custom successful "+requestUri);
+            }
+        } catch (IOException e) {
+            e.printStackTrace();
+            logger.error("Chaining custom request aborted "+requestUri);
+        }
+    }
+
     public static void unchain(LinkChain chain){
 
         // Same chaining port for both datacenters
@@ -80,5 +138,19 @@ public class TranslatorChain {
         }
     }
 
+    protected static ObjectMapper mapper;
+
+    static {
+        ObjectMapper mapper = new ObjectMapper(new JsonFactory());
+        mapper.disable(SerializationFeature.WRITE_EMPTY_JSON_ARRAYS);
+        mapper.enable(SerializationFeature.WRITE_ENUMS_USING_TO_STRING);
+        mapper.disable(SerializationFeature.WRITE_NULL_MAP_VALUES);
+        mapper.enable(SerializationFeature.ORDER_MAP_ENTRIES_BY_KEYS);
+        mapper.setSerializationInclusion(JsonInclude.Include.NON_NULL);
+        SimpleModule module = new SimpleModule();
+        module.addDeserializer(Unit.class, new UnitDeserializer());
+        mapper.registerModule(module);
+        mapper.enable(DeserializationFeature.READ_ENUMS_USING_TO_STRING);
+    }
 }
 

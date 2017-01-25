@@ -51,7 +51,7 @@ public class FunctionMonitor implements FutureCallback<HttpResponse> {
         this.requestPath = datacenter.getMonitoringEndpoint()+"v1/monitor/"+dc.getPopName()+"/"+stack+"/"+function;
         httpRequest = new HttpGet(this.requestPath);
         statsList = new ArrayList<MonitorStats>();
-        instanceName = function.substring(0,function.lastIndexOf(":"));
+        instanceName = function;
     }
 
     public void stopMonitorRequest() {

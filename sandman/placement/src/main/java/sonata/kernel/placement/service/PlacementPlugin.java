@@ -26,11 +26,6 @@ public interface PlacementPlugin {
      *  - Scaling instructions to corresponding FSMs
      *  - Updated service instance record
      */
-
-    public ServiceInstance initialScaling(DeployServiceData serviceData);
-
-    public ServiceInstance updateScaling(DeployServiceData serviceData, ServiceInstance instance, MonitorMessage trigger);
-
     /*
      * SONATA D4.1 - 4.2.1.1 Future Plugins - Features
      * Service placement calculation:
@@ -44,8 +39,12 @@ public interface PlacementPlugin {
      *   - Mapping of each VNF in the NSD to a network node and mapping of the corresponding paths among them to network links
      */
 
-    public PlacementMapping initialPlacement(DeployServiceData serviceData, ServiceInstance instance, List<PopResource> resources);
+    /*
+     * Scaling and Placement in one phase.
+     */
 
-    public PlacementMapping updatePlacement(DeployServiceData serviceData, ServiceInstance instance, List<PopResource> resources, PlacementMapping mapping);
+    public ServiceInstance initialScaling(DeployServiceData serviceData);
+
+    public ServiceInstance updateScaling(DeployServiceData serviceData, ServiceInstance instance, MonitorMessage trigger);
 
 }

@@ -18,6 +18,7 @@ import sonata.kernel.VimAdaptor.commons.DeployServiceData;
 import sonata.kernel.VimAdaptor.commons.heat.HeatTemplate;
 import sonata.kernel.VimAdaptor.commons.vnfd.Unit;
 import sonata.kernel.VimAdaptor.commons.vnfd.UnitDeserializer;
+import sonata.kernel.placement.DatacenterManager;
 import sonata.kernel.placement.DeploymentManager;
 import sonata.kernel.placement.PackageLoader;
 import sonata.kernel.placement.PlacementConfigLoader;
@@ -49,6 +50,7 @@ public class TranslatorNetworkTest {
 	public void create_network() throws Exception {
 
 		PlacementConfig config = PlacementConfigLoader.loadPlacementConfig();
+        DatacenterManager.initialize();
 		List<PopResource> resources = config.getResources();
 		PopResource pop1 = config.getResources().get(0);
 		String stackName = "TestStack";
@@ -57,8 +59,7 @@ public class TranslatorNetworkTest {
         PlacementPlugin plugin = new DefaultPlacementPlugin();
 
         ServiceInstance instance = plugin.initialScaling(data);
-        PlacementMapping mapping = plugin.initialPlacement(data, instance, config.getResources());
-        List<HeatTemplate> templates = ServiceHeatTranslator.translatePlacementMappingToHeat(instance, config.getResources(), mapping);
+        List<HeatTemplate> templates = ServiceHeatTranslator.translatePlacementMappingToHeat(instance, config.getResources());
 
         String template = null;
         try {

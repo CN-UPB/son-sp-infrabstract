@@ -99,7 +99,7 @@ public class ComputeMetrics {
 
         for (int i = 0; i < threshold_m.get(f_inst.function.getVnfId()).getHistory_check(); i++) {
 
-            MonitorStats stats_t = stats_history_t.get(i);
+            MonitorStats stats_t = stats_history_t.get(stats_history_t.size()-1-i);
 
             if (((threshold_m.get(f_inst.function.getVnfId()).getCpu_upper_l()) / 100) * stats_t.getCpuCores() < stats_t.getCpu()) {
                 logger.info("ComputerMetrics::evaluate_vnf_instance_load: cpu overload for " + f_inst.name

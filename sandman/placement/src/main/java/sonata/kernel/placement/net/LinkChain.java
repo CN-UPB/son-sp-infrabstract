@@ -2,10 +2,14 @@ package sonata.kernel.placement.net;
 
 import sonata.kernel.placement.config.PopResource;
 
+import java.util.ArrayList;
+import java.util.List;
+
 public class LinkChain {
 
     public LinkPort srcPort;
     public LinkPort dstPort;
+    public List<String> path = new ArrayList<String>();
 
     public LinkChain(PopResource srcDc, String srcStack, String srcServer, String srcPort,
                      PopResource dstDc, String dstStack, String dstServer, String dstPort) {

@@ -212,6 +212,17 @@ function scaleout(){
         });
 }
 
+function scalein(){
+    document.getElementById("scaleinbtn").disabled = true;
+    ajax("GET", "/scalein", null, "json", function(){
+        (monitorLoop, 2000);
+        setTimeout(function(){
+                document.getElementById("scaleinbtn").disabled = false;
+                location.reload(true);
+            }, 5000);
+        });
+}
+
 function onDeploy(status, response){
     if(status == 201) {        
     } else {
@@ -868,6 +879,7 @@ function init() {
 <button id="statusbtn" onclick="checkStatus();">Check</button>
 <button id="undeploybtn" onclick="undeploy();" disabled="true">Undeploy</button>
 <button id="scaleoutbtn" onclick="scaleout();" >ScaleOut</button>
+<button id="scaleinbtn" onclick="scalein();" >ScaleIn</button>
 </div>
 <div id="graphdiv"></div>
 <h3>Monitoring</h3>

@@ -96,7 +96,7 @@ public class ServiceInstanceManager {
 
             FunctionInstance function_instance = new FunctionInstance(function, descriptor, function.getVnfId(), default_pop);
 
-            boolean resource_status = consume_resources(function_instance);
+            boolean resource_status = consume_resources(function_instance, function_instance.data_center);
             if(!resource_status)
                 continue;
 
@@ -525,7 +525,7 @@ System.out.println("update_ns_link "+link.getId()+"  "+cp_ref);
                 FunctionInstance function_instance = new FunctionInstance(n_function, descriptor,
                         n_function.getVnfName().split("-")[0] + id, PopName);
 
-                boolean resource_status = consume_resources(function_instance);
+                boolean resource_status = consume_resources(function_instance, function_instance.data_center);
                 if(!resource_status)
                     return null;
 
@@ -552,7 +552,7 @@ System.out.println("update_ns_link "+link.getId()+"  "+cp_ref);
                 FunctionInstance function_instance = new FunctionInstance(n_function, descriptor,
                         n_function.getVnfName().split("-")[0] + id, PopName);
 
-                boolean resource_status = consume_resources(function_instance);
+                boolean resource_status = consume_resources(function_instance, function_instance.data_center);
                 if(!resource_status)
                     return null;
 
@@ -752,46 +752,50 @@ System.out.println("update_ns_link "+link.getId()+"  "+cp_ref);
         return this.instance;
     }
 
-    protected boolean consume_resources(FunctionInstance function_instance)
+    protected boolean consume_resources(FunctionInstance function_instance, String data_center)
     {
         double multiplier =
                 function_instance.deploymentUnits.get(0).getResourceRequirements().getMemory().getSizeUnit().getMultiplier();
-        boolean memory_status = DatacenterManager.consume_memory(function_instance.data_center,
+        boolean memory_status = DatacenterManager.consume_memory(data_center,
                 function_instance.deploymentUnits.get(0).getResourceRequirements().getMemory().getSize() * multiplier);
 
         if(memory_status == false) {
             logger.error("ServiceInstanceManager::initialize_function_instance: Insufficient memory resource on "
-                    + function_instance.data_center + ". Required: " + function_instance.deploymentUnits.get(0).getResourceRequirements().getMemory().getSize() * multiplier
-                    + " Available: " + DatacenterManager.get_available_memory(function_instance.data_center));
+                    + data_center + ". Required: " + function_instance.deploymentUnits.get(0).getResourceRequirements().getMemory().getSize() * multiplier
+                    + " " + function_instance.deploymentUnits.get(0).getResourceRequirements().getMemory().getSizeUnit().name()
+                    + ". Available: " + DatacenterManager.get_available_memory(data_center)
+            + " " + function_instance.deploymentUnits.get(0).getResourceRequirements().getMemory().getSizeUnit().name());
             return false;
         }
 
-        boolean cpu_status = DatacenterManager.consume_cpu(function_instance.data_center,
+        boolean cpu_status = DatacenterManager.consume_cpu(data_center,
                 function_instance.deploymentUnits.get(0).getResourceRequirements().getCpu().getVcpus());
 
         if(cpu_status == false)
         {
             logger.error("ServiceInstanceManager::initialize_function_instance: Insufficient cpu resource on "
-                    + function_instance.data_center + ". Required: " + function_instance.deploymentUnits.get(0).getResourceRequirements().getCpu().getVcpus()
-                    + " Available: " + DatacenterManager.get_available_cpu(function_instance.data_center));
-            DatacenterManager.relinquish_memory(function_instance.data_center,
+                    + data_center + ". Required: " + function_instance.deploymentUnits.get(0).getResourceRequirements().getCpu().getVcpus()
+                    + " Available: " + DatacenterManager.get_available_cpu(data_center));
+            DatacenterManager.relinquish_memory(data_center,
                     function_instance.deploymentUnits.get(0).getResourceRequirements().getMemory().getSize() * multiplier);
             return false;
         }
 
         multiplier =
                 function_instance.deploymentUnits.get(0).getResourceRequirements().getStorage().getSizeUnit().getMultiplier();
-        boolean storage_status = DatacenterManager.consume_storage(function_instance.data_center,
+        boolean storage_status = DatacenterManager.consume_storage(data_center,
                 function_instance.deploymentUnits.get(0).getResourceRequirements().getStorage().getSize() * multiplier);
 
         if(storage_status == false)
         {
             logger.error("ServiceInstanceManager::initialize_function_instance: Insufficient storage resource on "
-                    + function_instance.data_center + ". Required: " + function_instance.deploymentUnits.get(0).getResourceRequirements().getStorage().getSize() * multiplier
-                    + " Available: " + DatacenterManager.get_available_storage(function_instance.data_center));
-            DatacenterManager.relinquish_memory(function_instance.data_center,
+                    + data_center + ". Required: " + function_instance.deploymentUnits.get(0).getResourceRequirements().getStorage().getSize() * multiplier
+                    + " " + function_instance.deploymentUnits.get(0).getResourceRequirements().getStorage().getSizeUnit().name()
+                    + " Available: " + DatacenterManager.get_available_storage(data_center)
+                    + " " + function_instance.deploymentUnits.get(0).getResourceRequirements().getMemory().getSizeUnit().name());
+            DatacenterManager.relinquish_memory(data_center,
                     function_instance.deploymentUnits.get(0).getResourceRequirements().getMemory().getSize() * multiplier);
-            DatacenterManager.relinquish_cpu(function_instance.data_center,
+            DatacenterManager.relinquish_cpu(data_center,
                     function_instance.deploymentUnits.get(0).getResourceRequirements().getCpu().getVcpus());
             return false;
 
@@ -817,6 +821,43 @@ System.out.println("update_ns_link "+link.getId()+"  "+cp_ref);
 
         return true;
 
+    }
+
+    public boolean move_function_instance(String vnf_name, String pop_name)
+    {
+        FunctionInstance f_instance = instance.getFunctionInstance(vnf_name);
+        if(f_instance == null)
+            return false;
+
+        boolean status = consume_resources(f_instance, pop_name);
+        if(false == status)
+            return false;
+
+        relinquish_resource(f_instance);
+        f_instance.data_center = pop_name;
+
+        for(Map.Entry<String, Map<String, LinkInstance>> link_m : instance.innerlink_list.entrySet())
+        {
+            HashMap<String, LinkInstance> links = new HashMap<String, LinkInstance>();
+            for(Map.Entry<String, LinkInstance> entry : link_m.getValue().entrySet())
+            {
+                for(Map.Entry<FunctionInstance, String> ee : entry.getValue().interfaceList.entrySet())
+                {
+                    if(f_instance.name.equals(ee.getKey().name))
+                    {
+                        links.put(entry.getKey(),entry.getValue());
+                    }
+                }
+            }
+
+            for(Map.Entry<String,LinkInstance> vlinks : links.entrySet())
+            {
+                delete_chaining_rules(vlinks.getValue().getLinkId(), vlinks.getKey());
+                add_chaining_rules(vlinks.getValue(), instance.create_chain, vlinks.getValue().viaPath);
+            }
+        }
+
+        return true;
     }
 
 }

@@ -120,7 +120,7 @@ public class DefaultPlacementPlugin implements PlacementPlugin {
 
             ///instance_manager.update_functions_list("vnf_tcpdump", null, "datacenter3", ServiceInstanceManager.ACTION_TYPE.ADD_INSTANCE);
 
-            pm.AddNetworkFunctionInstance("vnf_tcpdump", "datacenter3");
+            pm.AddNetworkFunctionInstance("vnf_tcpdump", "datacenter5");
 
             List<String> s1 = new ArrayList<String>();
             s1.add("s1");
@@ -152,6 +152,7 @@ public class DefaultPlacementPlugin implements PlacementPlugin {
 
             ///instance_manager.update_functions_list("vnf_tcpdump", "vnf_tcpdump1", "datacenter1", ServiceInstanceManager.ACTION_TYPE.DELETE_INSTANCE);
 
+            pm.MoveNetworkFunctionInstance("vnf_tcpdump3", "datacenter5");
             pm.DeleteNetworkFunctionInstance("vnf_firewall1");
             pm.DeleteNetworkFunctionInstance("vnf_tcpdump3");
 

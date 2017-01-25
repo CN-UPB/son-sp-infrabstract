@@ -156,9 +156,6 @@ public class ScalingTest {
 
         ServiceInstance instance = plugin.initialScaling(data);
 
-        PlacementMapping mapping = plugin.initialPlacement(data, instance, config.getResources());
-
-
         //Perform sclae out.
         /*
         {"CPU_cores": 4,
@@ -198,9 +195,7 @@ public class ScalingTest {
 
         instance = plugin.updateScaling(data, instance, trigger);
 
-        mapping = plugin.initialPlacement(data, instance, config.getResources());
-
-        List<HeatTemplate> templates = ServiceHeatTranslator.translatePlacementMappingToHeat(instance, config.getResources(), mapping);
+        List<HeatTemplate> templates = ServiceHeatTranslator.translatePlacementMappingToHeat(instance, config.getResources());
 
         assert templates.size() == 1;
 
@@ -238,9 +233,6 @@ public class ScalingTest {
         PlacementPlugin plugin = new DefaultPlacementPlugin();
 
         ServiceInstance instance = plugin.initialScaling(data);
-
-        PlacementMapping mapping = plugin.initialPlacement(data, instance, config.getResources());
-
 
         //Perform sclae out.
         /*
@@ -280,9 +272,8 @@ public class ScalingTest {
         MonitorMessage trigger = new MonitorMessage(MonitorMessage.SCALE_TYPE.MONITOR_STATS, stats_history);
 
         instance = plugin.updateScaling(data, instance, trigger);
-        mapping = plugin.initialPlacement(data, instance, config.getResources());
 
-        List<HeatTemplate> templates = ServiceHeatTranslator.translatePlacementMappingToHeat(instance, config.getResources(), mapping);
+        List<HeatTemplate> templates = ServiceHeatTranslator.translatePlacementMappingToHeat(instance, config.getResources());
 
         assert templates.size() == 1;
 

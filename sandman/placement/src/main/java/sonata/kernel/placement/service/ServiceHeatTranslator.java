@@ -403,8 +403,7 @@ public class ServiceHeatTranslator {
     }
 
     public static List<HeatTemplate> translatePlacementMappingToHeat(ServiceInstance instance,
-                                                                     List<PopResource> resources,
-                                                                     PlacementMapping mapping) {
+                                                                     List<PopResource> resources) {
 
         logger.info("translatePlacementMappingToHeat: Translating Placement Mapping to Heat");
 

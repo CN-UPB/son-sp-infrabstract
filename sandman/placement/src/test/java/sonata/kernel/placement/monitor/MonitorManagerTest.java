@@ -41,8 +41,8 @@ public class MonitorManagerTest {
         PlacementPlugin plugin = new DefaultPlacementPlugin();
 
         ServiceInstance instance = plugin.initialScaling(data);
-        PlacementMapping mapping = plugin.initialPlacement(data, instance, config.getResources());
-        List<HeatTemplate> templates = ServiceHeatTranslator.translatePlacementMappingToHeat(instance, config.getResources(), mapping);
+
+        List<HeatTemplate> templates = ServiceHeatTranslator.translatePlacementMappingToHeat(instance, config.getResources());
 
         String template = null;
         try {

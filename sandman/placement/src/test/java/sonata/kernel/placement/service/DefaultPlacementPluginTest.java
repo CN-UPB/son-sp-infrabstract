@@ -49,12 +49,6 @@ public class DefaultPlacementPluginTest {
 
         ServiceInstance instance = plugin.initialScaling(data);
 
-        PlacementMapping mapping = plugin.initialPlacement(data, instance, config.getResources());
-
-        List<Object> nodeList = new ArrayList<Object>();
-        // add first node as example
-        nodeList.add(mapping.mapping.keySet().iterator().next());
-
         /*
         {"CPU_cores": 4,
          "SYS_time": 1480936009023641088,
@@ -93,14 +87,13 @@ public class DefaultPlacementPluginTest {
 
         instance = plugin.updateScaling(data, instance, trigger);
 
-        mapping = plugin.initialPlacement(data, instance, config.getResources());
         //Add additional tcpdump vnfs
 
 
 
 
 
-        List<HeatTemplate> templates = ServiceHeatTranslator.translatePlacementMappingToHeat(instance, config.getResources(), mapping);
+        List<HeatTemplate> templates = ServiceHeatTranslator.translatePlacementMappingToHeat(instance, config.getResources());
 
         //assert templates.size()==1;
 
@@ -131,10 +124,9 @@ public class DefaultPlacementPluginTest {
 
         instance = plugin.updateScaling(data, instance, trigger_down);
 
-        mapping = plugin.initialPlacement(data, instance, config.getResources());
         //Add additional tcpdump vnfs
 
-        templates = ServiceHeatTranslator.translatePlacementMappingToHeat(instance, config.getResources(), mapping);
+        templates = ServiceHeatTranslator.translatePlacementMappingToHeat(instance, config.getResources());
 
         //assert templates.size()==1;
 
@@ -185,9 +177,7 @@ public class DefaultPlacementPluginTest {
 
         ServiceInstance instance = plugin.initialScaling(data);
 
-        PlacementMapping mapping = plugin.initialPlacement(data, instance, config.getResources());
-
-        List<HeatTemplate> templates = ServiceHeatTranslator.translatePlacementMappingToHeat(instance, config.getResources(), mapping);
+        List<HeatTemplate> templates = ServiceHeatTranslator.translatePlacementMappingToHeat(instance, config.getResources());
 
         //assert templates.size()==1;
 

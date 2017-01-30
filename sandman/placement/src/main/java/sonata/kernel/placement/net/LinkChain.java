@@ -9,7 +9,7 @@ public class LinkChain {
 
     public LinkPort srcPort;
     public LinkPort dstPort;
-    public List<String> path = new ArrayList<String>();
+    public List<String> path = null;
 
     public LinkChain(PopResource srcDc, String srcStack, String srcServer, String srcPort,
                      PopResource dstDc, String dstStack, String dstServer, String dstPort) {

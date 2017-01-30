@@ -252,6 +252,15 @@ public class DatacenterManager {
         logger.debug("DatacenterManager::relinquish_storage ENTRY");
         return;
     }
+
+    public static void reset_resources()
+    {
+        logger.debug("DatacenterManager::reset_resources ENTRY");
+        m_datacenters.clear();
+        initialize();
+        logger.debug("DatacenterManager::reset_resources EXIT");
+        return;
+    }
 }
 
 

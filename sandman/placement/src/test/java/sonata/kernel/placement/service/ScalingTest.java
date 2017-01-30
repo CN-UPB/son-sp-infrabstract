@@ -12,6 +12,7 @@ import sonata.kernel.VimAdaptor.commons.DeployServiceData;
 import sonata.kernel.VimAdaptor.commons.heat.HeatTemplate;
 import sonata.kernel.VimAdaptor.commons.vnfd.Unit;
 import sonata.kernel.VimAdaptor.commons.vnfd.UnitDeserializer;
+import sonata.kernel.placement.DatacenterManager;
 import sonata.kernel.placement.HeatStackCreate;
 import sonata.kernel.placement.PackageLoader;
 import sonata.kernel.placement.PlacementConfigLoader;
@@ -83,6 +84,8 @@ public class ScalingTest {
         PlacementConfig config = PlacementConfigLoader.loadPlacementConfig();
 
         DeployServiceData data = PackageLoader.loadPackageFromDisk(Paths.get("YAML", "test.son").toString());
+
+        DatacenterManager.initialize();
 
         PlacementPlugin plugin = new DefaultPlacementPlugin();
 

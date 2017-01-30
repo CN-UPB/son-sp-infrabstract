@@ -162,7 +162,7 @@ function onStatus(status, response){
         newstatus = response;
         if(newstatus.status == "DEPLOYED") {
             document.getElementById("undeploybtn").disabled = false;
-            setStatusMsg(newstatus.status, "color:green;");
+            setStatusMsg(newstatus.status+" "+newstatus.name, "color:green;");
             monitorLooping = true;
             getMonitor();
         }

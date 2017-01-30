@@ -90,6 +90,7 @@ public class MiniStatusServer {
                 statusObj.put("status", "UNDEPLOYED");
             } else {
                 statusObj.put("status", "DEPLOYED");
+                statusObj.put("name", DeploymentManager.currentInstance.service.getName());
             }
             // Catalogue package count
             statusObj.put("packageCount",Catalogue.packages.size());

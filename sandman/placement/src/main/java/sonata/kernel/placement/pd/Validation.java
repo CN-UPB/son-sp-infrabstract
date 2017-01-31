@@ -551,10 +551,23 @@ public class Validation {
                         if(!(rr.getMemory().getSize()>0))
                             error("vnf ("+vnfd.getName()+") virtual deployment unit ("+vdu.getId()+") resource requirements: memory - size too small ("+rr.getMemory().getSize()+")");
                         // size_unit optional, if not null then checked by object mapping
+                        //FIXME: custom assumption: size unit is expected not to be null
+                        if(rr.getMemory().getSizeUnit() == null)
+                            error("vnf ("+vnfd.getName()+") virtual deployment unit ("+vdu.getId()+") resource requirements: memory - size unit missing");
                         // large_pages_required optional
                         // numa_allocation_policy optional
                     }
-                    //TODO: storage optional
+                    // Check storage
+                    if(rr.getStorage() == null)
+                        error("vnf ("+vnfd.getName()+") virtual deployment unit ("+vdu.getId()+") resource requirements: missing storage");
+                    else {
+                        // Check size
+                        if(!(rr.getStorage().getSize()>0))
+                            error("vnf ("+vnfd.getName()+") virtual deployment unit ("+vdu.getId()+") resource requirements: storage - size too small ("+rr.getStorage().getSize()+")");
+                        //FIXME: custom assumption: size unit is expected not to be null
+                        if(rr.getStorage().getSizeUnit() == null)
+                            error("vnf ("+vnfd.getName()+") virtual deployment unit ("+vdu.getId()+") resource requirements: storage - size unit missing");
+                    }
                     //TODO: network optional
                     //TODO: pcie optional
                     //TODO: hypervisor_parameters optional

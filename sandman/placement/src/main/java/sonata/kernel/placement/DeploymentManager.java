@@ -109,7 +109,7 @@ public class DeploymentManager implements Runnable {
                 return;
             }
 
-
+            DatacenterManager.reset_resources();
             PlacementConfig config = PlacementConfigLoader.loadPlacementConfig();
             PlacementPlugin plugin = PlacementPluginLoader.placementPlugin;
 
@@ -226,6 +226,7 @@ public class DeploymentManager implements Runnable {
                     }
                 }
             }
+            createLinkLoadbalanceMap(currentLoadbalanceMap, currentChaining, create_link_chains, delete_link_chains);
 
             // Execute deployment
             try {
@@ -254,7 +255,7 @@ public class DeploymentManager implements Runnable {
                 logger.error(e);
                 e.printStackTrace();
             }
-            createLinkLoadbalanceMap(currentLoadbalanceMap, create_link_chains, delete_link_chains);
+
             try {
                 loadbalance(currentLoadbalanceMap.values());
                 logger.info("Loadbalanced");
@@ -318,8 +319,10 @@ public class DeploymentManager implements Runnable {
 
         try {
 
-            message.responseId = 500;
-            message.responseMessage = "Something went terribly wrong";
+            if (message != null) {
+                message.responseId = 500;
+                message.responseMessage = "Something went terribly wrong";
+            }
 
             if (currentInstance != null) {
                 try {
@@ -357,8 +360,10 @@ public class DeploymentManager implements Runnable {
             }
             cleanup();
 
-            message.responseId = 200;
-            message.responseMessage = "OK";
+            if (message != null) {
+                message.responseId = 200;
+                message.responseMessage = "OK";
+            }
 
         } catch(Exception e){
             logger.error("Undeployment failed");
@@ -547,6 +552,7 @@ public class DeploymentManager implements Runnable {
                 logger.error(e);
                 e.printStackTrace();
             }
+            createLinkLoadbalanceMap(currentLoadbalanceMap, currentChaining, create_link_chains, delete_link_chains);
             try {
                 unchain(delete_link_chains);
                 logger.info("Unchained");
@@ -622,7 +628,7 @@ public class DeploymentManager implements Runnable {
                 logger.error(e);
                 e.printStackTrace();
             }
-            createLinkLoadbalanceMap(currentLoadbalanceMap, create_link_chains, delete_link_chains);
+
             try {
                 loadbalance(currentLoadbalanceMap.values());
                 logger.info("Loadbalanced");
@@ -648,8 +654,20 @@ public class DeploymentManager implements Runnable {
         }
     }
 
-    public static void createLinkLoadbalanceMap(Map<LinkPort, LinkLoadbalance> lbMap, List<LinkChain> createChains, List<LinkChain> deleteChains) {
-        // Remove loadbalancing rules, that are to be deleted
+    public static void createLinkLoadbalanceMap(Map<LinkPort, LinkLoadbalance> lbMap, List<LinkChain> currentChains,
+                List<LinkChain> createChains, List<LinkChain> deleteChains) {
+        // Add current Chains (if not already persistent)
+        for (LinkChain chain : currentChains) {
+            if (!lbMap.containsKey(chain.srcPort)) {
+                List<LinkPort> dstPorts = new ArrayList<LinkPort>();
+                dstPorts.add(chain.dstPort);
+                LinkLoadbalance lb = new LinkLoadbalance(chain.srcPort, dstPorts);
+                lbMap.put(chain.srcPort, lb);
+            } else {
+                // Already in map, nothing to do...
+            }
+        }
+        // Remove chains, that are to be deleted, from loadbalancing rules
         for (LinkChain chain : deleteChains) {
             if (lbMap.containsKey(chain.srcPort)) {
                 LinkLoadbalance lb = lbMap.get(chain.srcPort);
@@ -659,7 +677,7 @@ public class DeploymentManager implements Runnable {
                 // Nothing to do...
             }
         }
-        // Add new
+        // Add chains, that are to be added, to loadbalancing rules
         for (LinkChain chain : createChains) {
             if (!lbMap.containsKey(chain.srcPort)) {
                 List<LinkPort> dstPorts = new ArrayList<LinkPort>();
@@ -676,8 +694,26 @@ public class DeploymentManager implements Runnable {
         List<LinkLoadbalance> lbList = new ArrayList<LinkLoadbalance>();
         lbList.addAll(lbMap.values());
         for (LinkLoadbalance lb : lbList) {
-            if (lb.dstPorts.size() <= 1)
+            if (lb.dstPorts.size() == 0) {
+                // Chain no more in use, just remove the lb rule
                 lbMap.remove(lb.srcPort);
+            } else
+            if (lb.dstPorts.size() == 1) {
+                // Remove the lb rule
+                lbMap.remove(lb.srcPort);
+                // Check if chaining rule is in current chaining rules or createChains, if not create new chaining rule
+                LinkChain newChain = new LinkChain(lb.srcPort, lb.dstPorts.get(0));
+                if(!currentChains.contains(newChain) && !createChains.contains(newChain))
+                    createChains.add(newChain);
+            }
+            else {
+                // Check for each chain, if there is a create chain entry,
+                // if yes remove the create chain entry because the lb rule take care of this chain
+                for(LinkPort dstPort : lb.dstPorts) {
+                    LinkChain dummyChain = new LinkChain(lb.srcPort, dstPort);
+                    createChains.remove(dummyChain);
+                }
+            }
         }
     }
 

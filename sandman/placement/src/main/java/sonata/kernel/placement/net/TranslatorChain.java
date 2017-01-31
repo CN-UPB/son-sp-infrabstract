@@ -50,8 +50,8 @@ public class TranslatorChain {
 
         try {
             response = client.execute(putRequest);
-            if (response.getStatusLine().getStatusCode() == 500) {
-                logger.error("Chaining failed "+requestUri);
+            if (response.getStatusLine().getStatusCode() != 200) {
+                logger.error("Chaining failed "+requestUri+" "+response.getStatusLine());
             } else {
                 logger.info("Chaining successful "+requestUri);
             }
@@ -94,7 +94,7 @@ public class TranslatorChain {
 
 
             response = client.execute(postRequest);
-            if (response.getStatusLine().getStatusCode() == 500) {
+            if (response.getStatusLine().getStatusCode() != 200) {
                 logger.error("Chaining custom failed "+requestUri);
             } else {
                 logger.info("Chaining custom successful "+requestUri);
@@ -127,7 +127,7 @@ public class TranslatorChain {
 
         try {
             response = client.execute(deleteRequest);
-            if (response.getStatusLine().getStatusCode() == 500) {
+            if (response.getStatusLine().getStatusCode() != 200) {
                 logger.error("Unchaining failed "+requestUri);
             } else {
                 logger.info("Unchaining successful "+requestUri);

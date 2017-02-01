@@ -707,11 +707,18 @@ public class DeploymentManager implements Runnable {
                     createChains.add(newChain);
             }
             else {
-                // Check for each chain, if there is a create chain entry,
-                // if yes remove the create chain entry because the lb rule take care of this chain
+                // Check for each chain,
+                // if there is a create chain entry remove the create chain entry because the lb rule take care of this chain
+                // if there is a current chain entry remove the current chain entry because the lb rule will replace it
                 for(LinkPort dstPort : lb.dstPorts) {
                     LinkChain dummyChain = new LinkChain(lb.srcPort, dstPort);
-                    createChains.remove(dummyChain);
+                    if (createChains.contains(dummyChain)) {
+                        // actually you do not need the contains check
+                        createChains.remove(dummyChain);
+                    }
+                    if (currentChains.contains(dummyChain)) {
+                        deleteChains.add(dummyChain);
+                    }
                 }
             }
         }

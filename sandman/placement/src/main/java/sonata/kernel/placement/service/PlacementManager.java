@@ -6,6 +6,7 @@ import org.apache.log4j.Logger;
 import sonata.kernel.VimAdaptor.commons.DeployServiceData;
 import sonata.kernel.placement.DatacenterManager;
 import sonata.kernel.placement.PlacementConfigLoader;
+import sonata.kernel.placement.config.PerformanceThreshold;
 import sonata.kernel.placement.config.PlacementConfig;
 import sonata.kernel.placement.config.PopResource;
 import sonata.kernel.placement.config.SystemResource;
@@ -17,11 +18,13 @@ import java.util.List;
 public class PlacementManager {
     final static Logger logger = Logger.getLogger(PlacementManager.class);
     private ServiceInstanceManager instance_manager;
+    private ComputeMetrics c_metrics;
     final private PlacementConfig config;
 
     public PlacementManager() {
         this.instance_manager = new ServiceInstanceManager();
         config = PlacementConfigLoader.loadPlacementConfig();
+        c_metrics = new ComputeMetrics();
     }
 
     public PlacementManager(ServiceInstance instance)
@@ -30,6 +33,7 @@ public class PlacementManager {
         this.instance_manager.set_instance(instance);
         this.instance_manager.flush_chaining_rules();
         config = PlacementConfigLoader.loadPlacementConfig();
+        c_metrics = new ComputeMetrics();
 
     }
 
@@ -419,8 +423,101 @@ public class PlacementManager {
         return storage;
     }
 
+    private void compute_load(MonitorMessage message, List<String> overload_l, List<String> underload_l)
+    {
 
+    }
 
+    /**
+     * This method returns the overloaded VNFs.
+     * @param message MonitorMessage Containing monitoring data.
+     * @return List<String> List of overloaded VNFs.
+     */
+    public List<String> GetOverloadedVnfs(MonitorMessage message)
+    {
+        logger.debug("PlacementManager::GetOverloadedVnfs ENTRY");
+
+        List<String> overload_l = new ArrayList<String>();
+        List<String> underload_l = new ArrayList<String>();
+
+        c_metrics.initialize(instance_manager.get_instance(), message.stats_history);
+        c_metrics.compute_vnf_load(overload_l, underload_l);
+
+        if(overload_l.size() == 0)
+            logger.info("PlacementManager::GetOverloadedVnfs: No overloaded VNFs");
+
+        logger.debug("PlacementManager::GetOverloadedVnfs EXIT");
+        return overload_l;
+    }
+
+    /**
+     * This method returns the underloaded VNFs.
+     * @param message MonitorMessage Containing monitoring data.
+     * @return List<String> List of underloaded VNFs.
+     */
+    public List<String> GetUnderloadedVnfs(MonitorMessage message)
+    {
+        logger.debug("PlacementManager::GetUnderloadedVnfs ENTRY");
+
+        List<String> overload_l = new ArrayList<String>();
+        List<String> underload_l = new ArrayList<String>();
+
+        c_metrics.initialize(instance_manager.get_instance(), message.stats_history);
+        c_metrics.compute_vnf_load(overload_l, underload_l);
+
+        if(underload_l.size() == 0)
+            logger.info("PlacementManager::GetOverloadedVnfs: No underloaded VNFs");
+
+        logger.debug("PlacementManager::GetUnderloadedVnfs ENTRY");
+        return underload_l;
+    }
+
+    /**
+     * This method updates the performance threshold of a VNF Type.
+     * @param VnfId VNF ID.
+     * @param cpu_upper_l CPU upper limit.
+     * @param cpu_lower_l CPU lower limit.
+     * @param mem_upper_l Memory upper limit.
+     * @param mem_lower_l Memory lower limit.
+     * @param scale_out_upper_l Scale-out upper limit.
+     * @param scale_in_lower_l Scale-in lower limit.
+     * @param history_check Number of history data check.
+     * @return void.
+     */
+    public void UpdatePerformanceThresholds(String VnfId,
+                                            double cpu_upper_l,
+                                            double cpu_lower_l,
+                                            float mem_upper_l,
+                                            float mem_lower_l,
+                                            double scale_out_upper_l,
+                                            double scale_in_lower_l,
+                                            int history_check)
+    {
+        logger.debug("PlacementManager::UpdatePerformanceThresholds ENTRY");
+        logger.info("PlacementManager::UpdatePerformanceThresholds: VNF ID: " + VnfId
+                + "CPU Upper Limit: " + cpu_upper_l
+                + "CPU Lower Limit: " + cpu_lower_l
+                + "Memory Upper Limit: " + mem_upper_l
+                + "Memory Lower Limit: " + mem_lower_l
+                + "Scale-out Upper Limit: " + scale_out_upper_l
+                + "Scale-in Lower Limit: " + scale_in_lower_l
+                + "History Check: " + history_check);
+
+        PerformanceThreshold threshold_new = new PerformanceThreshold();
+        threshold_new.setCpu_lower_l(cpu_lower_l);
+        threshold_new.setCpu_upper_l(cpu_upper_l);
+        threshold_new.setMem_lower_l(mem_lower_l);
+        threshold_new.setMem_upper_l(mem_upper_l);
+        threshold_new.setScale_in_lower_l(scale_in_lower_l);
+        threshold_new.setScale_out_upper_l(scale_out_upper_l);
+        threshold_new.setVnfId(VnfId);
+        threshold_new.setHistory_check(history_check);
+
+        c_metrics.update_threshold(VnfId, threshold_new);
+
+        logger.debug("PlacementManager::UpdatePerformanceThresholds EXIT");
+        return;
+    }
     /*
      * This method returns the free VNF instance capacity on the PoP.
      * @param PopName String identifying the PoP.

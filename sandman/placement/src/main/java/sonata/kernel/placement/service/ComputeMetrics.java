@@ -15,9 +15,9 @@ import java.util.Map;
 public class ComputeMetrics {
     final static Logger logger = Logger.getLogger(ComputeMetrics.class);
 
-    public final ServiceInstance instance;
+    public ServiceInstance instance;
 
-    public final Map<String, List<MonitorStats>> stats_history;
+    public Map<String, List<MonitorStats>> stats_history;
     public final HashMap<String, PerformanceThreshold> threshold_m;
 
     public ComputeMetrics(ServiceInstance instance, Map<String, List<MonitorStats>> stats_history) {
@@ -25,6 +25,17 @@ public class ComputeMetrics {
         this.stats_history = stats_history;
         threshold_m = new HashMap<String, PerformanceThreshold>();
         initialize_threshold();
+    }
+
+    public ComputeMetrics() {
+        threshold_m = new HashMap<String, PerformanceThreshold>();
+        initialize_threshold();
+    }
+
+    public void initialize(ServiceInstance instance, Map<String, List<MonitorStats>> stats_history)
+    {
+        this.instance = instance;
+        this.stats_history = stats_history;
     }
 
 

@@ -6,6 +6,7 @@ import org.apache.log4j.Logger;
 import sonata.kernel.VimAdaptor.commons.DeployServiceData;
 import sonata.kernel.placement.DatacenterManager;
 import sonata.kernel.placement.PlacementConfigLoader;
+import sonata.kernel.placement.config.PerformanceThreshold;
 import sonata.kernel.placement.config.PlacementConfig;
 import sonata.kernel.placement.config.PopResource;
 import sonata.kernel.placement.config.SystemResource;
@@ -17,11 +18,13 @@ import java.util.List;
 public class PlacementManager {
     final static Logger logger = Logger.getLogger(PlacementManager.class);
     private ServiceInstanceManager instance_manager;
+    private ComputeMetrics c_metrics;
     final private PlacementConfig config;
 
     public PlacementManager() {
         this.instance_manager = new ServiceInstanceManager();
         config = PlacementConfigLoader.loadPlacementConfig();
+        c_metrics = new ComputeMetrics();
     }
 
     public PlacementManager(ServiceInstance instance)
@@ -30,6 +33,7 @@ public class PlacementManager {
         this.instance_manager.set_instance(instance);
         this.instance_manager.flush_chaining_rules();
         config = PlacementConfigLoader.loadPlacementConfig();
+        c_metrics = new ComputeMetrics();
 
     }
 
@@ -96,7 +100,7 @@ public class PlacementManager {
         logger.info("PlacementManager::AddVirtualLink: Source VnfInstance: " + SourceVnfInstance
                 + " Target VnfInstance: " + TargetVnfInstance);
 
-        String SourceVnfId = this.instance_manager.get_instance().findVnfIdFromVnfInstanceName(SourceVnfInstance);
+        String SourceVnfId = this.instance_manager.get_instance().findVnfIdFromVnfInstanceName("vnf_" + SourceVnfInstance);
 
         if(SourceVnfId == null)
         {
@@ -106,7 +110,7 @@ public class PlacementManager {
             return false;
         }
 
-        String TargetVnfId = this.instance_manager.get_instance().findVnfIdFromVnfInstanceName(TargetVnfInstance);
+        String TargetVnfId = this.instance_manager.get_instance().findVnfIdFromVnfInstanceName("vnf_" + TargetVnfInstance);
         if(TargetVnfId == null)
         {
             logger.fatal("PlacementManager::AddVirtualLink: Unable to add link to "
@@ -115,7 +119,7 @@ public class PlacementManager {
             return false;
         }
 
-        instance_manager.update_vlink_list(SourceVnfId, TargetVnfId, SourceVnfInstance, TargetVnfInstance, ViaPath,
+        instance_manager.update_vlink_list(SourceVnfId, TargetVnfId, "vnf_" + SourceVnfInstance, "vnf_" + TargetVnfInstance, ViaPath,
                 ServiceInstanceManager.ACTION_TYPE.ADD_INSTANCE);
 
 
@@ -135,7 +139,7 @@ public class PlacementManager {
         logger.info("PlacementManager::DeleteVirtualLink: Source VnfInstance: " + SourceVnfInstance
                 + " Target VnfInstance: " + TargetVnfInstance);
 
-        String SourceVnfId = this.instance_manager.get_instance().findVnfIdFromVnfInstanceName(SourceVnfInstance);
+        String SourceVnfId = this.instance_manager.get_instance().findVnfIdFromVnfInstanceName("vnf_" + SourceVnfInstance);
         if(SourceVnfId == null)
         {
             logger.fatal("PlacementManager::DeleteVirtualLink: Unable to delete link to "
@@ -144,7 +148,7 @@ public class PlacementManager {
             return false;
         }
 
-        String TargetVnfId = this.instance_manager.get_instance().findVnfIdFromVnfInstanceName(TargetVnfInstance);
+        String TargetVnfId = this.instance_manager.get_instance().findVnfIdFromVnfInstanceName("vnf_" + TargetVnfInstance);
         if(TargetVnfId == null)
         {
             logger.fatal("PlacementManager::DeleteVirtualLink: Unable to delete link to "
@@ -153,7 +157,7 @@ public class PlacementManager {
             return false;
         }
 
-        this.instance_manager.update_vlink_list(SourceVnfId, TargetVnfId, SourceVnfInstance, TargetVnfInstance, null,
+        this.instance_manager.update_vlink_list(SourceVnfId, TargetVnfId, "vnf_" + SourceVnfInstance, "vnf_" + TargetVnfInstance, null,
                 ServiceInstanceManager.ACTION_TYPE.DELETE_INSTANCE);
         logger.debug("PlacementManager::DeleteVirtualLink EXIT");
         return true;
@@ -198,9 +202,9 @@ public class PlacementManager {
         logger.debug("PlacementManager::DeleteNetworkFunctionInstance ENTRY");
         logger.info("PlacementManager::DeleteNetworkFunctionInstance: VnfInstance: " + VnfInstance);
 
-        String VnfId = this.instance_manager.get_instance().findVnfIdFromVnfInstanceName(VnfInstance);
+        String VnfId = this.instance_manager.get_instance().findVnfIdFromVnfInstanceName("vnf_" + VnfInstance);
         if(VnfId != null)
-            this.instance_manager.update_functions_list(VnfId, VnfInstance, null, ServiceInstanceManager.ACTION_TYPE.DELETE_INSTANCE);
+            this.instance_manager.update_functions_list(VnfId, "vnf_" + VnfInstance, null, ServiceInstanceManager.ACTION_TYPE.DELETE_INSTANCE);
         else {
             logger.fatal("PlacementManager::DeleteNetworkFunctionInstance: Unable to delete function instance "
                     + VnfInstance + ". Vnf does not exist.");
@@ -230,7 +234,7 @@ public class PlacementManager {
             return false;
         }
 
-        String VnfId = this.instance_manager.get_instance().findVnfIdFromVnfInstanceName(VnfInstance);
+        String VnfId = this.instance_manager.get_instance().findVnfIdFromVnfInstanceName("vnf_" + VnfInstance);
         if(VnfId == null)
         {
             logger.fatal("PlacementManager::MoveNetworkFunctionInstance: Unknown Vnf instance.");
@@ -238,7 +242,7 @@ public class PlacementManager {
             return false;
         }
 
-        boolean status = this.instance_manager.move_function_instance(VnfInstance, PopName);
+        boolean status = this.instance_manager.move_function_instance("vnf_" + VnfInstance, PopName);
         logger.debug("PlacementManager::MoveNetworkFunctionInstance EXIT");
         return status;
 
@@ -419,8 +423,101 @@ public class PlacementManager {
         return storage;
     }
 
+    private void compute_load(MonitorMessage message, List<String> overload_l, List<String> underload_l)
+    {
 
+    }
 
+    /**
+     * This method returns the overloaded VNFs.
+     * @param message MonitorMessage Containing monitoring data.
+     * @return List<String> List of overloaded VNFs.
+     */
+    public List<String> GetOverloadedVnfs(MonitorMessage message)
+    {
+        logger.debug("PlacementManager::GetOverloadedVnfs ENTRY");
+
+        List<String> overload_l = new ArrayList<String>();
+        List<String> underload_l = new ArrayList<String>();
+
+        c_metrics.initialize(instance_manager.get_instance(), message.stats_history);
+        c_metrics.compute_vnf_load(overload_l, underload_l);
+
+        if(overload_l.size() == 0)
+            logger.info("PlacementManager::GetOverloadedVnfs: No overloaded VNFs");
+
+        logger.debug("PlacementManager::GetOverloadedVnfs EXIT");
+        return overload_l;
+    }
+
+    /**
+     * This method returns the underloaded VNFs.
+     * @param message MonitorMessage Containing monitoring data.
+     * @return List<String> List of underloaded VNFs.
+     */
+    public List<String> GetUnderloadedVnfs(MonitorMessage message)
+    {
+        logger.debug("PlacementManager::GetUnderloadedVnfs ENTRY");
+
+        List<String> overload_l = new ArrayList<String>();
+        List<String> underload_l = new ArrayList<String>();
+
+        c_metrics.initialize(instance_manager.get_instance(), message.stats_history);
+        c_metrics.compute_vnf_load(overload_l, underload_l);
+
+        if(underload_l.size() == 0)
+            logger.info("PlacementManager::GetOverloadedVnfs: No underloaded VNFs");
+
+        logger.debug("PlacementManager::GetUnderloadedVnfs ENTRY");
+        return underload_l;
+    }
+
+    /**
+     * This method updates the performance threshold of a VNF Type.
+     * @param VnfId VNF ID.
+     * @param cpu_upper_l CPU upper limit.
+     * @param cpu_lower_l CPU lower limit.
+     * @param mem_upper_l Memory upper limit.
+     * @param mem_lower_l Memory lower limit.
+     * @param scale_out_upper_l Scale-out upper limit.
+     * @param scale_in_lower_l Scale-in lower limit.
+     * @param history_check Number of history data check.
+     * @return void.
+     */
+    public void UpdatePerformanceThresholds(String VnfId,
+                                            double cpu_upper_l,
+                                            double cpu_lower_l,
+                                            float mem_upper_l,
+                                            float mem_lower_l,
+                                            double scale_out_upper_l,
+                                            double scale_in_lower_l,
+                                            int history_check)
+    {
+        logger.debug("PlacementManager::UpdatePerformanceThresholds ENTRY");
+        logger.info("PlacementManager::UpdatePerformanceThresholds: VNF ID: " + VnfId
+                + "CPU Upper Limit: " + cpu_upper_l
+                + "CPU Lower Limit: " + cpu_lower_l
+                + "Memory Upper Limit: " + mem_upper_l
+                + "Memory Lower Limit: " + mem_lower_l
+                + "Scale-out Upper Limit: " + scale_out_upper_l
+                + "Scale-in Lower Limit: " + scale_in_lower_l
+                + "History Check: " + history_check);
+
+        PerformanceThreshold threshold_new = new PerformanceThreshold();
+        threshold_new.setCpu_lower_l(cpu_lower_l);
+        threshold_new.setCpu_upper_l(cpu_upper_l);
+        threshold_new.setMem_lower_l(mem_lower_l);
+        threshold_new.setMem_upper_l(mem_upper_l);
+        threshold_new.setScale_in_lower_l(scale_in_lower_l);
+        threshold_new.setScale_out_upper_l(scale_out_upper_l);
+        threshold_new.setVnfId(VnfId);
+        threshold_new.setHistory_check(history_check);
+
+        c_metrics.update_threshold(VnfId, threshold_new);
+
+        logger.debug("PlacementManager::UpdatePerformanceThresholds EXIT");
+        return;
+    }
     /*
      * This method returns the free VNF instance capacity on the PoP.
      * @param PopName String identifying the PoP.

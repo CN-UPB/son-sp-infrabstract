@@ -533,7 +533,8 @@ System.out.println("update_ns_link "+link.getId()+"  "+cp_ref);
 
                 internal_add_mgmt_link(function_instance);
 
-                return n_function.getVnfId() + id;
+                //return n_function.getVnfId() + id;
+                return function_instance.name;
 
             } else {
                 logger.debug("Add instance of known function "+vnf_id);
@@ -559,7 +560,8 @@ System.out.println("update_ns_link "+link.getId()+"  "+cp_ref);
                 instance.function_list.get(n_function.getVnfId()).put(n_function.getVnfId() +
                         id, function_instance);
 
-                return n_function.getVnfId() + id;
+                //return n_function.getVnfId() + id;
+                return function_instance.name;
 
             }
         } else if (action == ACTION_TYPE.DELETE_INSTANCE) {
@@ -756,7 +758,7 @@ System.out.println("update_ns_link "+link.getId()+"  "+cp_ref);
                 function_instance.deploymentUnits.get(0).getResourceRequirements().getMemory().getSize() * multiplier);
 
         if(memory_status == false) {
-            logger.error("ServiceInstanceManager::initialize_function_instance: Insufficient memory resource on "
+            logger.error("ServiceInstanceManager::consume_resources: Insufficient memory resource on "
                     + data_center + ". Required: " + function_instance.deploymentUnits.get(0).getResourceRequirements().getMemory().getSize() * multiplier
                     + " " + function_instance.deploymentUnits.get(0).getResourceRequirements().getMemory().getSizeUnit().name()
                     + ". Available: " + DatacenterManager.get_available_memory(data_center)
@@ -769,7 +771,7 @@ System.out.println("update_ns_link "+link.getId()+"  "+cp_ref);
 
         if(cpu_status == false)
         {
-            logger.error("ServiceInstanceManager::initialize_function_instance: Insufficient cpu resource on "
+            logger.error("ServiceInstanceManager::consume_resources: Insufficient cpu resource on "
                     + data_center + ". Required: " + function_instance.deploymentUnits.get(0).getResourceRequirements().getCpu().getVcpus()
                     + " Available: " + DatacenterManager.get_available_cpu(data_center));
             DatacenterManager.relinquish_memory(data_center,
@@ -784,7 +786,7 @@ System.out.println("update_ns_link "+link.getId()+"  "+cp_ref);
 
         if(storage_status == false)
         {
-            logger.error("ServiceInstanceManager::initialize_function_instance: Insufficient storage resource on "
+            logger.error("ServiceInstanceManager::consume_resources: Insufficient storage resource on "
                     + data_center + ". Required: " + function_instance.deploymentUnits.get(0).getResourceRequirements().getStorage().getSize() * multiplier
                     + " " + function_instance.deploymentUnits.get(0).getResourceRequirements().getStorage().getSizeUnit().name()
                     + " Available: " + DatacenterManager.get_available_storage(data_center)
@@ -855,5 +857,7 @@ System.out.println("update_ns_link "+link.getId()+"  "+cp_ref);
 
         return true;
     }
+
+
 
 }

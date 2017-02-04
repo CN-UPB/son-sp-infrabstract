@@ -782,6 +782,11 @@ public class DeploymentManager implements Runnable {
             } else {
                 TranslatorChain.chain(chain);
             }
+            try {
+                Thread.sleep(3000);
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+            }
             currentChaining.add(chain);
         }
     }

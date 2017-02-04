@@ -250,9 +250,13 @@ public class DeploymentManager implements Runnable {
 
             // Add floating node and loadbalance input
             try {
-                //FIXME: replace fake example code
+                //FIXME: what datacenter to use? check vnf and decide for datacenter
+                // vnf-name - port name
+                List<Pair<String, String>> inputPorts = instance.get_create_input_lb_links();
                 ArrayList<LinkPort> fnlist = new ArrayList<LinkPort>();
-                fnlist.add(new LinkPort(usedPops.get(0), dcStackMap.get(usedPops.get(0)), "iperf1", "iperf1:cp02:input"));
+                for(Pair<String, String> inputPort: inputPorts) {
+                    fnlist.add(new LinkPort(usedPops.get(0), dcStackMap.get(usedPops.get(0)), inputPort.getLeft(), inputPort.getRight()));
+                }
                 LinkLoadbalance lb = new LinkLoadbalance(usedPops.get(0), "floating", "foo", "bar", fnlist);
                 inputFloatingNode = TranslatorLoadbalancer.floatingNode(lb);
             } catch(Exception e) {
@@ -602,6 +606,8 @@ public class DeploymentManager implements Runnable {
                 }
             }
 
+            //FIXME: Add remove of the floating node loadbalancing
+
             // Update stacks
 
             for (int i = 0; i < allPops.size(); i++) {
@@ -663,6 +669,8 @@ public class DeploymentManager implements Runnable {
                 logger.error(e);
                 e.printStackTrace();
             }
+
+            //FIXME: Add new floating node loadbalancing
 
             // Monitoring
             MonitorManager.updateMonitors(addedFunctions, removedFunctions);

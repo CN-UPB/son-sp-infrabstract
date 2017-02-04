@@ -22,6 +22,8 @@ import sonata.kernel.placement.DatacenterManager;
 import sonata.kernel.placement.PlacementConfigLoader;
 import sonata.kernel.placement.config.PlacementConfig;
 
+import javax.ws.rs.core.Link;
+
 /*
 ServiceInstanceManager enables addition/deletion/updation of resources
 for a given the ServiceInstance pertaining to the SONATA descriptor.
@@ -239,20 +241,28 @@ public class ServiceInstanceManager {
         for (VirtualLink link : virtual_links) {
             LinkInstance linkInstance = new LinkInstance(link, "nslink:" + link.getId());
 
-            boolean do_not = true;
             boolean is_nslink = false;
 
+            for(String cp_ref : link.getConnectionPointsReference())
+            {
+                String[] cp_ref_str = cp_ref.split(":");
+                assert cp_ref_str != null && cp_ref_str.length == 2 : "Virtual Link " + link.getId() + " uses odd vnf reference " + cp_ref;
+                String vnfid = cp_ref_str[0];
+
+                if(vnfid.equals("ns"))
+                    is_nslink = true;
+             }
+
+            if(!is_nslink)
+                continue;
+
+
             for (String cp_ref : link.getConnectionPointsReference()) {
-System.out.println("update_ns_link "+link.getId()+"  "+cp_ref);
+                System.out.println("update_ns_link "+link.getId()+"  "+cp_ref);
                 String[] cp_ref_str = cp_ref.split(":");
                 assert cp_ref_str != null && cp_ref_str.length == 2 : "Virtual Link " + link.getId() + " uses odd vnf reference " + cp_ref;
                 String vnfid = cp_ref_str[0];
                 String connectionPointName = cp_ref_str[1];
-
-                if ("ns".equals(vnfid)) {
-                    is_nslink = true;
-                    continue;
-                }
 
                 if (f_inst.function.getVnfId().equals(vnfid) == true) {
                     LinkInstance vnf_LinkInstance = f_inst.links.get(connectionPointName);
@@ -260,17 +270,38 @@ System.out.println("update_ns_link "+link.getId()+"  "+cp_ref);
                             + link.getId() + " connects to function " + f_inst.name
                             + " that does not contain link for connection point " + connectionPointName;
                     linkInstance.interfaceList.put(f_inst, cp_ref);
-                    do_not = false; //Do not add to outerlink list. Not a NS link.
+
+                    int id;
+                    if (instance.outerlink_list.get(link.getId()) == null) {
+                        AtomicInteger vnf_vlinkid = new AtomicInteger(0);
+                        id = vnf_vlinkid.addAndGet(1);
+                        vnf_vlinkid.set(id);
+                        instance.vnf_vlinkid.put(link.getId(), vnf_vlinkid);
+                        Map<String, LinkInstance> map = new HashMap<String, LinkInstance>();
+                        map.put(link.getId() + ":" + id, linkInstance);
+                        instance.outerlink_list.put(link.getId(), map);
+
+                    } else {
+                        id = instance.vnf_vlinkid.get(link.getId()).addAndGet(1);
+                        instance.vnf_vlinkid.get(link.getId()).set(id);
+                        instance.outerlink_list.get(link.getId()).put(link.getId() + ":" + id, linkInstance);
+                    }
+
+                    if(connectionPointName.equals("input"))
+                    {
+                        add_input_lb_rules(linkInstance, instance.create_input_lb_links);
+                    }
+
                 }
 
+
+
             }
-            if(do_not)
-                continue;
 
             //if(linkInstance.isMgmtLink())
             //    continue;
 
-            int id;
+            /*int id;
             if (is_nslink) {
                 System.out.println("Add to outerlink list");
                 if (instance.outerlink_list.get(link.getId()) == null) {
@@ -281,13 +312,15 @@ System.out.println("update_ns_link "+link.getId()+"  "+cp_ref);
                     Map<String, LinkInstance> map = new HashMap<String, LinkInstance>();
                     map.put(link.getId() + ":" + id, linkInstance);
                     instance.outerlink_list.put(link.getId(), map);
+
                 } else {
                     id = instance.vnf_vlinkid.get(link.getId()).addAndGet(1);
                     instance.vnf_vlinkid.get(link.getId()).set(id);
                     instance.outerlink_list.get(link.getId()).put(link.getId() + ":" + id, linkInstance);
                 }
-            }
+            }*/
         }
+        return;
 
     }
 
@@ -307,11 +340,13 @@ System.out.println("update_ns_link "+link.getId()+"  "+cp_ref);
         }
 
         instance.outerlink_list.get((key.split(":"))[0]).remove(key);
+
         return;
     }
 
     protected void initialize_link(VirtualLink link, LinkInstance linkInstance) {
         boolean is_nslink = false;
+        boolean is_inputlink = false;
 
         for (String cp_ref : link.getConnectionPointsReference()) {
 
@@ -324,6 +359,9 @@ System.out.println("update_ns_link "+link.getId()+"  "+cp_ref);
                 is_nslink = true;
                 continue;
             }
+
+            if(connectionPointName.equals("input"))
+                is_inputlink = true;
 
             Map<String, FunctionInstance> vnf_instances = instance.function_list.get(vnfid);
             assert vnf_instances.size() != 0 : "In Service " + instance.service.getName() + " Virtual Link " + link.getId() + " references unknown vnf with id " + vnfid;
@@ -356,6 +394,9 @@ System.out.println("update_ns_link "+link.getId()+"  "+cp_ref);
                 Map<String, LinkInstance> map = new HashMap<String, LinkInstance>();
                 map.put(link.getId() + ":" + id, linkInstance);
                 instance.outerlink_list.put(link.getId(), map);
+                if(is_inputlink)
+                    add_input_lb_rules(linkInstance, instance.create_input_lb_links);
+
             } else {
                 id = instance.vnf_vlinkid.get(link.getId()).addAndGet(1);
                 instance.vnf_vlinkid.get(link.getId()).set(id);
@@ -391,7 +432,76 @@ System.out.println("update_ns_link "+link.getId()+"  "+cp_ref);
         instance.create_chain.clear();
         instance.delete_chain.clear();
         instance.customized_chains.clear();
+        instance.create_input_lb_links.clear();
+        instance.delete_input_lb_links.clear();
     }
+
+    protected void add_input_lb_rules(LinkInstance linkInstance, List<Pair<String, String>> chain)
+    {
+        Object[] finst_t = linkInstance.interfaceList.entrySet().toArray();
+
+        String server = "";
+        String port = "";
+        String intf = "";
+
+
+        for (Object v_link : (((HashMap.Entry<FunctionInstance, String>) finst_t[0]).getKey().descriptor.getVirtualLinks()).toArray()) {
+            if (((VnfVirtualLink) v_link).getId().equals("input")) {
+                for (String if_name : ((VnfVirtualLink) v_link).getConnectionPointsReference()) {
+                    if (if_name.contains("vdu")) {
+                        intf = if_name.split(":")[1];
+                    }
+                }
+            }
+        }
+        port = ((HashMap.Entry<FunctionInstance, String>) finst_t[0]).getKey().getName() + ":" + intf
+                + ":" + ((HashMap.Entry<FunctionInstance, String>) finst_t[0]).getValue().split(":")[1];
+        server = ((HashMap.Entry<FunctionInstance, String>) finst_t[0]).getKey().getName();
+
+        chain.add(new ImmutablePair<String, String>(server, port));
+        return;
+
+    }
+
+    protected void delete_input_lb_rules(FunctionInstance f_inst)
+    {
+        String link_name = null;
+        String link_id = null;
+        LinkInstance l_inst = null;
+        boolean link_found = false;
+
+        for (Map.Entry<String, Map<String, LinkInstance>> link_m : instance.outerlink_list.entrySet()) {
+            for (Map.Entry<String, LinkInstance> link : link_m.getValue().entrySet()) {
+
+                if(link.getValue().isMgmtLink())
+                    break;
+
+                Object[] listt = link.getValue().interfaceList.entrySet().toArray();
+
+                for(int i=0 ; i< listt.length; i++){
+
+                    if(((HashMap.Entry<FunctionInstance, String>) listt[i]).getValue().contains(":input") && ((HashMap.Entry<FunctionInstance, String>) listt[i]).getKey().name.equals(f_inst.name))
+                    {
+                        link_name = link.getKey();
+                        l_inst = link.getValue();
+
+                        link_found = true;
+                        break;
+                    }
+                }
+
+                if(link_found)
+                    break;
+
+            }
+            if (link_found && link_name != null) {
+                link_id = link_m.getKey();
+                add_input_lb_rules(l_inst, instance.delete_input_lb_links);
+                break;
+            }
+        }
+    }
+
 
     protected void delete_chaining_rules(String link_id, String link_name) {
 
@@ -573,6 +683,7 @@ System.out.println("update_ns_link "+link.getId()+"  "+cp_ref);
                 FunctionInstance f_inst = instance.function_list.get(vnf_id).get(vnf_name);
                 relinquish_resource(f_inst);
                 delete_inner_links(f_inst);
+                delete_input_lb_rules(f_inst);
                 delete_ns_link((vnf_name.split("_"))[1]);
                 int id = instance.vnf_uid.get(vnf_id).decrementAndGet();
                 instance.vnf_uid.get(vnf_id).set(id);
@@ -602,9 +713,10 @@ System.out.println("update_ns_link "+link.getId()+"  "+cp_ref);
 
             for(String vlinks : link_names)
             {
+                delete_chaining_rules(vlinks.split(":")[0], vlinks);
                 link_m.getValue().remove(vlinks);
             }
-        }
+      }
     }
 
     public ServiceInstance update_vlink_list(String s_vnfid, String d_vnfid, String endpoint_src, String endpoint_target, List<String> viaPath, ACTION_TYPE action) {
@@ -820,6 +932,7 @@ System.out.println("update_ns_link "+link.getId()+"  "+cp_ref);
         return true;
 
     }
+
 
     public boolean move_function_instance(String vnf_name, String pop_name)
     {

@@ -52,6 +52,18 @@ public class ServiceInstance {
 
     public final List<Pair<Pair<String, String>, List<String>>> customized_chains;
 
+    public List<Pair<String, String>> get_create_input_lb_links() {
+        return create_input_lb_links;
+    }
+
+    public final List<Pair<String ,String>> create_input_lb_links;
+
+    public List<Pair<String, String>> get_delete_input_lb_links() {
+        return delete_input_lb_links;
+    }
+
+    public final List<Pair<String ,String>> delete_input_lb_links;
+
     protected Map<String, VnfDescriptor> nw_function_desc_map;
     protected Map<String, NetworkFunction> network_functions_db;
 
@@ -88,6 +100,9 @@ public class ServiceInstance {
 
         customized_chains = new ArrayList<Pair<Pair<String, String>, List<String>>>();
 
+        create_input_lb_links = new ArrayList<Pair<String, String>>();
+        delete_input_lb_links = new ArrayList<Pair<String, String>>();
+
 
 
     }
@@ -96,8 +111,8 @@ public class ServiceInstance {
     {
         for(Map.Entry<String, Map<String, FunctionInstance>> entry_m: function_list.entrySet())
         {
-            if(entry_m.getValue().get(VnfName) != null){
-                return entry_m.getValue().get(VnfName);
+            if(entry_m.getValue().get("vnf_" + VnfName) != null){
+                return entry_m.getValue().get("vnf_" + VnfName);
             }
         }
         return null;
@@ -107,7 +122,7 @@ public class ServiceInstance {
     {
         for(Map.Entry<String, Map<String, FunctionInstance>> entry_m: function_list.entrySet())
         {
-            if(entry_m.getValue().get(VnfName) != null)
+            if(entry_m.getValue().get("vnf_" + VnfName) != null)
                 return entry_m.getKey();
         }
         return null;
@@ -117,7 +132,7 @@ public class ServiceInstance {
     {
         for(Map.Entry<String, Map<String, FunctionInstance>> entry_m: function_list.entrySet())
         {
-            FunctionInstance f_inst = entry_m.getValue().get(VnfName);
+            FunctionInstance f_inst = entry_m.getValue().get("vnf_" + VnfName);
             if(f_inst != null)
             {
                 f_inst.data_center = DataCenter;
@@ -139,6 +154,7 @@ public class ServiceInstance {
         }
         return null;
     }
+
     /*
     public LinkInstance findLinkInstanceByUnit(UnitInstance unit, String conPoint){
 

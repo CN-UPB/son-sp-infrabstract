@@ -100,7 +100,7 @@ public class PlacementManager {
         logger.info("PlacementManager::AddVirtualLink: Source VnfInstance: " + SourceVnfInstance
                 + " Target VnfInstance: " + TargetVnfInstance);
 
-        String SourceVnfId = this.instance_manager.get_instance().findVnfIdFromVnfInstanceName("vnf_" + SourceVnfInstance);
+        String SourceVnfId = this.instance_manager.get_instance().findVnfIdFromVnfInstanceName(SourceVnfInstance);
 
         if(SourceVnfId == null)
         {
@@ -110,7 +110,7 @@ public class PlacementManager {
             return false;
         }
 
-        String TargetVnfId = this.instance_manager.get_instance().findVnfIdFromVnfInstanceName("vnf_" + TargetVnfInstance);
+        String TargetVnfId = this.instance_manager.get_instance().findVnfIdFromVnfInstanceName(TargetVnfInstance);
         if(TargetVnfId == null)
         {
             logger.fatal("PlacementManager::AddVirtualLink: Unable to add link to "
@@ -139,7 +139,7 @@ public class PlacementManager {
         logger.info("PlacementManager::DeleteVirtualLink: Source VnfInstance: " + SourceVnfInstance
                 + " Target VnfInstance: " + TargetVnfInstance);
 
-        String SourceVnfId = this.instance_manager.get_instance().findVnfIdFromVnfInstanceName("vnf_" + SourceVnfInstance);
+        String SourceVnfId = this.instance_manager.get_instance().findVnfIdFromVnfInstanceName(SourceVnfInstance);
         if(SourceVnfId == null)
         {
             logger.fatal("PlacementManager::DeleteVirtualLink: Unable to delete link to "
@@ -148,7 +148,7 @@ public class PlacementManager {
             return false;
         }
 
-        String TargetVnfId = this.instance_manager.get_instance().findVnfIdFromVnfInstanceName("vnf_" + TargetVnfInstance);
+        String TargetVnfId = this.instance_manager.get_instance().findVnfIdFromVnfInstanceName(TargetVnfInstance);
         if(TargetVnfId == null)
         {
             logger.fatal("PlacementManager::DeleteVirtualLink: Unable to delete link to "
@@ -202,7 +202,7 @@ public class PlacementManager {
         logger.debug("PlacementManager::DeleteNetworkFunctionInstance ENTRY");
         logger.info("PlacementManager::DeleteNetworkFunctionInstance: VnfInstance: " + VnfInstance);
 
-        String VnfId = this.instance_manager.get_instance().findVnfIdFromVnfInstanceName("vnf_" + VnfInstance);
+        String VnfId = this.instance_manager.get_instance().findVnfIdFromVnfInstanceName(VnfInstance);
         if(VnfId != null)
             this.instance_manager.update_functions_list(VnfId, "vnf_" + VnfInstance, null, ServiceInstanceManager.ACTION_TYPE.DELETE_INSTANCE);
         else {
@@ -234,7 +234,7 @@ public class PlacementManager {
             return false;
         }
 
-        String VnfId = this.instance_manager.get_instance().findVnfIdFromVnfInstanceName("vnf_" + VnfInstance);
+        String VnfId = this.instance_manager.get_instance().findVnfIdFromVnfInstanceName(VnfInstance);
         if(VnfId == null)
         {
             logger.fatal("PlacementManager::MoveNetworkFunctionInstance: Unknown Vnf instance.");
@@ -242,7 +242,7 @@ public class PlacementManager {
             return false;
         }
 
-        boolean status = this.instance_manager.move_function_instance("vnf_" + VnfInstance, PopName);
+        boolean status = this.instance_manager.move_function_instance(VnfInstance, PopName);
         logger.debug("PlacementManager::MoveNetworkFunctionInstance EXIT");
         return status;
 

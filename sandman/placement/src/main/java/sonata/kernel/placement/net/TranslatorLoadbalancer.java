@@ -7,6 +7,7 @@ import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
 import com.fasterxml.jackson.databind.module.SimpleModule;
+import org.apache.commons.io.IOUtils;
 import org.apache.http.client.methods.CloseableHttpResponse;
 import org.apache.http.client.methods.HttpDelete;
 import org.apache.http.client.methods.HttpPost;
@@ -18,12 +19,15 @@ import org.apache.http.impl.client.HttpClients;
 import org.apache.log4j.Logger;
 import sonata.kernel.VimAdaptor.commons.vnfd.Unit;
 import sonata.kernel.VimAdaptor.commons.vnfd.UnitDeserializer;
+import sonata.kernel.placement.config.PopResource;
 
 import java.io.IOException;
 import java.nio.charset.Charset;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 public class TranslatorLoadbalancer {
 
@@ -31,6 +35,8 @@ public class TranslatorLoadbalancer {
 
     static HashMap<String,Object> lbObject;
     static List<LinkPort> lbPortList;
+
+    static Pattern pattern_floatingNode = Pattern.compile("^Loadbalancer set up at ([^:]*):(.*)$");
 
     static {
         lbObject = new HashMap<String,Object>();
@@ -70,13 +76,103 @@ public class TranslatorLoadbalancer {
         try {
             response = client.execute(postRequest);
             if (response.getStatusLine().getStatusCode() == 500) {
-                logger.error("Loadbalance failed "+requestUri);
+                String errorMsg = null;
+                if(response.getEntity()!=null && response.getEntity().getContent()!=null) {
+                    IOUtils.toString(response.getEntity().getContent(), "utf-8");
+                }
+                logger.error("Loadbalance failed "+requestUri+" errorMsg: "+errorMsg);
             } else {
                 logger.info("Loadbalance successful "+requestUri);
             }
         } catch (IOException e) {
             e.printStackTrace();
             logger.error("Loadbalance request aborted "+requestUri);
+        }
+    }
+
+    public static FloatingNode floatingNode(LinkLoadbalance balance){
+        String balancePath = balance.srcPort.pop.getChainingEndpoint();
+        if(!balancePath.endsWith("/"))
+            balancePath += "/";
+        String requestUri;
+
+        String srcDcName = balance.srcPort.pop.getPopName();
+
+        requestUri = balancePath+"v1/lb/"+srcDcName+"/floating/"+balance.srcPort.server+"/"+balance.srcPort.port;
+
+        lbPortList.clear();
+        lbPortList.addAll(balance.dstPorts);
+        String json = null;
+        try {
+            json = jsonMapper.writeValueAsString(lbObject);
+        } catch (JsonProcessingException e) {
+            logger.error("Error when converting port list to json structure.",e);
+            return null;
+        }
+
+        CloseableHttpClient client = HttpClients.createDefault();
+        HttpPost postRequest = new HttpPost(requestUri);
+        postRequest.setEntity(new StringEntity(json, ContentType.APPLICATION_JSON));
+        CloseableHttpResponse response = null;
+
+        logger.info("Add floating node "+postRequest.getRequestLine().getUri()+" "+json);
+
+        try {
+            response = client.execute(postRequest);
+            if (response.getStatusLine().getStatusCode() == 500) {
+                String errorMsg = null;
+                if(response.getEntity()!=null && response.getEntity().getContent()!=null) {
+                    IOUtils.toString(response.getEntity().getContent(), "utf-8");
+                }
+                logger.error("Adding floating node failed "+requestUri+" errorMsg: "+errorMsg);
+            } else {
+
+                String text = IOUtils.toString(response.getEntity().getContent(), "utf-8");
+                Matcher match = pattern_floatingNode.matcher(text);
+                if(match.matches()) {
+                    logger.info("Adding floating node successful "+requestUri);
+
+                    return new TranslatorLoadbalancer.FloatingNode(balance.srcPort.pop, balance.srcPort.stack, match.group(1), match.group(2));
+                }
+                logger.error("Adding floating node failed "+requestUri+", call succeeded but response invalid: "+text);
+            }
+        } catch (IOException e) {
+            e.printStackTrace();
+            logger.error("Adding floating node request aborted "+requestUri);
+        }
+        return null;
+    }
+
+    public static void unFloatingNode(FloatingNode floatingNode){
+        String balancePath = floatingNode.pop.getChainingEndpoint();
+        if(!balancePath.endsWith("/"))
+            balancePath += "/";
+        String requestUri;
+
+        String srcDcName = floatingNode.pop.getPopName();
+
+        requestUri = balancePath+"v1/lb/"+srcDcName+"/"+floatingNode.stackName+"/"+floatingNode.serverName+"/"+floatingNode.interfaceName;
+
+        CloseableHttpClient client = HttpClients.createDefault();
+        HttpDelete deleteRequest = new HttpDelete(requestUri);
+        CloseableHttpResponse response = null;
+
+        logger.info("Remove floating node "+deleteRequest.getRequestLine().getUri());
+
+        try {
+            response = client.execute(deleteRequest);
+            if (response.getStatusLine().getStatusCode() == 500) {
+                String errorMsg = null;
+                if(response.getEntity()!=null && response.getEntity().getContent()!=null) {
+                    IOUtils.toString(response.getEntity().getContent(), "utf-8");
+                }
+                logger.error("Remove floating node failed "+requestUri+" error: "+errorMsg);
+            } else {
+                logger.info("Remove floating node successful "+requestUri);
+            }
+        } catch (IOException e) {
+            e.printStackTrace();
+            logger.error("Remove floating node request aborted "+requestUri);
         }
     }
 
@@ -99,13 +195,32 @@ public class TranslatorLoadbalancer {
         try {
             response = client.execute(deleteRequest);
             if (response.getStatusLine().getStatusCode() == 500) {
-                logger.error("Unloadbalance failed "+requestUri);
+                String errorMsg = null;
+                if(response.getEntity()!=null && response.getEntity().getContent()!=null) {
+                    IOUtils.toString(response.getEntity().getContent(), "utf-8");
+                }
+                logger.error("Unloadbalance failed "+requestUri+" errorMsg: "+errorMsg);
             } else {
                 logger.info("Unloadbalance successful "+requestUri);
             }
         } catch (IOException e) {
             e.printStackTrace();
             logger.error("Unloadbalance request aborted "+requestUri);
+        }
+    }
+
+    public static class FloatingNode{
+
+        public final PopResource pop;
+        public final String stackName;
+        public final String serverName;
+        public final String interfaceName;
+
+        public FloatingNode(PopResource pop, String stackName, String serverName, String interfaceName){
+            this.pop = pop;
+            this.stackName = stackName;
+            this.serverName = serverName;
+            this.interfaceName = interfaceName;
         }
     }
 

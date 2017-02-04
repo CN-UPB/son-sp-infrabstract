@@ -41,6 +41,7 @@ public class Catalogue {
     static public int addPackage(SonataPackage sPackage){
         // Validate package
         sPackage.validation.validate();
+        sPackage.validation.fixCustomAssumptions();
         int newIndex = -1;
         int oldIndex = -1;
         for(int i=0; i<packages.size(); i++) {

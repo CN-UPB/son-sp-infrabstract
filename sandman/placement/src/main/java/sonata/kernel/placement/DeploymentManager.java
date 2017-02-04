@@ -33,6 +33,7 @@ import sonata.kernel.placement.net.*;
 import sonata.kernel.placement.monitor.MonitorStats;
 import sonata.kernel.placement.net.LinkChain;
 import sonata.kernel.placement.net.TranslatorChain;
+import sonata.kernel.placement.net.TranslatorLoadbalancer.FloatingNode;
 import sonata.kernel.placement.service.*;
 
 import java.text.SimpleDateFormat;
@@ -54,6 +55,7 @@ public class DeploymentManager implements Runnable {
     static DeployServiceData currentDeployData;
     static List<PopResource> currentPops;
     static List<String> currentNodes;
+    static FloatingNode inputFloatingNode = null;
 
 
     static MonitorMessage.SCALE_TYPE nextScale = null;
@@ -246,6 +248,19 @@ public class DeploymentManager implements Runnable {
                 e.printStackTrace();
             }
 
+            // Add floating node and loadbalance input
+            try {
+                //FIXME: replace fake example code
+                ArrayList<LinkPort> fnlist = new ArrayList<LinkPort>();
+                fnlist.add(new LinkPort(usedPops.get(0), dcStackMap.get(usedPops.get(0)), "iperf1", "iperf1:cp02:input"));
+                LinkLoadbalance lb = new LinkLoadbalance(usedPops.get(0), "floating", "foo", "bar", fnlist);
+                inputFloatingNode = TranslatorLoadbalancer.floatingNode(lb);
+            } catch(Exception e) {
+                logger.info("Adding floating node failed");
+                logger.error(e);
+                e.printStackTrace();
+            }
+
             // Loadbalancing
             try {
                 unloadbalance(currentLoadbalanceMap.values());
@@ -347,6 +362,16 @@ public class DeploymentManager implements Runnable {
                     e.printStackTrace();
                 }
 
+                // Remove floating node
+                try {
+                    if(inputFloatingNode != null) {
+                        TranslatorLoadbalancer.unFloatingNode(inputFloatingNode);
+                    }
+                } catch(Exception e) {
+                    logger.error(e);
+                    e.printStackTrace();
+                }
+
                 // Undeploy stacks
                 for (PopResource pop : currentPops) {
                     String stackName = dcStackMap.get(pop);
@@ -386,6 +411,7 @@ public class DeploymentManager implements Runnable {
         currentNodes = null;
         currentLoadbalanceMap.clear();
         dcStackMap.clear();
+        inputFloatingNode = null;
     }
 
     public static void monitor(MessageQueue.MessageQueueMonitorData message) {
@@ -756,6 +782,11 @@ public class DeploymentManager implements Runnable {
             } else {
                 TranslatorChain.chain(chain);
             }
+            try {
+                Thread.sleep(3000);
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+            }
             currentChaining.add(chain);
         }
     }
@@ -838,6 +869,7 @@ public class DeploymentManager implements Runnable {
         mapper.registerModule(module);
         mapper.enable(DeserializationFeature.READ_ENUMS_USING_TO_STRING);
 
+        inputFloatingNode = null;
     }
 
     public static String templateToJson(HeatTemplate template) {

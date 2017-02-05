@@ -813,38 +813,80 @@ public class Validation {
                 for(VirtualDeploymentUnit vdu: vnfd.getVirtualDeploymentUnits()) {
                     if(vdu.getId() == null)
                         continue;
-                    if(vdu.getConnectionPoints() != null)
-                        for(ConnectionPoint vducp: vdu.getConnectionPoints()) {
-                            if(vducp.getId() != null) {
+                    if(vdu.getConnectionPoints() != null) {
+                        for (ConnectionPoint vducp : vdu.getConnectionPoints()) {
+                            if (vducp.getId() != null) {
 
                                 String oldId = vducp.getId();
                                 String newId;
 
-                                if(!oldId.startsWith(vdu.getId()))
-                                    newId = vdu.getId()+":"+vducp.getId().replace(':','-');
-                                else if(countChar(oldId, ':') > 1)
+                                if (!oldId.startsWith(vdu.getId()))
+                                    newId = vdu.getId() + ":" + vducp.getId().replace(':', '-');
+                                else if (countChar(oldId, ':') > 1)
                                     newId = replaceSkip(oldId, ':', '-', 1);
                                 else
                                     continue;
 
-                                fix("Fix vnf vdu connection point id "+oldId);
+                                fix("Fix vnf vdu connection point id " + oldId);
                                 // Fix initial definition
                                 vducp.setId(newId);
                                 // Fix virtual links
-                                if(vnfd.getVirtualLinks() != null)
-                                    for(VnfVirtualLink vl: vnfd.getVirtualLinks()) {
-                                        if(vl.getConnectionPointsReference() != null)
-                                            for(int i=0; i<vl.getConnectionPointsReference().size(); i++) {
-                                                if(vl.getConnectionPointsReference().get(i) != null && vl.getConnectionPointsReference().get(i).equals(oldId)) {
+                                if (vnfd.getVirtualLinks() != null)
+                                    for (VnfVirtualLink vl : vnfd.getVirtualLinks()) {
+                                        if (vl.getConnectionPointsReference() != null)
+                                            for (int i = 0; i < vl.getConnectionPointsReference().size(); i++) {
+                                                if (vl.getConnectionPointsReference().get(i) != null && vl.getConnectionPointsReference().get(i).equals(oldId)) {
                                                     String old = vl.getConnectionPointsReference().get(i);
                                                     vl.getConnectionPointsReference().add(i, newId);
-                                                    vl.getConnectionPointsReference().remove(i+1);
-                                                    fix("--> virtual deployment unit virtual link connection point reference \""+old+"\" replaced with \""+vl.getConnectionPointsReference().get(i)+"\"");
+                                                    vl.getConnectionPointsReference().remove(i + 1);
+                                                    fix("--> virtual deployment unit virtual link connection point reference \"" + old + "\" replaced with \"" + vl.getConnectionPointsReference().get(i) + "\"");
                                                 }
                                             }
                                     }
                             }
                         }
+                    }
+                    if (vdu.getResourceRequirements() != null) {
+                        ResourceRequirements rr = vdu.getResourceRequirements();
+                        if (rr.getCpu() == null) {
+                            rr.setCpu(defaultCpu);
+                            fix("Set cpu resource to default 1 vcpu for vnf "+vnfd.getName());
+                        } else {
+                            if (rr.getCpu().getVcpus() <= 0) {
+                                rr.getCpu().setVcpus(1);
+                                fix("Set cpu resource to default 1 vcpu for vnf "+vnfd.getName());
+                            }
+                        }
+                        if (rr.getMemory() == null) {
+                            rr.setMemory(defaultMemory);
+                            fix("Set memory resource to default 100 MB for vnf "+vnfd.getName());
+                        } else {
+                            if (rr.getMemory().getSize() <= 0) {
+                                rr.getMemory().setSize(100);
+                                fix("Set memory resource to default 100 MB for vnf "+vnfd.getName());
+                            }
+                            if (rr.getMemory().getSizeUnit() == null) {
+                                rr.getMemory().setSizeUnit(Unit.MemoryUnit.MB);
+                                fix("Set memory resource to default size unit MB for vnf "+vnfd.getName());
+                            }
+                        }
+                        if (rr.getStorage() == null) {
+                            rr.setStorage(defaultStorage);
+                            fix("Set storage resource to default 500 MB for vnf "+vnfd.getName());
+                        } else {
+                            if (rr.getStorage().getSize() <= 0) {
+                                rr.getStorage().setSize(100);
+                                fix("Set memory resource to default 500 MB for vnf "+vnfd.getName());
+                            }
+                            if (rr.getStorage().getSizeUnit() == null) {
+                                rr.getStorage().setSizeUnit(Unit.MemoryUnit.MB);
+                                fix("Set memory resource to default size unit MB for vnf "+vnfd.getName());
+                            }
+                        }
+                    } else {
+                        vdu.setResourceRequirements(defaultRR);
+                        fix("Set vdu resources to default 1 vcpu, 100 MB memory, 500 MB storage for vnf "+vnfd.getName());
+                    }
                 }
 
         }
@@ -884,5 +926,21 @@ public class Validation {
             current = input.indexOf(c, current);
         }
         return output.toString();
+    }
+
+    static ResourceRequirements defaultRR = new ResourceRequirements();
+    static Cpu defaultCpu = new Cpu();
+    static Memory defaultMemory = new Memory();
+    static Storage defaultStorage = new Storage();
+
+    static {
+        defaultCpu.setVcpus(1);
+        defaultRR.setCpu(defaultCpu);
+        defaultMemory.setSize(100);
+        defaultMemory.setSizeUnit(Unit.MemoryUnit.MB);
+        defaultRR.setMemory(defaultMemory);
+        defaultStorage.setSize(500);
+        defaultStorage.setSizeUnit(Unit.MemoryUnit.MB);
+        defaultRR.setStorage(defaultStorage);
     }
 }

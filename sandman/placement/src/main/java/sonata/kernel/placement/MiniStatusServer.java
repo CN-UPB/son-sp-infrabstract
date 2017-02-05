@@ -91,6 +91,9 @@ public class MiniStatusServer {
             } else {
                 statusObj.put("status", "DEPLOYED");
                 statusObj.put("name", DeploymentManager.currentInstance.service.getName());
+                if(DeploymentManager.inputFloatingNode != null && DeploymentManager.inputFloatingNode.floatingIp != null) {
+                    statusObj.put("floatingip", DeploymentManager.inputFloatingNode.floatingIp);
+                }
             }
             // Catalogue package count
             statusObj.put("packageCount",Catalogue.packages.size());

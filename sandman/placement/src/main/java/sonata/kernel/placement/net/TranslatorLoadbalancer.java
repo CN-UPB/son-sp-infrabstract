@@ -41,8 +41,7 @@ public class TranslatorLoadbalancer {
     static {
         lbObject = new HashMap<String,Object>();
         lbPortList = new ArrayList<LinkPort>();
-        lbObject.put("dst_vnf_Interfaces",lbPortList);
-        lbObject.put("type","select");
+        lbObject.put("dst_vnf_interfaces",lbPortList);
     }
 
     public static void loadbalance(LinkLoadbalance balance){
@@ -128,13 +127,20 @@ public class TranslatorLoadbalancer {
             } else {
 
                 String text = IOUtils.toString(response.getEntity().getContent(), "utf-8");
-                Matcher match = pattern_floatingNode.matcher(text);
-                if(match.matches()) {
-                    logger.info("Adding floating node successful "+requestUri);
 
-                    return new TranslatorLoadbalancer.FloatingNode(balance.srcPort.pop, balance.srcPort.stack, match.group(1), match.group(2));
+                HashMap cookieMap = null;
+                String cookieNr = null;
+                String floatingIp = null;
+                try {
+                    cookieMap = jsonMapper.readValue(text, HashMap.class);
+                    cookieNr = (String)cookieMap.get("cookie");
+                    floatingIp = (String)cookieMap.get("floating_ip");
+                    logger.info("Adding floating node successful "+requestUri+", "+text);
+                    return new TranslatorLoadbalancer.FloatingNode(balance.srcPort.pop, balance.srcPort.stack, cookieNr, floatingIp, balance);
+
+                } catch(Exception e) {
+                    logger.error("Adding floating node failed "+requestUri+", call succeeded but response invalid: "+text);
                 }
-                logger.error("Adding floating node failed "+requestUri+", call succeeded but response invalid: "+text);
             }
         } catch (IOException e) {
             e.printStackTrace();
@@ -151,7 +157,7 @@ public class TranslatorLoadbalancer {
 
         String srcDcName = floatingNode.pop.getPopName();
 
-        requestUri = balancePath+"v1/lb/"+srcDcName+"/"+floatingNode.stackName+"/"+floatingNode.serverName+"/"+floatingNode.interfaceName;
+        requestUri = balancePath+"v1/lb/"+srcDcName+"/"+floatingNode.stackName+"/"+floatingNode.cookie+"/"+floatingNode.floatingIp;
 
         CloseableHttpClient client = HttpClients.createDefault();
         HttpDelete deleteRequest = new HttpDelete(requestUri);
@@ -211,16 +217,18 @@ public class TranslatorLoadbalancer {
 
     public static class FloatingNode{
 
+        public LinkLoadbalance lbRule;
         public final PopResource pop;
         public final String stackName;
-        public final String serverName;
-        public final String interfaceName;
+        public final String cookie;
+        public final String floatingIp;
 
-        public FloatingNode(PopResource pop, String stackName, String serverName, String interfaceName){
+        public FloatingNode(PopResource pop, String stackName, String cookie, String floatingIp, LinkLoadbalance lbRule){
             this.pop = pop;
             this.stackName = stackName;
-            this.serverName = serverName;
-            this.interfaceName = interfaceName;
+            this.cookie = cookie;
+            this.floatingIp = floatingIp;
+            this.lbRule = lbRule;
         }
     }
 

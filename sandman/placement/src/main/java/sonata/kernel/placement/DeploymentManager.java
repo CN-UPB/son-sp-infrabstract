@@ -47,6 +47,8 @@ public class DeploymentManager implements Runnable {
 
     final static Logger logger = Logger.getLogger(DeploymentManager.class);
 
+    static int defaultNetworkWaitMs = 1000;
+
     // Maps datacenter name to stack name
     static Map<PopResource, String> dcStackMap = new HashMap<PopResource, String>();
     static List<LinkChain> currentChaining = new ArrayList<LinkChain>();
@@ -57,7 +59,6 @@ public class DeploymentManager implements Runnable {
     static List<String> currentNodes;
     static FloatingNode inputFloatingNode = null;
     static List<Pair<String,String>> currentFloatingPorts = new ArrayList<Pair<String,String>>();
-
 
     static MonitorMessage.SCALE_TYPE nextScale = null;
 
@@ -131,7 +132,7 @@ public class DeploymentManager implements Runnable {
                     functionMap.put(entry.getValue().name, entry.getValue());
             }
 
-            SimpleDateFormat format = new SimpleDateFormat("yymmddHHmmss");
+            SimpleDateFormat format = new SimpleDateFormat("mmssSS");
             String timestamp = format.format(new Date());
 
             List<FunctionMonitor> vnfMonitors = new ArrayList<FunctionMonitor>();
@@ -240,6 +241,8 @@ public class DeploymentManager implements Runnable {
                 logger.error(e);
                 e.printStackTrace();
             }
+            networkWait(defaultNetworkWaitMs);
+
             try {
                 unchain(delete_link_chains);
                 logger.info("Unchained");
@@ -248,6 +251,7 @@ public class DeploymentManager implements Runnable {
                 logger.error(e);
                 e.printStackTrace();
             }
+            networkWait(defaultNetworkWaitMs);
 
             // Add floating node and loadbalance input
             try {
@@ -266,6 +270,7 @@ public class DeploymentManager implements Runnable {
                 logger.error(e);
                 e.printStackTrace();
             }
+            networkWait(defaultNetworkWaitMs);
 
             // Loadbalancing
             try {
@@ -276,6 +281,7 @@ public class DeploymentManager implements Runnable {
                 logger.error(e);
                 e.printStackTrace();
             }
+            networkWait(defaultNetworkWaitMs);
 
             try {
                 loadbalance(currentLoadbalanceMap.values());
@@ -285,6 +291,7 @@ public class DeploymentManager implements Runnable {
                 logger.error(e);
                 e.printStackTrace();
             }
+            networkWait(defaultNetworkWaitMs);
 
             // Monitoring
             MonitorManager.addAndStartMonitor(vnfMonitors);
@@ -359,6 +366,7 @@ public class DeploymentManager implements Runnable {
                     logger.error(e);
                     e.printStackTrace();
                 }
+                networkWait(defaultNetworkWaitMs);
 
                 // Loadbalancing
                 try {
@@ -367,6 +375,7 @@ public class DeploymentManager implements Runnable {
                     logger.error(e);
                     e.printStackTrace();
                 }
+                networkWait(defaultNetworkWaitMs);
 
                 // Remove floating node
                 try {
@@ -377,6 +386,7 @@ public class DeploymentManager implements Runnable {
                     logger.error(e);
                     e.printStackTrace();
                 }
+                networkWait(defaultNetworkWaitMs);
 
                 // Undeploy stacks
                 for (PopResource pop : currentPops) {
@@ -388,6 +398,7 @@ public class DeploymentManager implements Runnable {
                         e.printStackTrace();
                     }
                 }
+                networkWait(defaultNetworkWaitMs);
             }
             cleanup();
 
@@ -465,7 +476,7 @@ public class DeploymentManager implements Runnable {
                     functionMap.put(entry.getValue().name, entry.getValue());
             }
 
-            SimpleDateFormat format = new SimpleDateFormat("yymmddHHmmss");
+            SimpleDateFormat format = new SimpleDateFormat("mmssSS");
             String timestamp = format.format(new Date());
 
             List<FunctionMonitor> vnfMonitors = new ArrayList<FunctionMonitor>();
@@ -618,7 +629,10 @@ public class DeploymentManager implements Runnable {
                 logger.error(e);
                 e.printStackTrace();
             }
+            networkWait(defaultNetworkWaitMs);
+
             createLinkLoadbalanceMap(currentLoadbalanceMap, currentChaining, create_link_chains, delete_link_chains);
+
             try {
                 unchain(delete_link_chains);
                 logger.info("Unchained");
@@ -627,6 +641,7 @@ public class DeploymentManager implements Runnable {
                 logger.error(e);
                 e.printStackTrace();
             }
+            networkWait(defaultNetworkWaitMs);
 
             // Undeploy removed stacks
             for (Map.Entry<PopResource, String> removedStack : removedStacks.entrySet()) {
@@ -641,6 +656,7 @@ public class DeploymentManager implements Runnable {
                     e.printStackTrace();
                 }
             }
+            networkWait(defaultNetworkWaitMs);
 
             // Remove of the floating node loadbalancing
             if(updateFloatingLoadbalance == true) {
@@ -653,6 +669,7 @@ public class DeploymentManager implements Runnable {
                     logger.error(e);
                     e.printStackTrace();
                 }
+                networkWait(defaultNetworkWaitMs);
             }
 
             // Update stacks
@@ -672,6 +689,7 @@ public class DeploymentManager implements Runnable {
                         e.printStackTrace();
                     }
                     logger.debug(templateStr);
+                    networkWait(defaultNetworkWaitMs);
                 }
             }
 
@@ -696,6 +714,7 @@ public class DeploymentManager implements Runnable {
 
                     }
                     logger.debug(templateStr);
+                    networkWait(defaultNetworkWaitMs);
                 }
             }
 
@@ -707,6 +726,7 @@ public class DeploymentManager implements Runnable {
                 logger.error(e);
                 e.printStackTrace();
             }
+            networkWait(defaultNetworkWaitMs);
 
             try {
                 loadbalance(currentLoadbalanceMap.values());
@@ -716,6 +736,7 @@ public class DeploymentManager implements Runnable {
                 logger.error(e);
                 e.printStackTrace();
             }
+            networkWait(defaultNetworkWaitMs);
 
             // Add new floating node loadbalancing
             if(updateFloatingLoadbalance == true) {
@@ -727,6 +748,7 @@ public class DeploymentManager implements Runnable {
                     logger.error(e);
                     e.printStackTrace();
                 }
+                networkWait(defaultNetworkWaitMs);
             }
 
             // Monitoring
@@ -853,6 +875,7 @@ public class DeploymentManager implements Runnable {
                 e.printStackTrace();
             }
             currentChaining.add(chain);
+            networkWait(defaultNetworkWaitMs);
         }
     }
 
@@ -861,6 +884,7 @@ public class DeploymentManager implements Runnable {
             TranslatorChain.unchain(chain);
             if (chains != currentChaining)
                 currentChaining.remove(chain);
+            networkWait(defaultNetworkWaitMs);
         }
         if (chains == currentChaining)
             currentChaining.clear();
@@ -871,6 +895,7 @@ public class DeploymentManager implements Runnable {
             // No loadbalancing for only
             if (balance.dstPorts.size() > 1)
                 TranslatorLoadbalancer.loadbalance(balance);
+            networkWait(defaultNetworkWaitMs);
         }
     }
 
@@ -902,6 +927,14 @@ public class DeploymentManager implements Runnable {
     }
 
     // Utility
+
+    public static void networkWait(int msSleep){
+        try {
+            Thread.sleep(msSleep);
+        } catch (InterruptedException e) {
+            e.printStackTrace();
+        }
+    }
 
     public static List<String> getServerListFromHeatTemplate(HeatTemplate template) {
 

@@ -125,6 +125,7 @@ public class MiniStatusServer {
                     fMap.put("templateName", monitor.function);
                     fMap.put("vnfId", monitor.instance.function.getVnfId());
                     fMap.put("vnfName", monitor.instance.descriptor.getName());
+                    fMap.put("dc", monitor.instance.data_center);
                     instanceMap.put(monitor.instance.name, fMap);
                     nodeMap.put(monitor.instance.name, fMap);
                 }

@@ -302,7 +302,7 @@ function addGraph(graph){
     var nodes = [];
         // add vnf nodes
         for (var nodeName in graph.nodes) {
-            nodes.push({id:nodeName, name:nodeName, type:"vnfnode", vnfid:graph.nodes[nodeName].vnfId}); // TODO: Maybe add also other attributes?
+            nodes.push({id:nodeName, name:nodeName, type:"vnfnode", vnfid:graph.nodes[nodeName].vnfId, dc:graph.nodes[nodeName].dc}); // TODO: Maybe add also other attributes?
         }
         // add ns nodes
         for (var i=0; i<graph.nsPoints.length; i++) {
@@ -497,7 +497,7 @@ function addGraph(graph){
             .attr("class","nodetext")
             .attr("x",d.x)
             .attr("y",d.y-graphSizes[d.type]-5)
-            .text(function(d){return d.name;});
+            .text(function(d){return (d.dc != undefined ? d.dc+": ":"")+d.name;});
 
         d.width = graphSizes[d.type];
         d.height = graphSizes[d.type];
@@ -608,7 +608,7 @@ function updateMonitorView(monitorData) {
     var functionDivList = [];
     for(var i=0; i<newFunctions.length; i++) {
 
-        var newFunctionDiv = createPlot(newFunctions[i], monitorData);
+        var newFunctionDiv = createPlot(newFunctions[i], monitorData, monitorData.functions[newFunctions[i]]);
         updatePlot(newFunctions[i], monitorData)
         functionDivList.push(newFunctionDiv);
     }
@@ -645,7 +645,7 @@ function defineSvgSize(dataKey){
     };
 }
 
-function createPlot(funname, monitorData){
+function createPlot(funname, monitorData, instanceData){
 
     console.log("create div for function "+funname);
     // add monitor divs
@@ -653,7 +653,7 @@ function createPlot(funname, monitorData){
     newFunctionDiv.setAttribute("class","vnfMonitor");
     var monitorLabelDiv = document.createElement("h3");
     monitorLabelDiv.setAttribute("class","vnfMonitorLabel");
-    monitorLabelDiv.appendChild(document.createTextNode(funname));
+    monitorLabelDiv.appendChild(document.createTextNode(instanceData.dc+": "+funname));
     var currentStatsDiv = document.createElement("div");
     currentStatsDiv.setAttribute("class", "vnfMonitorCurrent");
     var newCpuDiv = document.createElement("div");
@@ -829,7 +829,7 @@ function createMonitorView(monitorData) {
     var dummy = [{"SYS_time":123,"CPU_used":123,"MEM_used":123},{"SYS_time":125,"CPU_used":123,"MEM_used":123},{"SYS_time":124,"CPU_used":123,"MEM_used":123}];
     for (var i=0; i<functionList.length; i++) {
 
-        var newFunctionDiv = createPlot(functionList[i], monitorData);
+        var newFunctionDiv = createPlot(functionList[i], monitorData, monitorData.functions[functionList[i]]);
 
         updatePlot(functionList[i], monitorData)
 

@@ -56,6 +56,7 @@ public class DeploymentManager implements Runnable {
     static List<PopResource> currentPops;
     static List<String> currentNodes;
     static FloatingNode inputFloatingNode = null;
+    static List<Pair<String,String>> currentFloatingPorts = new ArrayList<Pair<String,String>>();
 
 
     static MonitorMessage.SCALE_TYPE nextScale = null;
@@ -255,6 +256,7 @@ public class DeploymentManager implements Runnable {
                 List<Pair<String, String>> inputPorts = instance.get_create_input_lb_links();
                 ArrayList<LinkPort> fnlist = new ArrayList<LinkPort>();
                 for(Pair<String, String> inputPort: inputPorts) {
+                    currentFloatingPorts.add(inputPort);
                     fnlist.add(new LinkPort(usedPops.get(0), dcStackMap.get(usedPops.get(0)), inputPort.getLeft(), inputPort.getRight()));
                 }
                 LinkLoadbalance lb = new LinkLoadbalance(usedPops.get(0), "floating", "foo", "bar", fnlist);
@@ -570,6 +572,40 @@ public class DeploymentManager implements Runnable {
                 }
             }
 
+            // Floating loadbalancing
+            List<Pair<String, String>> createLbLinks = instance.get_create_input_lb_links();
+            List<Pair<String, String>> deleteLbLinks = instance.get_delete_input_lb_links();
+            boolean updateFloatingLoadbalance = false;
+            LinkLoadbalance newFloatingLbRule = null;
+            if(createLbLinks.size()>0 || deleteLbLinks.size()>0) {
+
+                // vnf-name - port name
+                ArrayList<Pair<String,String>> newFloatingPorts = new ArrayList<Pair<String,String>>();
+
+                // check if old ports are to be deleted
+                for(Pair<String, String> oldPort: currentFloatingPorts){
+                    for(Pair<String, String> delPort: deleteLbLinks) {
+                        if(oldPort.getLeft().equals(delPort.getLeft()) &&
+                                oldPort.getRight().equals(delPort.getRight())) {
+                            break;
+                        }
+                    }
+                    // old port not in delete list
+                    newFloatingPorts.add(oldPort);
+                }
+                // add new ports
+                newFloatingPorts.addAll(createLbLinks);
+
+                // create new floating ports rule
+                ArrayList<LinkPort> fnlist = new ArrayList<LinkPort>();
+                for(Pair<String, String> inputPort: newFloatingPorts) {
+                    fnlist.add(new LinkPort(usedPops.get(0), dcStackMap.get(usedPops.get(0)), inputPort.getLeft(), inputPort.getRight()));
+                }
+                currentFloatingPorts = newFloatingPorts;
+                newFloatingLbRule = new LinkLoadbalance(usedPops.get(0), "floating", "foo", "bar", fnlist);
+                updateFloatingLoadbalance = true;
+            }
+
             // Execute changes
 
             // Remove old resources
@@ -606,7 +642,18 @@ public class DeploymentManager implements Runnable {
                 }
             }
 
-            //FIXME: Add remove of the floating node loadbalancing
+            // Remove of the floating node loadbalancing
+            if(updateFloatingLoadbalance == true) {
+                try {
+                    TranslatorLoadbalancer.unFloatingNode(inputFloatingNode);
+                    inputFloatingNode = null;
+                    logger.info("Floating lb remove successful");
+                } catch (Exception e) {
+                    logger.info("Floating lb remove failed");
+                    logger.error(e);
+                    e.printStackTrace();
+                }
+            }
 
             // Update stacks
 
@@ -670,7 +717,17 @@ public class DeploymentManager implements Runnable {
                 e.printStackTrace();
             }
 
-            //FIXME: Add new floating node loadbalancing
+            // Add new floating node loadbalancing
+            if(updateFloatingLoadbalance == true) {
+                try {
+                    inputFloatingNode = TranslatorLoadbalancer.floatingNode(newFloatingLbRule);
+                    logger.info("Add floating lb rule successful");
+                } catch (Exception e) {
+                    logger.info("Add floating lb rule failed");
+                    logger.error(e);
+                    e.printStackTrace();
+                }
+            }
 
             // Monitoring
             MonitorManager.updateMonitors(addedFunctions, removedFunctions);
@@ -791,7 +848,7 @@ public class DeploymentManager implements Runnable {
                 TranslatorChain.chain(chain);
             }
             try {
-                Thread.sleep(3000);
+                Thread.sleep(1000);
             } catch (InterruptedException e) {
                 e.printStackTrace();
             }

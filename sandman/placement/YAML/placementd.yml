@@ -2,6 +2,25 @@
 
 #All performance limits in % usage
 perfThreshold:
+  - vnfId: "vnf_webs"
+    cpu_upper_l: "70"
+    cpu_lower_l: "10"
+    mem_upper_l: "70"
+    mem_lower_l: "10"
+    scale_out_upper_l: "70"
+    scale_in_lower_l: "70"
+    history_check: "3"
+
+
+  - vnfId: "vnf_db"
+    cpu_upper_l: "70"
+    cpu_lower_l: "10"
+    mem_upper_l: "70"
+    mem_lower_l: "10"
+    scale_out_upper_l: "70"
+    scale_in_lower_l: "70"
+    history_check: "3"
+
   - vnfId: "vnf_tcpdump"
     cpu_upper_l: "70"
     cpu_lower_l: "10"

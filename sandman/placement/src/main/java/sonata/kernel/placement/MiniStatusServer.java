@@ -91,6 +91,9 @@ public class MiniStatusServer {
             } else {
                 statusObj.put("status", "DEPLOYED");
                 statusObj.put("name", DeploymentManager.currentInstance.service.getName());
+                if(DeploymentManager.inputFloatingNode != null && DeploymentManager.inputFloatingNode.floatingIp != null) {
+                    statusObj.put("floatingip", DeploymentManager.inputFloatingNode.floatingIp);
+                }
             }
             // Catalogue package count
             statusObj.put("packageCount",Catalogue.packages.size());
@@ -125,6 +128,7 @@ public class MiniStatusServer {
                     fMap.put("templateName", monitor.function);
                     fMap.put("vnfId", monitor.instance.function.getVnfId());
                     fMap.put("vnfName", monitor.instance.descriptor.getName());
+                    fMap.put("dc", monitor.instance.data_center);
                     instanceMap.put(monitor.instance.name, fMap);
                     nodeMap.put(monitor.instance.name, fMap);
                 }

@@ -393,6 +393,7 @@ public class DeploymentManager implements Runnable {
                     String stackName = dcStackMap.get(pop);
                     try {
                         undeployStack(pop, stackName);
+                        logger.info("Removed stack "+stackName);
                     } catch (Exception e) {
                         logger.error(e);
                         e.printStackTrace();
@@ -428,6 +429,7 @@ public class DeploymentManager implements Runnable {
         currentNodes = null;
         currentLoadbalanceMap.clear();
         dcStackMap.clear();
+        currentFloatingPorts.clear();
         inputFloatingNode = null;
     }
 

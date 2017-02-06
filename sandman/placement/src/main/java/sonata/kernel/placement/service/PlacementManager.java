@@ -423,10 +423,6 @@ public class PlacementManager {
         return storage;
     }
 
-    private void compute_load(MonitorMessage message, List<String> overload_l, List<String> underload_l)
-    {
-
-    }
 
     /**
      * This method returns the overloaded VNFs.

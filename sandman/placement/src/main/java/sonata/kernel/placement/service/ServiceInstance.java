@@ -6,10 +6,7 @@ import org.apache.commons.lang3.tuple.Pair;
 import sonata.kernel.VimAdaptor.commons.nsd.NetworkFunction;
 import sonata.kernel.VimAdaptor.commons.nsd.ServiceDescriptor;
 
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import org.apache.log4j.Logger;
@@ -31,6 +28,12 @@ public class ServiceInstance {
     public final Map<String, Map<String, FunctionInstance>> function_list;
     public final Map<String, AtomicInteger> vnf_uid;
     public final Map<String, AtomicInteger> vnf_vlinkid;
+
+    public final Map<String, Stack<String>> vnf_uid_s;
+    public final Map<String, Stack<String>> vnf_vlinkid_s;
+
+    //public final Map<String, > vnf_uid_t;
+    //public final Map<String, List<Boolean>> vnf_vlinkid_t;
 
     public final Map<String, Map<String, LinkInstance>> outerlink_list;
     public final Map<String, Map<String, LinkInstance>> innerlink_list;
@@ -103,6 +106,11 @@ public class ServiceInstance {
         create_input_lb_links = new ArrayList<Pair<String, String>>();
         delete_input_lb_links = new ArrayList<Pair<String, String>>();
 
+        vnf_uid_s = new HashMap<String, Stack<String>>();
+        vnf_vlinkid_s = new HashMap<String, Stack<String>>();
+
+
+
 
 
     }
@@ -154,6 +162,7 @@ public class ServiceInstance {
         }
         return null;
     }
+
 
     /*
     public LinkInstance findLinkInstanceByUnit(UnitInstance unit, String conPoint){

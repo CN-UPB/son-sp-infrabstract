@@ -643,6 +643,21 @@ public class DeploymentManager implements Runnable {
             }
             networkWait(defaultNetworkWaitMs);
 
+            // FIXME: DELETE ALSO CURRENT CHAINS
+            ArrayList<LinkChain> oldChains = new ArrayList<LinkChain>();
+            oldChains.addAll(currentChaining);
+            try {
+                unchain(currentChaining);
+                logger.info("Unchained current");
+            } catch (Exception e) {
+                logger.info("Unchaining current failed");
+                logger.error(e);
+                e.printStackTrace();
+            }
+            networkWait(defaultNetworkWaitMs);
+
+            // FIXME: DELETE ALSO CURRENT CHAINS
+
             // Undeploy removed stacks
             for (Map.Entry<PopResource, String> removedStack : removedStacks.entrySet()) {
                 PopResource pop = removedStack.getKey();
@@ -717,6 +732,20 @@ public class DeploymentManager implements Runnable {
                     networkWait(defaultNetworkWaitMs);
                 }
             }
+
+            // FIXME: Add also old chains
+
+            try {
+                chain(oldChains);
+                logger.info("Chaining current");
+            } catch (Exception e) {
+                logger.info("Chaining current failed");
+                logger.error(e);
+                e.printStackTrace();
+            }
+            networkWait(defaultNetworkWaitMs);
+
+            // FIXME: Add also old chains
 
             try {
                 chain(create_link_chains);

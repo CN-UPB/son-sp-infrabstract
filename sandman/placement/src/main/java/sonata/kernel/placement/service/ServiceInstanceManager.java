@@ -1,17 +1,12 @@
 package sonata.kernel.placement.service;
 
 import com.google.common.collect.Lists;
-import org.apache.commons.chain.web.MapEntry;
 import org.apache.commons.lang3.tuple.ImmutablePair;
 import org.apache.commons.lang3.tuple.Pair;
-import org.jaxen.Function;
 import sonata.kernel.VimAdaptor.commons.DeployServiceData;
 import sonata.kernel.VimAdaptor.commons.nsd.*;
 
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import org.apache.log4j.Logger;
@@ -21,8 +16,6 @@ import sonata.kernel.placement.Catalogue;
 import sonata.kernel.placement.DatacenterManager;
 import sonata.kernel.placement.PlacementConfigLoader;
 import sonata.kernel.placement.config.PlacementConfig;
-
-import javax.ws.rs.core.Link;
 
 /*
 ServiceInstanceManager enables addition/deletion/updation of resources
@@ -89,6 +82,7 @@ public class ServiceInstanceManager {
 
         for (NetworkFunction function : network_functions) {
 
+            String vnf_instance_name = get_next_vnf_name(function.getVnfId(), instance.vnf_uid_s);
 
             instance.network_functions_db.put(function.getVnfId(), function);
             VnfDescriptor descriptor = instance.nw_function_desc_map.get(function.getVnfName());
@@ -103,25 +97,33 @@ public class ServiceInstanceManager {
 
             int id;
 
+
             if (null == instance.function_list.get(function.getVnfId())) {
                 AtomicInteger vnf_uid = new AtomicInteger(0);
                 id = vnf_uid.addAndGet(1);
                 vnf_uid.set(id);
                 instance.vnf_uid.put(function.getVnfId(), vnf_uid);
                 Map<String, FunctionInstance> map = new HashMap<String, FunctionInstance>();
-                map.put(function.getVnfId() + id, function_instance);
+
+                //map.put(function.getVnfId() + id, function_instance);
+                map.put(vnf_instance_name, function_instance);
                 instance.function_list.put(function.getVnfId(), map);
 
 
             } else {
+
                 id = instance.vnf_uid.get(function.getVnfId()).addAndGet(1);
                 instance.vnf_uid.get(function.getVnfId()).set(id);
-                instance.function_list.get(function.getVnfId()).put(function.getVnfId() +
-                        id, function_instance);
+
+                instance.function_list.get(function.getVnfId()).put(vnf_instance_name, function_instance);
+
+//                instance.function_list.get(function.getVnfId()).put(function.getVnfId() +
+//                        id, function_instance);
             }
 
 
-            function_instance.setName(function.getVnfId().split("_")[1] + id);
+            //function_instance.setName(function.getVnfId().split("_")[1] + id);
+            function_instance.setName(vnf_instance_name.split("_")[1]);
 
             initialize_vnfvlink_list(function_instance, descriptor);
 
@@ -175,6 +177,8 @@ public class ServiceInstanceManager {
         linkInstance.setBuild_out(build_out);
 
         int id;
+
+        String link_name = get_next_link_name(link.getId(), instance.vnf_vlinkid_s);
         if (is_nslink) {
             if (instance.outerlink_list.get(link.getId()) == null) {
                 AtomicInteger vnf_vlinkid = new AtomicInteger(0);
@@ -182,12 +186,14 @@ public class ServiceInstanceManager {
                 vnf_vlinkid.set(id);
                 instance.vnf_vlinkid.put(link.getId(), vnf_vlinkid);
                 Map<String, LinkInstance> map = new HashMap<String, LinkInstance>();
-                map.put(link.getId() + ":" + id, linkInstance);
+                //map.put(link.getId() + ":" + id, linkInstance);
+                map.put(link_name, linkInstance);
                 instance.outerlink_list.put(link.getId(), map);
             } else {
                 id = instance.vnf_vlinkid.get(link.getId()).addAndGet(1);
                 instance.vnf_vlinkid.get(link.getId()).set(id);
-                instance.outerlink_list.get(link.getId()).put(link.getId() + ":" + id, linkInstance);
+                //instance.outerlink_list.get(link.getId()).put(link.getId() + ":" + id, linkInstance);
+                instance.outerlink_list.get(link.getId()).put(link_name, linkInstance);
             }
             instance.outerLinks.put(link.getId(), linkInstance);
 
@@ -198,12 +204,14 @@ public class ServiceInstanceManager {
                 vnf_vlinkid.set(id);
                 instance.vnf_vlinkid.put(link.getId(), vnf_vlinkid);
                 Map<String, LinkInstance> map = new HashMap<String, LinkInstance>();
-                map.put(link.getId() + ":" + id, linkInstance);
+                //map.put(link.getId() + ":" + id, linkInstance);
+                map.put(link_name, linkInstance);
                 instance.innerlink_list.put(link.getId(), map);
             } else {
                 id = instance.vnf_vlinkid.get(link.getId()).addAndGet(1);
                 instance.vnf_vlinkid.get(link.getId()).set(id);
-                instance.innerlink_list.get(link.getId()).put(link.getId() + ":" + id, linkInstance);
+                //instance.innerlink_list.get(link.getId()).put(link.getId() + ":" + id, linkInstance);
+                instance.innerlink_list.get(link.getId()).put(link_name, linkInstance);
             }
 
         }
@@ -256,6 +264,8 @@ public class ServiceInstanceManager {
             if(!is_nslink)
                 continue;
 
+            if(linkInstance.isMgmtLink())
+                continue;
 
             for (String cp_ref : link.getConnectionPointsReference()) {
                 System.out.println("update_ns_link "+link.getId()+"  "+cp_ref);
@@ -272,19 +282,22 @@ public class ServiceInstanceManager {
                     linkInstance.interfaceList.put(f_inst, cp_ref);
 
                     int id;
+                    String link_name = get_next_link_name(link.getId(), instance.vnf_vlinkid_s);
                     if (instance.outerlink_list.get(link.getId()) == null) {
                         AtomicInteger vnf_vlinkid = new AtomicInteger(0);
                         id = vnf_vlinkid.addAndGet(1);
                         vnf_vlinkid.set(id);
                         instance.vnf_vlinkid.put(link.getId(), vnf_vlinkid);
                         Map<String, LinkInstance> map = new HashMap<String, LinkInstance>();
-                        map.put(link.getId() + ":" + id, linkInstance);
+                        //map.put(link.getId() + ":" + id, linkInstance);
+                        map.put(link_name, linkInstance);
                         instance.outerlink_list.put(link.getId(), map);
 
                     } else {
                         id = instance.vnf_vlinkid.get(link.getId()).addAndGet(1);
                         instance.vnf_vlinkid.get(link.getId()).set(id);
-                        instance.outerlink_list.get(link.getId()).put(link.getId() + ":" + id, linkInstance);
+                        //instance.outerlink_list.get(link.getId()).put(link.getId() + ":" + id, linkInstance);
+                        instance.outerlink_list.get(link.getId()).put(link_name, linkInstance);
                     }
 
                     if(connectionPointName.equals("input"))
@@ -340,6 +353,7 @@ public class ServiceInstanceManager {
         }
 
         instance.outerlink_list.get((key.split(":"))[0]).remove(key);
+        release_link_name(key.split(":")[0], key, instance.vnf_vlinkid_s);
 
         return;
     }
@@ -391,8 +405,11 @@ public class ServiceInstanceManager {
                 id = vnf_vlinkid.addAndGet(1);
                 vnf_vlinkid.set(id);
                 instance.vnf_vlinkid.put(link.getId(), vnf_vlinkid);
+
+                String link_name = get_next_link_name(link.getId(), instance.vnf_vlinkid_s);
                 Map<String, LinkInstance> map = new HashMap<String, LinkInstance>();
-                map.put(link.getId() + ":" + id, linkInstance);
+                //map.put(link.getId() + ":" + id, linkInstance);
+                map.put(link_name, linkInstance);
                 instance.outerlink_list.put(link.getId(), map);
                 if(is_inputlink)
                     add_input_lb_rules(linkInstance, instance.create_input_lb_links);
@@ -400,23 +417,32 @@ public class ServiceInstanceManager {
             } else {
                 id = instance.vnf_vlinkid.get(link.getId()).addAndGet(1);
                 instance.vnf_vlinkid.get(link.getId()).set(id);
-                instance.outerlink_list.get(link.getId()).put(link.getId() + ":" + id, linkInstance);
+
+                String link_name = get_next_link_name(link.getId(), instance.vnf_vlinkid_s);
+                //instance.outerlink_list.get(link.getId()).put(link.getId() + ":" + id, linkInstance);
+                instance.outerlink_list.get(link.getId()).put(link_name, linkInstance);
             }
             instance.outerLinks.put(link.getId(), linkInstance);
 
         } else {
+            String link_name = get_next_link_name(link.getId(), instance.vnf_vlinkid_s);
             if (instance.innerlink_list.get(link.getId()) == null) {
                 AtomicInteger vnf_vlinkid = new AtomicInteger(0);
                 id = vnf_vlinkid.addAndGet(1);
                 vnf_vlinkid.set(id);
                 instance.vnf_vlinkid.put(link.getId(), vnf_vlinkid);
+
                 Map<String, LinkInstance> map = new HashMap<String, LinkInstance>();
-                map.put(link.getId() + ":" + id, linkInstance);
+
+                //map.put(link.getId() + ":" + id, linkInstance);
+                map.put(link_name, linkInstance);
                 instance.innerlink_list.put(link.getId(), map);
             } else {
                 id = instance.vnf_vlinkid.get(link.getId()).addAndGet(1);
                 instance.vnf_vlinkid.get(link.getId()).set(id);
-                instance.innerlink_list.get(link.getId()).put(link.getId() + ":" + id, linkInstance);
+
+                instance.innerlink_list.get(link.getId()).put(link_name, linkInstance);
+                //instance.innerlink_list.get(link.getId()).put(link.getId() + ":" + id, linkInstance);
             }
 
         }
@@ -628,8 +654,12 @@ public class ServiceInstanceManager {
                 vnf_uid.set(id);
                 instance.vnf_uid.put(n_function.getVnfId(), vnf_uid);
 
+                String vnf_instance_name = get_next_vnf_name(n_function.getVnfId(), instance.vnf_uid_s);
+                //FunctionInstance function_instance = new FunctionInstance(n_function, descriptor,
+                //        n_function.getVnfName().split("-")[0] + id, PopName);
+
                 FunctionInstance function_instance = new FunctionInstance(n_function, descriptor,
-                        n_function.getVnfName().split("-")[0] + id, PopName);
+                        vnf_instance_name.split("_")[1], PopName);
 
                 boolean resource_status = consume_resources(function_instance, function_instance.data_center);
                 if(!resource_status)
@@ -638,7 +668,8 @@ public class ServiceInstanceManager {
                 initialize_vnfvlink_list(function_instance, descriptor);
 
                 Map<String, FunctionInstance> map = new HashMap<String, FunctionInstance>();
-                map.put(n_function.getVnfId() + id, function_instance);
+                //map.put(n_function.getVnfId() + id, function_instance);
+                map.put(vnf_instance_name, function_instance);
                 instance.function_list.put(n_function.getVnfId(), map);
 
                 internal_add_mgmt_link(function_instance);
@@ -656,8 +687,14 @@ public class ServiceInstanceManager {
 
                 int id = instance.vnf_uid.get(n_function.getVnfId()).addAndGet(1);
                 instance.vnf_uid.get(n_function.getVnfId()).set(id);
+
+                String vnf_instance_name = get_next_vnf_name(n_function.getVnfId(), instance.vnf_uid_s);
+
+//                FunctionInstance function_instance = new FunctionInstance(n_function, descriptor,
+//                        n_function.getVnfName().split("-")[0] + id, PopName);
+
                 FunctionInstance function_instance = new FunctionInstance(n_function, descriptor,
-                        n_function.getVnfName().split("-")[0] + id, PopName);
+                        vnf_instance_name.split("_")[1], PopName);
 
                 boolean resource_status = consume_resources(function_instance, function_instance.data_center);
                 if(!resource_status)
@@ -667,8 +704,11 @@ public class ServiceInstanceManager {
 
                 update_ns_link(function_instance);
 
-                instance.function_list.get(n_function.getVnfId()).put(n_function.getVnfId() +
-                        id, function_instance);
+                internal_add_mgmt_link(function_instance);
+
+//                instance.function_list.get(n_function.getVnfId()).put(n_function.getVnfId() +
+//                        id, function_instance);
+                instance.function_list.get(n_function.getVnfId()).put(vnf_instance_name, function_instance);
 
                 //return n_function.getVnfId() + id;
                 return function_instance.name;
@@ -687,7 +727,9 @@ public class ServiceInstanceManager {
                 delete_ns_link((vnf_name.split("_"))[1]);
                 int id = instance.vnf_uid.get(vnf_id).decrementAndGet();
                 instance.vnf_uid.get(vnf_id).set(id);
+                release_vnf_name(vnf_name, instance.vnf_uid_s);
                 instance.function_list.get(vnf_id).remove(vnf_name);
+
             }
         }
         return null;
@@ -715,6 +757,7 @@ public class ServiceInstanceManager {
             {
                 delete_chaining_rules(vlinks.split(":")[0], vlinks);
                 link_m.getValue().remove(vlinks);
+                release_link_name(vlinks.split(":")[0], vlinks, instance.vnf_vlinkid_s);
             }
       }
     }
@@ -792,6 +835,7 @@ public class ServiceInstanceManager {
                 if (link_name != null) {
                     link_id = link_m.getKey();
                     delete_chaining_rules(link_id, link_name);
+                    release_link_name(link_id, link_name, instance.vnf_vlinkid_s);
                     instance.innerlink_list.get(link_id).remove(link_name);
                     break;
                 }
@@ -814,6 +858,7 @@ public class ServiceInstanceManager {
                     }
                     if (link_name != null) {
                         link_id = link_m.getKey();
+                        release_link_name(link_id, link_name, instance.vnf_vlinkid_s);
                         instance.outerlink_list.get(link_id).remove(link_name);
                         break;
                     }
@@ -971,6 +1016,67 @@ public class ServiceInstanceManager {
         return true;
     }
 
+    private String get_next_link_name(String link_id, Map<String, Stack<String>> id_map)
+    {
+        if(id_map.get(link_id) == null)
+        {
+            Stack<String> instance_name = new Stack<String>();
+            for(int i = 1000; i >= 1; i--)
+            {
+                instance_name.push(link_id + ":" + i);
+            }
+
+            id_map.put(link_id, instance_name);
+            return instance_name.pop();
+
+        } else {
+            return id_map.get(link_id).pop();
+        }
+
+    }
+
+    private  void release_link_name(String link_id, String link_instance, Map<String, Stack<String>> id_map)
+    {
+        if(id_map.get(link_id) == null)
+            return;
+
+        id_map.get(link_id).add(link_instance);
+
+        return;
+
+    }
+
+    private String get_next_vnf_name(String vnf_id, Map<String, Stack<String>> id_map)
+    {
+        if(id_map.get(vnf_id) == null)
+        {
+            Stack<String> instance_name = new Stack<String>();
+            for(int i = 100; i >= 1; i--)
+            {
+                instance_name.push(vnf_id + i);
+            }
+
+            id_map.put(vnf_id, instance_name);
+            return instance_name.pop();
+
+        } else {
+            return id_map.get(vnf_id).pop();
+        }
+    }
+
+    protected void release_vnf_name(String vnf_instance, Map<String, Stack<String>> id_map)
+    {
+        String vnf_id = instance.findVnfIdFromVnfInstanceName(vnf_instance.split("_")[1]);
+
+        if(vnf_id == null)
+        {
+            return;
+        }
+
+        id_map.get(vnf_id).add(vnf_instance);
+
+        return;
+    }
 
 
 }

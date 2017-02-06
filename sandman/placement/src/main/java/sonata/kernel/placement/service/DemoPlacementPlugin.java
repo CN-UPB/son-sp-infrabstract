@@ -1,17 +1,13 @@
 package sonata.kernel.placement.service;
 
-import sonata.kernel.VimAdaptor.commons.DeployServiceData;
-import sonata.kernel.placement.DatacenterManager;
-import sonata.kernel.placement.config.NodeResource;
-import sonata.kernel.placement.config.PopResource;
-
-
-import java.util.*;
-
 import org.apache.log4j.Logger;
+import sonata.kernel.VimAdaptor.commons.DeployServiceData;
 
-public class DefaultPlacementPlugin implements PlacementPlugin {
-    final static Logger logger = Logger.getLogger(DefaultPlacementPlugin.class);
+import java.util.ArrayList;
+import java.util.List;
+
+public class DemoPlacementPlugin implements PlacementPlugin {
+    final static Logger logger = Logger.getLogger(DemoPlacementPlugin.class);
 
     ServiceInstanceManager instance_manager;
 
@@ -87,12 +83,12 @@ public class DefaultPlacementPlugin implements PlacementPlugin {
             //instance_manager.update_functions_list("vnf_loadbalancer", null, ServiceInstanceManager.ACTION_TYPE.ADD_INSTANCE);
             ///instance_manager.update_functions_list("vnf_tcpdump", null, "datacenter3", ServiceInstanceManager.ACTION_TYPE.ADD_INSTANCE);
 
-            pm.AddNetworkFunctionInstance("vnf_tcpdump", "dc1");
+            pm.AddNetworkFunctionInstance("vnf_webs", "dc1");
 
             ///instance_manager.update_vlink_list("vnf_firewall", "vnf_tcpdump", "vnf_firewall1", "vnf_tcpdump1", null,
-            ///     ServiceInstanceManager.ACTION_TYPE.DELETE_INSTANCE);
+               ///     ServiceInstanceManager.ACTION_TYPE.DELETE_INSTANCE);
 
-            pm.DeleteVirtualLink("firewall1", "tcpdump1");
+            //pm.DeleteVirtualLink("firewall1", "tcpdump1");
             /*
             instance_manager.update_vlink_list("vnf_firewall", "vnf_loadbalancer", "vnf_firewall1", "vnf_loadbalancer1",
                     ServiceInstanceManager.ACTION_TYPE.ADD_INSTANCE);
@@ -109,34 +105,34 @@ public class DefaultPlacementPlugin implements PlacementPlugin {
                     ServiceInstanceManager.ACTION_TYPE.ADD_INSTANCE);*/
 
             ///instance_manager.update_vlink_list("vnf_firewall", "vnf_tcpdump", "vnf_firewall1", "vnf_tcpdump1", null,
-            ///     ServiceInstanceManager.ACTION_TYPE.ADD_INSTANCE);
+               ///     ServiceInstanceManager.ACTION_TYPE.ADD_INSTANCE);
 
-            pm.AddVirtualLink("firewall1", "tcpdump1", null);
+            pm.AddVirtualLink("webs2", "db1", null);
 
             ///instance_manager.update_vlink_list("vnf_firewall", "vnf_tcpdump", "vnf_firewall1", "vnf_tcpdump2", null,
-            ///     ServiceInstanceManager.ACTION_TYPE.ADD_INSTANCE);
+               ///     ServiceInstanceManager.ACTION_TYPE.ADD_INSTANCE);
 
-            pm.AddVirtualLink("firewall1", "tcpdump2", null);
+            //pm.AddVirtualLink("firewall1", "tcpdump2", null);
 
             ///instance_manager.update_functions_list("vnf_tcpdump", null, "datacenter3", ServiceInstanceManager.ACTION_TYPE.ADD_INSTANCE);
 
-            pm.AddNetworkFunctionInstance("vnf_tcpdump", "dc1");
+            //pm.AddNetworkFunctionInstance("vnf_tcpdump", "datacenter1");
 
-            List<String> s1 = new ArrayList<String>();
-            s1.add("s1");
-            s1.add("s2");
+            //List<String> s1 = new ArrayList<String>();
+            //s1.add("s1");
+            //s1.add("s2");
             ///ServiceInstance instance_t =  instance_manager.update_vlink_list("vnf_firewall", "vnf_tcpdump", "vnf_firewall1", "vnf_tcpdump3", s1,
-            ///     ServiceInstanceManager.ACTION_TYPE.ADD_INSTANCE);
+               ///     ServiceInstanceManager.ACTION_TYPE.ADD_INSTANCE);
 
-            pm.AddVirtualLink("firewall1", "tcpdump3", s1);
+            //pm.AddVirtualLink("firewall1", "tcpdump3", s1);
 
-            pm.AddNetworkFunctionInstance("vnf_iperf", "dc1");
-            pm.AddVirtualLink("iperf2", "firewall1", null);
+            //pm.AddNetworkFunctionInstance("vnf_iperf", "datacenter1");
+            //pm.AddVirtualLink("iperf2", "firewall1", null);
 
             ServiceInstance instance_t = pm.GetServiceInstance();
 
             ServiceGraph graph = new ServiceGraph(instance);
-            Node node = graph.generate_graph();
+            //Node node = graph.generate_graph();
 
             return instance_t;
 
@@ -149,15 +145,15 @@ public class DefaultPlacementPlugin implements PlacementPlugin {
             instance_manager.update_functions_list("vnf_tcpdump", "vnf_tcpdump2", ServiceInstanceManager.ACTION_TYPE.DELETE_INSTANCE);
 */
             ///instance_manager.update_vlink_list("vnf_firewall", "vnf_tcpdump", "vnf_firewall1", "vnf_tcpdump1", null,
-            ///     ServiceInstanceManager.ACTION_TYPE.DELETE_INSTANCE);
+               ///     ServiceInstanceManager.ACTION_TYPE.DELETE_INSTANCE);
 
             //pm.DeleteVirtualLink("vnf_firewall1", "vnf_tcpdump1");
 
             ///instance_manager.update_functions_list("vnf_tcpdump", "vnf_tcpdump1", "datacenter1", ServiceInstanceManager.ACTION_TYPE.DELETE_INSTANCE);
 
-            pm.MoveNetworkFunctionInstance("tcpdump3", "dc1");
-            pm.DeleteNetworkFunctionInstance("firewall1");
-            pm.DeleteNetworkFunctionInstance("tcpdump3");
+            //pm.MoveNetworkFunctionInstance("tcpdump3", "datacenter1");
+            pm.DeleteNetworkFunctionInstance("webs2");
+            //pm.DeleteNetworkFunctionInstance("tcpdump3");
 
             return pm.GetServiceInstance();
         }

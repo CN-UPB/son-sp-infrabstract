@@ -100,7 +100,7 @@ class RestInterfaceServerApi extends NanoHTTPD implements Runnable {
                 return MiniStatusServer.serveStatic(session);
             }
             else
-            if("/packages".equals(uri) && session.getMethod().equals(Method.POST)) {
+            if(("/api/v2/packages".equals(uri) || "/api/v2/packages?".equals(uri)) && session.getMethod().equals(Method.POST)) {
                 logger.info("Package post");
                 session.getParms();
                 Integer contentLength = Integer.parseInt(session.getHeaders().get("content-length"));

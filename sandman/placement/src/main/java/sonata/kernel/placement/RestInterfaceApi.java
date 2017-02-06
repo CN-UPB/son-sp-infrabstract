@@ -146,7 +146,7 @@ class RestInterfaceServerApi extends NanoHTTPD implements Runnable {
                 return newFixedLengthResponse(Response.Status.CREATED, "application/json", ret_index);
             }
             else
-            if("/packages".equals(uri) && session.getMethod().equals(Method.GET)) {
+            if("/api/v2/packages".equals(uri) && session.getMethod().equals(Method.GET)) {
 				logger.info("Package list");
                 String jsonPackageList = Catalogue.getJsonPackageList();
                 String ret_index=null;
@@ -294,7 +294,7 @@ class RestInterfaceServerApi extends NanoHTTPD implements Runnable {
     public static byte[] stripMultiPartFormDataHeader(IHTTPSession session, byte[] buffer) {
         // Check if POST request contains multipart/form-data
         if (session.getMethod().compareTo(Method.POST) == 0 && session.getHeaders().containsKey("content-type") &&
-                session.getHeaders().get("content-type").startsWith("multipart/form-data")) {
+                (session.getHeaders().get("content-type").startsWith("multipart/form-data") || session.getHeaders().get("content-type").startsWith("application/zip"))) {
 
             // Assume UTF-8 encoding
             CharsetDecoder dec = Charset.forName("UTF-8").newDecoder();

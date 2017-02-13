@@ -11,7 +11,7 @@ import static org.junit.Assert.*;
 public class ValidationTest {
     @Test
     public void validate() throws Exception {
-        SonataPackage brokenPkg = PackageLoader.loadSonataPackageFromDisk(Paths.get("YAML","packages","sonata-demo-totally-broken","sonata-demo-totally-broken.son").toString());
+        SonataPackage brokenPkg = PackageLoader.loadSonataPackageFromDisk(Paths.get("testScripts","packages","sonata-demo-totally-broken","sonata-demo-totally-broken.son").toString());
         brokenPkg.validation.validate();
         String validationLog = brokenPkg.validation.getValidationLog();
         assert validationLog != null && validationLog.length()>0 : "Validation log should contain several lines.";
@@ -19,7 +19,7 @@ public class ValidationTest {
 
     @Test
     public void fix() {
-        SonataPackage brokenPkg = PackageLoader.loadSonataPackageFromDisk(Paths.get("YAML","packages","mild-broken","mild-broken.son").toString());
+        SonataPackage brokenPkg = PackageLoader.loadSonataPackageFromDisk(Paths.get("testScripts","packages","mild-broken","mild-broken.son").toString());
         brokenPkg.validation.validate();
         brokenPkg.validation.fixCustomAssumptions();
         String validationLog = brokenPkg.validation.getValidationLog();

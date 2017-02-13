@@ -46,7 +46,7 @@ public class TranslatorNetworkTest {
 	
 	
 	
-	@Test
+	//@Test
 	public void create_network() throws Exception {
 
 		PlacementConfig config = PlacementConfigLoader.loadPlacementConfig();

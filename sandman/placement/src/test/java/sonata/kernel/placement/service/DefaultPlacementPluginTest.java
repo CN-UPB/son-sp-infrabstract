@@ -45,7 +45,7 @@ public class DefaultPlacementPluginTest {
 
         PlacementConfig config = PlacementConfigLoader.loadPlacementConfig();
 
-        DeployServiceData data = PackageLoader.loadPackageFromDisk(Paths.get("YAML", "test.son").toString());
+        DeployServiceData data = PackageLoader.loadPackageFromDisk(Paths.get("testScripts","packages","sonata-demo","sonata-demo.son").toString());
 
         DatacenterManager.initialize();
 
@@ -171,7 +171,7 @@ public class DefaultPlacementPluginTest {
 
         PlacementConfig config = PlacementConfigLoader.loadPlacementConfig();
 
-        DeployServiceData data = PackageLoader.loadPackageFromDisk(Paths.get("YAML", "test.son").toString());
+        DeployServiceData data = PackageLoader.loadPackageFromDisk(Paths.get("testScripts","packages","sonata-demo","sonata-demo.son").toString());
 
         DatacenterManager.initialize();
 

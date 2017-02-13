@@ -36,7 +36,7 @@ public class MonitorManagerTest {
         String stackName = "mon";
         String nodeName = "single1:9df6a98f-9e11-4cb7-b3c0-InAdUnitTest";
 
-        DeployServiceData data = PackageLoader.loadPackageFromDisk(Paths.get("YAML","packages","singlevnf", "singlevnf.son").toString());
+        DeployServiceData data = PackageLoader.loadPackageFromDisk(Paths.get("testScripts","packages","singlevnf", "singlevnf.son").toString());
 
         PlacementPlugin plugin = new DefaultPlacementPlugin();
 

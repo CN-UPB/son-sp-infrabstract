@@ -54,7 +54,7 @@ public class TranslatorNetworkTest {
 		List<PopResource> resources = config.getResources();
 		PopResource pop1 = config.getResources().get(0);
 		String stackName = "TestStack";
-		DeployServiceData data = PackageLoader.loadPackageFromDisk(Paths.get("YAML","test.son").toString());
+		DeployServiceData data = PackageLoader.loadPackageFromDisk(Paths.get("testScripts","packages","sonata-demo","sonata-demo.son").toString());
 
         PlacementPlugin plugin = new DefaultPlacementPlugin();
 

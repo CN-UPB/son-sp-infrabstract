@@ -10,6 +10,7 @@ exec > >(tee -i -a /var/log/placement)
 # adding his answer to mine.
 exec 2>&1
 
+cd /placement
 echo "Start placement at ""$(date)"" ..."
-java -jar /placement/target/placement-0.0.1-SNAPSHOT-jar-with-dependencies.jar
+java -jar target/placement-0.0.1-SNAPSHOT-jar-with-dependencies.jar
 echo "Stop placement at ""$(date)"" ..."

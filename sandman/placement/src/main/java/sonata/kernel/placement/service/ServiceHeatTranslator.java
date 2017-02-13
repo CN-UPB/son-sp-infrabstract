@@ -23,8 +23,8 @@ import java.util.Map;
 
 import org.apache.log4j.Logger;
 
-import javax.swing.plaf.basic.BasicInternalFrameTitlePane;
-import javax.ws.rs.core.Link;
+//import javax.swing.plaf.basic.BasicInternalFrameTitlePane;
+//import javax.ws.rs.core.Link;
 
 public class ServiceHeatTranslator {
 

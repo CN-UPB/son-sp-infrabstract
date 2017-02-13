@@ -23,6 +23,7 @@ import sonata.kernel.placement.pd.Validation;
 
 import java.io.File;
 import java.io.FilenameFilter;
+import java.nio.file.Paths;
 import java.util.*;
 
 public class Catalogue {
@@ -36,7 +37,7 @@ public class Catalogue {
 
     static public Map<String,VnfDescriptor> internalFunctions = new HashMap<String,VnfDescriptor>();
 
-    public final static String[] INTERNAL_VNF_FOLDERS = new String[]{"sandman\\placement\\YAML\\internal", "sandman/placement/YAML/internal", "YAML/internal", "placement/YAML/internal"};
+    public final static String[] INTERNAL_VNF_FOLDERS = new String[]{Paths.get("defaultConfig","internal").toString()};
 
     static public int addPackage(SonataPackage sPackage){
         // Validate package

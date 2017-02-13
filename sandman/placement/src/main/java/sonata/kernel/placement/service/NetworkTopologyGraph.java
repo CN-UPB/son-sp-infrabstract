@@ -75,15 +75,15 @@ public class NetworkTopologyGraph {
                 for(Map.Entry<String, LinkProperty_J> entry : link.entrySet())
                 {
                     LinkProperty_J property = entry.getValue();
-                    node.set_output_links(new NetworkLink(Float.parseFloat(property.loss),
-                            Float.parseFloat(property.delay),
-                            Float.parseFloat(property.jitter),
-                            Float.parseFloat(property.bandwidth),
+                    node.set_output_links(new NetworkLink(Float.parseFloat(property.getLoss()),
+                            Float.parseFloat(property.getDelay()),
+                            Float.parseFloat(property.getJitter()),
+                            Float.parseFloat(property.getBandwidth()),
                             m_nodes.get(property.name)));
-                    m_nodes.get(property.name).set_input_links(new NetworkLink(Integer.parseInt(property.loss),
-                            Float.parseFloat(property.delay),
-                            Float.parseFloat(property.jitter),
-                            Float.parseFloat(property.bandwidth),
+                    m_nodes.get(property.name).set_input_links(new NetworkLink(Integer.parseInt(property.getLoss()),
+                            Float.parseFloat(property.getDelay()),
+                            Float.parseFloat(property.getJitter()),
+                            Float.parseFloat(property.getBandwidth()),
                             node));
                 }
             }
@@ -139,6 +139,27 @@ public class NetworkTopologyGraph {
         private String destination_port_id;
         @JsonProperty("dst_port_nr")
         private String destination_port_number;
+
+        public String getLoss() {
+            if (this.loss == null)
+                return "0";
+            return loss;
+        }
+        public String getDelay(){
+            if(this.delay == null)
+                return "0";
+            return delay;
+        }
+        public String getBandwidth(){
+            if(this.bandwidth == null)
+                return "0";
+            return bandwidth;
+        }
+        public String getJitter(){
+            if(this.jitter == null)
+                return "0";
+            return jitter;
+        }
     }
 
     public static class NetworkTopology_J

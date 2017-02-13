@@ -4,5 +4,5 @@ services:
         build: .
         ports:
          - "1234:8080"
-    volumes:
-        - ./config:/placement/config
+        volumes:
+            - ./config:/placement/config

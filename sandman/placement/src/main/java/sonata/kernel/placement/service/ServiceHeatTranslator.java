@@ -44,27 +44,12 @@ public class ServiceHeatTranslator {
     }
 
     protected static void initialize_network_parameters(PopResource pop, List<NetworkResourceUnit> networkResources) {
-        for (NetworkResource nr : pop.getNetworks()) {
-            String gateway = nr.getGateway();
-            String subnetCidr = nr.getSubnet();
 
-            if (!"mgmt".equals(nr.getPrefer())) {
-                if (nr.getAvailable() != null)
-                    for (String s : nr.getAvailable())
-                        networkResources.add(new NetworkResourceUnit().setGateway(gateway).setIp(s).setSubnetCidr(subnetCidr));
-                else {
-                    SubnetUtilsV6 subnet = SubnetUtilsV6.createSubnet(nr.getSubnet());
-                    String[] aa;
-                    if (subnet.isV6())
-                        aa = subnet.getInfo().getAllAddresses(126);
-                    else
-                        aa = subnet.getInfo().getAllAddresses();
-                    int subnetmaskcidr = subnet.getInfo().getCidrBits();
-                    for (String s : aa)
-                        networkResources.add(new NetworkResourceUnit().setGateway(gateway).setIp(s + "/" + subnetmaskcidr).setSubnetCidr(subnetCidr));
-                }
-            }
-        }
+        NetworkResourceUnit r_unit = new NetworkResourceUnit().setGateway("0.0.0.0").
+                setIp("0.0.0.0").
+                setSubnetCidr("0.0.0.0/0");
+        networkResources.add(r_unit);
+
     }
 
     protected static int populate_nova_server(ServiceInstance instance,
@@ -221,7 +206,7 @@ public class ServiceHeatTranslator {
                 //TODO. Refactor. This loop is redundant.
                 break;
             }*/
-            subnetIndex++;
+            //subnetIndex++;
         }
 
         return subnetIndex;
@@ -266,7 +251,7 @@ public class ServiceHeatTranslator {
                     if (nru.gateway != null)
                         subnet.putProperty("gateway_ip", nru.gateway);
 
-                    subnetIndex++;
+                    //subnetIndex++;
                     HashMap<String, Object> netMap = new HashMap<String, Object>();
                     netMap.put("get_resource", network.getResourceName());
                     subnet.putProperty("network", netMap);
@@ -376,7 +361,7 @@ public class ServiceHeatTranslator {
         mgmtSubnet.setName(instance.service.getName() + ":mgmt:subnet");
         mgmtSubnet.putProperty("name", mgmtSubnet.getResourceName());
         NetworkResourceUnit nru = networkResources.get(subnetIndex);
-        subnetIndex++;
+        //subnetIndex++;
         mgmtSubnet.putProperty("cidr", nru.subnetCidr);
         if (nru.gateway != null)
             mgmtSubnet.putProperty("gateway_ip", nru.gateway);

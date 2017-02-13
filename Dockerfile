@@ -67,9 +67,9 @@ ADD vim-adaptor/adaptor /adaptor
 
 ADD sandman/placement /placement
 
-ADD sandman/sandman-placement* /usr/local/bin/
-ADD sandman/sandman-placement /etc/init.d/
-ADD sandman/docker-entrypoint.sh /
+ADD sandman/placement/service/sandman-placement* /usr/local/bin/
+ADD sandman/placement/service/sandman-placement /etc/init.d/
+ADD sandman/placement/service/docker-entrypoint.sh /
 RUN chmod +x /usr/local/bin/sandman-placement-*
 RUN chmod +x /etc/init.d/sandman-placement
 

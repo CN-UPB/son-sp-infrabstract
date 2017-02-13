@@ -37,8 +37,7 @@ public class MiniStatusServer {
 
     public static Path[] rootPaths = new Path[]{
 
-            Paths.get("placement","YAML","static"),
-            Paths.get("sandman","placement","YAML","static")
+            Paths.get("webStatic")
     };
 
     public static Path rootPath = null;

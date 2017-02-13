@@ -1,6 +1,3 @@
+#!/bin/bash
 
-
-curl -D - -X POST \
--F "package=@packages/sonata-demo/sonata-demo.son" \
- http://localhost:8080/packages
-
+./push.sh packages/sonata-demo/sonata-demo.son

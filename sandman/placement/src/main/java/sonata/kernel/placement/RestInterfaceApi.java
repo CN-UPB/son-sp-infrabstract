@@ -227,20 +227,11 @@ class RestInterfaceServerApi extends NanoHTTPD implements Runnable {
             if(req_uri.equals(uri) && session.getMethod().equals(Method.POST)) {
                 logger.info("Deploy");
             	int newIndex;
-               	String bla = null;
-            	ObjectMapper mapper = getJSONMapper();
             	Integer contentLength = Integer.parseInt(session.getHeaders().get("content-length"));
             	byte[] buffer = new byte[contentLength];
             	session.getInputStream().read(buffer, 0, contentLength);
             	String str = new String(buffer);
             	String index = extractNumber(str);
-            	/*try{
-            		map = mapper.readValue(bla, HashMap.class);
-            	} catch(IOException e)
-            	{
-            		// return error
-            	}*/
-               //map.get("service_uuid"));
             	if (index.length() > 0) {
                 	newIndex = Integer.parseInt(index);
                 	try {

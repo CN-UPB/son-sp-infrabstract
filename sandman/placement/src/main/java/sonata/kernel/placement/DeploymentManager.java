@@ -49,8 +49,11 @@ public class DeploymentManager implements Runnable {
 
     static int defaultNetworkWaitMs = 1000;
 
-    // Maps datacenter name to stack name
-    static Map<PopResource, String> dcStackMap = new HashMap<PopResource, String>();
+    /**
+     * List of datacenters currently in use.
+     * For each of this datacenters a stack is deployed.
+     */
+    static List<PopResource> currentDatacenterList = new ArrayList<PopResource>();
     static List<LinkChain> currentChaining = new ArrayList<LinkChain>();
     static Map<LinkPort, LinkLoadbalance> currentLoadbalanceMap = new HashMap<LinkPort, LinkLoadbalance>();
     static ServiceInstance currentInstance;
@@ -59,7 +62,14 @@ public class DeploymentManager implements Runnable {
     static List<String> currentNodes;
     static FloatingNode inputFloatingNode = null;
     static List<Pair<String,String>> currentFloatingPorts = new ArrayList<Pair<String,String>>();
-
+    /**
+     * Name for all stacks that belong to this service.
+     * There is one stack per datacenter and all share the same name.
+     */
+    static String serviceStackName = null;
+    /**
+     * Type of scale message for the next fake scale operation
+     */
     static MonitorMessage.SCALE_TYPE nextScale = null;
 
     public void run() {
@@ -134,6 +144,7 @@ public class DeploymentManager implements Runnable {
 
             SimpleDateFormat format = new SimpleDateFormat("mmssSS");
             String timestamp = format.format(new Date());
+            serviceStackName = timestamp + "-" + serviceName;
 
             List<FunctionMonitor> vnfMonitors = new ArrayList<FunctionMonitor>();
 
@@ -145,21 +156,20 @@ public class DeploymentManager implements Runnable {
 
             for (int i = 0; i < allPops.size(); i++) {
                 PopResource pop = allPops.get(i);
-                String stackName = timestamp + "-" + serviceName;
                 HeatTemplate template = templates.get(i);
 
                 if (template == null)
                     continue;
                 usedPops.add(pop);
 
-                dcStackMap.put(pop, stackName);
+                currentDatacenterList.add(pop);
 
                 for (String nodeName : getServerListFromHeatTemplate(template)) {
                     // Populate maps and lists
                     popNodeMap.put(nodeName, pop);
                     usedNodes.add(nodeName);
                     // Prepare function monitors
-                    FunctionMonitor monitor = new FunctionMonitor(pop, stackName, nodeName);
+                    FunctionMonitor monitor = new FunctionMonitor(pop, serviceStackName, nodeName);
                     monitor.instance = functionMap.get(nodeName);
                     vnfMonitors.add(monitor);
                 }
@@ -173,14 +183,13 @@ public class DeploymentManager implements Runnable {
             for (int i = 0; i < allPops.size(); i++) {
                 PopResource pop = allPops.get(i);
                 if (usedPops.contains(pop)) {
-                    String stackName = dcStackMap.get(pop);
                     HeatTemplate template = templates.get(i);
                     String templateStr = templateToJson(template);
                     lastStack = i;
                     try {
-                        deployStack(pop, stackName, templateStr);
+                        deployStack(pop, serviceStackName, templateStr);
                     } catch (Exception e) {
-                        logger.info("Stack deployment failed for datacenter: " + pop.getPopName() + " Stack name: " + stackName);
+                        logger.info("Stack deployment failed for datacenter: " + pop.getPopName() + " Stack name: " + serviceStackName);
                         logger.error(e);
                         e.printStackTrace();
                         logger.debug(templateStr);
@@ -188,7 +197,7 @@ public class DeploymentManager implements Runnable {
                         break;
                     }
 
-                    logger.debug("Create stack for datacenter: " + pop.getPopName() + " Stack name: " + stackName);
+                    logger.debug("Create stack for datacenter: " + pop.getPopName() + " Stack name: " + serviceStackName);
                     logger.debug(templateStr);
                 }
             }
@@ -198,11 +207,10 @@ public class DeploymentManager implements Runnable {
                     PopResource pop = allPops.get(i);
                     if (usedPops.contains(pop)) {
                         lastStack--;
-                        String stackName = dcStackMap.get(pop);
                         try {
-                            undeployStack(pop, stackName);
+                            undeployStack(pop, serviceStackName);
                         } catch (Exception e) {
-                            logger.info("Stack undeployment failed for datacenter: " + pop.getPopName() + " Stack name: " + stackName);
+                            logger.info("Stack undeployment failed for datacenter: " + pop.getPopName() + " Stack name: " + serviceStackName);
                             logger.error(e);
                             e.printStackTrace();
                         }
@@ -218,8 +226,8 @@ public class DeploymentManager implements Runnable {
             List<Pair<Pair<String, String>, Pair<String, String>>> create_chains = instance.get_create_chain();
             List<Pair<Pair<String, String>, Pair<String, String>>> delete_chains = instance.get_delete_chain();
             List<Pair<Pair<String, String>, List<String>>> custom_chains = instance.getCustomized_chains();
-            List<LinkChain> create_link_chains = createLinkChainList(create_chains, dcStackMap, popNodeMap);
-            List<LinkChain> delete_link_chains = createLinkChainList(delete_chains, dcStackMap, popNodeMap);
+            List<LinkChain> create_link_chains = createLinkChainList(create_chains, popNodeMap);
+            List<LinkChain> delete_link_chains = createLinkChainList(delete_chains, popNodeMap);
             // Add custom chain paths to chain to be created
             for (LinkChain chain : create_link_chains) {
                 for (Pair<Pair<String, String>, List<String>> custom_chain : custom_chains) {
@@ -261,7 +269,7 @@ public class DeploymentManager implements Runnable {
                 ArrayList<LinkPort> fnlist = new ArrayList<LinkPort>();
                 for(Pair<String, String> inputPort: inputPorts) {
                     currentFloatingPorts.add(inputPort);
-                    fnlist.add(new LinkPort(usedPops.get(0), dcStackMap.get(usedPops.get(0)), inputPort.getLeft(), inputPort.getRight()));
+                    fnlist.add(new LinkPort(usedPops.get(0), serviceStackName, inputPort.getLeft(), inputPort.getRight()));
                 }
                 LinkLoadbalance lb = new LinkLoadbalance(usedPops.get(0), "floating", "foo", "bar", fnlist);
                 inputFloatingNode = TranslatorLoadbalancer.floatingNode(lb);
@@ -390,10 +398,9 @@ public class DeploymentManager implements Runnable {
 
                 // Undeploy stacks
                 for (PopResource pop : currentPops) {
-                    String stackName = dcStackMap.get(pop);
                     try {
-                        undeployStack(pop, stackName);
-                        logger.info("Removed stack "+stackName);
+                        undeployStack(pop, serviceStackName);
+                        logger.info("Removed stack "+serviceStackName);
                     } catch (Exception e) {
                         logger.error(e);
                         e.printStackTrace();
@@ -428,9 +435,10 @@ public class DeploymentManager implements Runnable {
         currentPops = null;
         currentNodes = null;
         currentLoadbalanceMap.clear();
-        dcStackMap.clear();
+        currentDatacenterList.clear();
         currentFloatingPorts.clear();
         inputFloatingNode = null;
+        serviceStackName = null;
     }
 
     public static void monitor(MessageQueue.MessageQueueMonitorData message) {
@@ -492,7 +500,7 @@ public class DeploymentManager implements Runnable {
             List<PopResource> oldPops = new ArrayList<PopResource>();       // pops used in old state and new state
             List<PopResource> removedPops = new ArrayList<PopResource>();   // pops used in the old state but not in the new state
             List<PopResource> newPops = new ArrayList<PopResource>();       // pops used in the new state but not in the old state
-            Map<PopResource, String> removedStacks = new HashMap<PopResource, String>();
+            List<PopResource> removedStacks = new ArrayList<PopResource>();
 
             // Find out used/ old pops
             for (int i = 0; i < templates.size(); i++) {
@@ -510,8 +518,8 @@ public class DeploymentManager implements Runnable {
             for (PopResource oldPop : currentPops) {
                 if (!usedPops.contains(oldPop)) {
                     removedPops.add(oldPop);
-                    removedStacks.put(oldPop, dcStackMap.get(oldPop));
-                    dcStackMap.remove(oldPop);
+                    removedStacks.add(oldPop);
+                    currentDatacenterList.remove(oldPop);
                 }
             }
 
@@ -520,16 +528,13 @@ public class DeploymentManager implements Runnable {
                 String popName = pop.getPopName();
                 logger.debug("Check pop " + popName);
 
-                String stackName = dcStackMap.get(pop); // get old stack name
 
-                if (stackName == null) // it's a pop not used before
-                    stackName = timestamp + "-" + serviceName;
 
                 HeatTemplate template = templates.get(i);
                 if (template == null)
                     continue;
 
-                dcStackMap.put(pop, stackName);
+                currentDatacenterList.add(pop);
                 for (String nodeName : getServerListFromHeatTemplate(template)) {
                     assert !popNodeMap.containsKey(nodeName) : "Vnf name " + nodeName + " is not unique! This should have never happened!";
                     popNodeMap.put(nodeName, pop);
@@ -561,8 +566,7 @@ public class DeploymentManager implements Runnable {
             }
             for (String nodeName : newNodes) {
                 PopResource pop = popNodeMap.get(nodeName);
-                String stackName = dcStackMap.get(pop);
-                FunctionMonitor monitor = new FunctionMonitor(pop, stackName, nodeName);
+                FunctionMonitor monitor = new FunctionMonitor(pop, serviceStackName, nodeName);
                 monitor.instance = functionMap.get(nodeName);
                 addedFunctions.add(monitor);
                 logger.debug("New monitor " + monitor.function);
@@ -572,8 +576,8 @@ public class DeploymentManager implements Runnable {
             List<Pair<Pair<String, String>, Pair<String, String>>> create_chains = instance.get_create_chain();
             List<Pair<Pair<String, String>, Pair<String, String>>> delete_chains = instance.get_delete_chain();
             List<Pair<Pair<String, String>, List<String>>> custom_chains = instance.getCustomized_chains();
-            List<LinkChain> create_link_chains = createLinkChainList(create_chains, dcStackMap, popNodeMap);
-            List<LinkChain> delete_link_chains = createLinkChainList(delete_chains, dcStackMap, popNodeMap);
+            List<LinkChain> create_link_chains = createLinkChainList(create_chains, popNodeMap);
+            List<LinkChain> delete_link_chains = createLinkChainList(delete_chains, popNodeMap);
             // Add custom chain paths to chain to be created
             for (LinkChain chain : create_link_chains) {
                 for (Pair<Pair<String, String>, List<String>> custom_chain : custom_chains) {
@@ -612,7 +616,7 @@ public class DeploymentManager implements Runnable {
                 // create new floating ports rule
                 ArrayList<LinkPort> fnlist = new ArrayList<LinkPort>();
                 for(Pair<String, String> inputPort: newFloatingPorts) {
-                    fnlist.add(new LinkPort(usedPops.get(0), dcStackMap.get(usedPops.get(0)), inputPort.getLeft(), inputPort.getRight()));
+                    fnlist.add(new LinkPort(usedPops.get(0), serviceStackName, inputPort.getLeft(), inputPort.getRight()));
                 }
                 currentFloatingPorts = newFloatingPorts;
                 newFloatingLbRule = new LinkLoadbalance(usedPops.get(0), "floating", "foo", "bar", fnlist);
@@ -661,14 +665,12 @@ public class DeploymentManager implements Runnable {
             // FIXME: DELETE ALSO CURRENT CHAINS
 
             // Undeploy removed stacks
-            for (Map.Entry<PopResource, String> removedStack : removedStacks.entrySet()) {
-                PopResource pop = removedStack.getKey();
-                String stackName = removedStack.getValue();
+            for (PopResource removedStackPop : removedStacks) {
                 try {
-                    undeployStack(pop, stackName);
-                    logger.info("Undeploy stack for datacenter: " + pop.getPopName() + " Stack name: " + stackName);
+                    undeployStack(removedStackPop, serviceStackName);
+                    logger.info("Undeploy stack for datacenter: " + removedStackPop.getPopName() + " Stack name: " + serviceStackName);
                 } catch (Exception e) {
-                    logger.info("Stack undeployment failed for datacenter: " + pop.getPopName() + " Stack name: " + stackName);
+                    logger.info("Stack undeployment failed for datacenter: " + removedStackPop.getPopName() + " Stack name: " + serviceStackName);
                     logger.error(e);
                     e.printStackTrace();
                 }
@@ -694,14 +696,13 @@ public class DeploymentManager implements Runnable {
             for (int i = 0; i < allPops.size(); i++) {
                 PopResource pop = allPops.get(i);
                 if (oldPops.contains(pop)) {
-                    String stackName = dcStackMap.get(pop);
                     HeatTemplate template = templates.get(i);
                     String templateStr = templateToJson(template);
                     try {
-                        updateStack(pop, stackName, templateStr);
-                        logger.debug("Update stack for datacenter: " + pop.getPopName() + " Stack name: " + stackName);
+                        updateStack(pop, serviceStackName, templateStr);
+                        logger.debug("Update stack for datacenter: " + pop.getPopName() + " Stack name: " + serviceStackName);
                     } catch (Exception e) {
-                        logger.info("Stack update failed for datacenter: " + pop.getPopName() + " Stack name: " + stackName);
+                        logger.info("Stack update failed for datacenter: " + pop.getPopName() + " Stack name: " + serviceStackName);
                         logger.error(e);
                         e.printStackTrace();
                     }
@@ -717,15 +718,14 @@ public class DeploymentManager implements Runnable {
             for (int i = 0; i < allPops.size(); i++) {
                 PopResource pop = allPops.get(i);
                 if (newPops.contains(pop)) {
-                    String stackName = dcStackMap.get(pop);
                     HeatTemplate template = templates.get(i);
                     String templateStr = templateToJson(template);
                     try {
-                        deployStack(pop, stackName, templateStr);
-                        logger.debug("Create stack for datacenter: " + pop.getPopName() + " Stack name: " + stackName);
+                        deployStack(pop, serviceStackName, templateStr);
+                        logger.debug("Create stack for datacenter: " + pop.getPopName() + " Stack name: " + serviceStackName);
 
                     } catch (Exception e) {
-                        logger.info("Stack deployment failed for datacenter: " + pop.getPopName() + " Stack name: " + stackName);
+                        logger.info("Stack deployment failed for datacenter: " + pop.getPopName() + " Stack name: " + serviceStackName);
                         logger.error(e);
                         e.printStackTrace();
 
@@ -869,7 +869,7 @@ public class DeploymentManager implements Runnable {
     }
 
     public static List<LinkChain> createLinkChainList(List<Pair<Pair<String, String>, Pair<String, String>>> chains,
-                                                      Map<PopResource, String> stackMap, Map<String, PopResource> popNodeMap) {
+                                                      Map<String, PopResource> popNodeMap) {
         List<LinkChain> linkChainList = new ArrayList<LinkChain>();
 
         for (Pair<Pair<String, String>, Pair<String, String>> c : chains) {
@@ -884,8 +884,8 @@ public class DeploymentManager implements Runnable {
             if (leftPop == null || rightPop == null)
                 continue;
 
-            String leftStack = stackMap.get(leftPop);
-            String rightStack = stackMap.get(rightPop);
+            String leftStack = serviceStackName;
+            String rightStack = serviceStackName;
 
             linkChainList.add(new LinkChain(leftPop, leftStack, left.getLeft(), left.getRight(),
                     rightPop, rightStack, right.getLeft(), right.getRight()));

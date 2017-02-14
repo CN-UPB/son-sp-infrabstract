@@ -7,19 +7,8 @@ import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
 import com.fasterxml.jackson.databind.module.SimpleModule;
-import org.apache.bcel.generic.POP;
-import org.apache.commons.collections.map.HashedMap;
 import org.apache.commons.lang3.tuple.Pair;
 import org.apache.log4j.Logger;
-import org.jaxen.Function;
-import org.openstack4j.api.Builders;
-import org.openstack4j.api.OSClient;
-import org.openstack4j.model.common.ActionResponse;
-import org.openstack4j.model.heat.Stack;
-import org.openstack4j.model.heat.StackUpdate;
-import org.openstack4j.model.heat.builder.StackUpdateBuilder;
-import org.openstack4j.openstack.OSFactory;
-import org.openstack4j.openstack.heat.domain.HeatStackUpdate;
 import sonata.kernel.VimAdaptor.commons.DeployServiceData;
 import sonata.kernel.VimAdaptor.commons.heat.HeatResource;
 import sonata.kernel.VimAdaptor.commons.heat.HeatTemplate;
@@ -30,12 +19,10 @@ import sonata.kernel.placement.config.PopResource;
 import sonata.kernel.placement.monitor.FunctionMonitor;
 import sonata.kernel.placement.monitor.MonitorManager;
 import sonata.kernel.placement.net.*;
-import sonata.kernel.placement.monitor.MonitorStats;
 import sonata.kernel.placement.net.LinkChain;
 import sonata.kernel.placement.net.TranslatorChain;
 import sonata.kernel.placement.net.TranslatorLoadbalancer.FloatingNode;
 import sonata.kernel.placement.service.*;
-
 import java.text.SimpleDateFormat;
 import java.util.*;
 
@@ -47,20 +34,42 @@ public class DeploymentManager implements Runnable {
 
     final static Logger logger = Logger.getLogger(DeploymentManager.class);
 
+    /**
+     * Minimal time to wait between datacenter network in milliseconds.
+     */
     static int defaultNetworkWaitMs = 1000;
-
+    /**
+     * Chaining rules currently in place.
+     */
+    static List<LinkChain> currentChaining = new ArrayList<LinkChain>();
+    /**
+     * Loadbalance rules currently in place.
+     */
+    static Map<LinkPort, LinkLoadbalance> currentLoadbalanceMap = new HashMap<LinkPort, LinkLoadbalance>();
+    /**
+     * Details about the current service instance.
+     */
+    static ServiceInstance currentInstance;
+    /**
+     * Descriptors used to instantiate current service.
+     */
+    static DeployServiceData currentDeployData;
     /**
      * List of datacenters currently in use.
      * For each of this datacenters a stack is deployed.
      */
-    static List<PopResource> currentDatacenterList = new ArrayList<PopResource>();
-    static List<LinkChain> currentChaining = new ArrayList<LinkChain>();
-    static Map<LinkPort, LinkLoadbalance> currentLoadbalanceMap = new HashMap<LinkPort, LinkLoadbalance>();
-    static ServiceInstance currentInstance;
-    static DeployServiceData currentDeployData;
     static List<PopResource> currentPops;
+    /**
+     * List of currently deployed servers.
+     */
     static List<String> currentNodes;
+    /**
+     * Loadbalancer rule to connect the service with an ip that is accessable from the emulator host.
+     */
     static FloatingNode inputFloatingNode = null;
+    /**
+     * List of vnf, port name pairs that are currently connected to the floating node.
+     */
     static List<Pair<String,String>> currentFloatingPorts = new ArrayList<Pair<String,String>>();
     /**
      * Name for all stacks that belong to this service.
@@ -72,6 +81,10 @@ public class DeploymentManager implements Runnable {
      */
     static MonitorMessage.SCALE_TYPE nextScale = null;
 
+    /**
+     * Main loop that receives control messages out of the @MessageQueue.
+     * The loop can only be stopped by sending a terminate message.
+     */
     public void run() {
         while (true) {
 
@@ -109,6 +122,15 @@ public class DeploymentManager implements Runnable {
         }
     }
 
+    /**
+     * Processes a deploy message by
+     *  - Starting the @PlacementPlugin and call initialScaling
+     *  - Creating Heat templates
+     *  - Detecting necessary datacenter operations
+     *  - Deploying the service and calling necessary datacenter
+     *  - Starting monitoring
+     * @param message Message containing the index of the service to deploy.
+     */
     public static void deploy(MessageQueue.MessageQueueDeployData message) {
 
         try {
@@ -162,8 +184,6 @@ public class DeploymentManager implements Runnable {
                     continue;
                 usedPops.add(pop);
 
-                currentDatacenterList.add(pop);
-
                 for (String nodeName : getServerListFromHeatTemplate(template)) {
                     // Populate maps and lists
                     popNodeMap.put(nodeName, pop);
@@ -187,7 +207,7 @@ public class DeploymentManager implements Runnable {
                     String templateStr = templateToJson(template);
                     lastStack = i;
                     try {
-                        deployStack(pop, serviceStackName, templateStr);
+                        TranslatorHeat.deployStack(pop, serviceStackName, templateStr);
                     } catch (Exception e) {
                         logger.info("Stack deployment failed for datacenter: " + pop.getPopName() + " Stack name: " + serviceStackName);
                         logger.error(e);
@@ -208,7 +228,7 @@ public class DeploymentManager implements Runnable {
                     if (usedPops.contains(pop)) {
                         lastStack--;
                         try {
-                            undeployStack(pop, serviceStackName);
+                            TranslatorHeat.undeployStack(pop, serviceStackName);
                         } catch (Exception e) {
                             logger.info("Stack undeployment failed for datacenter: " + pop.getPopName() + " Stack name: " + serviceStackName);
                             logger.error(e);
@@ -324,33 +344,14 @@ public class DeploymentManager implements Runnable {
         }
     }
 
-    public static void deployStack(PopResource pop, String stackName, String templateJsonString) {
-        OSClient.OSClientV2 os = OSFactory.builderV2()
-                .endpoint(pop.getEndpoint())
-                .credentials(pop.getUserName(), pop.getPassword())
-                .tenantName(pop.getTenantName())
-                .authenticate();
-
-        Stack stack = os.heat().stacks().create(Builders.stack()
-                .name(stackName)
-                .template(templateJsonString)
-                .timeoutMins(5L).build());
-    }
-
-    public static void updateStack(PopResource pop, String stackName, String templateJsonString) {
-        OSClient.OSClientV2 os = OSFactory.builderV2()
-                .endpoint(pop.getEndpoint())
-                .credentials(pop.getUserName(), pop.getPassword())
-                .tenantName(pop.getTenantName())
-                .authenticate();
-
-        // First get stack id
-        Stack stack = os.heat().stacks().getStackByName(stackName);
-        // Send updated template
-        ActionResponse x = os.heat().stacks().update(stackName, stack.getId(),
-                Builders.stackUpdate().template(templateJsonString).timeoutMins(5L).build());
-    }
-
+    /**
+     * Processes an undeploy message by
+     *  - Rewinding all network operations
+     *  - Undeploy all stacks
+     *  - Stopping monitoring
+     *  - Cleaning up all of the service objects
+     * @param message Message that represents the Undeploying command.
+     */
     public static void undeploy(MessageQueue.MessageQueueUnDeployData message) {
 
         try {
@@ -399,7 +400,7 @@ public class DeploymentManager implements Runnable {
                 // Undeploy stacks
                 for (PopResource pop : currentPops) {
                     try {
-                        undeployStack(pop, serviceStackName);
+                        TranslatorHeat.undeployStack(pop, serviceStackName);
                         logger.info("Removed stack "+serviceStackName);
                     } catch (Exception e) {
                         logger.error(e);
@@ -429,18 +430,30 @@ public class DeploymentManager implements Runnable {
         }
     }
 
+    /**
+     * Removes all objects created for the deployed service.
+     */
     protected static void cleanup() {
         currentInstance = null;
         currentDeployData = null;
         currentPops = null;
         currentNodes = null;
         currentLoadbalanceMap.clear();
-        currentDatacenterList.clear();
         currentFloatingPorts.clear();
         inputFloatingNode = null;
         serviceStackName = null;
     }
 
+    /**
+     * Processes an update message by
+     *  - Passing the monitoring data or fake scale command to the @PlacementPlugin
+     *  If an update is necessary it
+     *  - Detects the necessary changes
+     *  - Rewinds old operations and undeploys unnecessary stacks
+     *  - Deploys new stacks and executes new network operations
+     *  - Updates monitoring
+     * @param message Message that contains monitoring data or a fake scale command.
+     */
     public static void monitor(MessageQueue.MessageQueueMonitorData message) {
 
         try {
@@ -519,7 +532,6 @@ public class DeploymentManager implements Runnable {
                 if (!usedPops.contains(oldPop)) {
                     removedPops.add(oldPop);
                     removedStacks.add(oldPop);
-                    currentDatacenterList.remove(oldPop);
                 }
             }
 
@@ -534,7 +546,6 @@ public class DeploymentManager implements Runnable {
                 if (template == null)
                     continue;
 
-                currentDatacenterList.add(pop);
                 for (String nodeName : getServerListFromHeatTemplate(template)) {
                     assert !popNodeMap.containsKey(nodeName) : "Vnf name " + nodeName + " is not unique! This should have never happened!";
                     popNodeMap.put(nodeName, pop);
@@ -667,7 +678,7 @@ public class DeploymentManager implements Runnable {
             // Undeploy removed stacks
             for (PopResource removedStackPop : removedStacks) {
                 try {
-                    undeployStack(removedStackPop, serviceStackName);
+                    TranslatorHeat.undeployStack(removedStackPop, serviceStackName);
                     logger.info("Undeploy stack for datacenter: " + removedStackPop.getPopName() + " Stack name: " + serviceStackName);
                 } catch (Exception e) {
                     logger.info("Stack undeployment failed for datacenter: " + removedStackPop.getPopName() + " Stack name: " + serviceStackName);
@@ -699,7 +710,7 @@ public class DeploymentManager implements Runnable {
                     HeatTemplate template = templates.get(i);
                     String templateStr = templateToJson(template);
                     try {
-                        updateStack(pop, serviceStackName, templateStr);
+                        TranslatorHeat.updateStack(pop, serviceStackName, templateStr);
                         logger.debug("Update stack for datacenter: " + pop.getPopName() + " Stack name: " + serviceStackName);
                     } catch (Exception e) {
                         logger.info("Stack update failed for datacenter: " + pop.getPopName() + " Stack name: " + serviceStackName);
@@ -721,7 +732,7 @@ public class DeploymentManager implements Runnable {
                     HeatTemplate template = templates.get(i);
                     String templateStr = templateToJson(template);
                     try {
-                        deployStack(pop, serviceStackName, templateStr);
+                        TranslatorHeat.deployStack(pop, serviceStackName, templateStr);
                         logger.debug("Create stack for datacenter: " + pop.getPopName() + " Stack name: " + serviceStackName);
 
                     } catch (Exception e) {
@@ -798,6 +809,23 @@ public class DeploymentManager implements Runnable {
         }
     }
 
+    /**
+     * Merges single chaining rules to loadbalancing rules or replaces unnecessary loadbalancing rules with chaining rules.
+     *
+     * It behaves as follows:
+     *  - Port to port chaining rules where the ports are involved in only this rule stay as they are.
+     *  - Chaining rules where one port is the destination of several other ports stay as they are.
+     *    The emulator chaining manages this kind of aggregation.
+     *  - Chaining rules where one port is connected to several destination ports are replaced with loadbalancing rules.
+     *  - Loadbalancing rules with only two involved ports are replaced with one chaining rule respectively.
+     *  (A list of loadbalancing rules that should be deleted is not necessary since the update method removes all
+     *  loadbalancing rules before executing the updated rules.)
+     *
+     * @param lbMap Map mapping Ports to Loadbalancing rules that contain the port as source port.
+     * @param currentChains List of currently deployed chaining rules.
+     * @param createChains List of chaining rules that should be created.
+     * @param deleteChains List of chaining rules that should be deleted.
+     */
     public static void createLinkLoadbalanceMap(Map<LinkPort, LinkLoadbalance> lbMap, List<LinkChain> currentChains,
                 List<LinkChain> createChains, List<LinkChain> deleteChains) {
         // Add current Chains (if not already persistent)
@@ -868,6 +896,12 @@ public class DeploymentManager implements Runnable {
         }
     }
 
+    /**
+     * Utility method that converts Pairs of vnf,port names to LinkChain objects.
+     * @param chains List of Pairs of vnf,port names that represent chains.
+     * @param popNodeMap Map mapping vnf names to datacenters that contain the vnf.
+     * @return The List of Chaining rules created from the Chaining Pairs.
+     */
     public static List<LinkChain> createLinkChainList(List<Pair<Pair<String, String>, Pair<String, String>>> chains,
                                                       Map<String, PopResource> popNodeMap) {
         List<LinkChain> linkChainList = new ArrayList<LinkChain>();
@@ -893,6 +927,11 @@ public class DeploymentManager implements Runnable {
         return linkChainList;
     }
 
+    /**
+     * Executes a list of chaining rules.
+     * If a chaining rule contains a custom path the Custom Chaining API will be used.
+     * @param chains List of chaining rules.
+     */
     public static void chain(List<LinkChain> chains) {
         for (LinkChain chain : chains) {
             if (chain.path != null) {
@@ -910,6 +949,11 @@ public class DeploymentManager implements Runnable {
         }
     }
 
+    /**
+     * Deletes a list of chaining rules from the respective datacenters.
+     * Custom chaining rules are deleted using the same API.
+     * @param chains List chaining rules to be deleted.
+     */
     public static void unchain(List<LinkChain> chains) {
         for (LinkChain chain : chains) {
             TranslatorChain.unchain(chain);
@@ -921,6 +965,10 @@ public class DeploymentManager implements Runnable {
             currentChaining.clear();
     }
 
+    /**
+     * Executes a list of loadbalancing rules.
+     * @param balances List of loadbalancing rules
+     */
     public static void loadbalance(Collection<LinkLoadbalance> balances) {
         for (LinkLoadbalance balance : balances) {
             // No loadbalancing for only
@@ -930,35 +978,29 @@ public class DeploymentManager implements Runnable {
         }
     }
 
+    /**
+     * Deletes a list of loadbalancing rules.
+     * @param balances List of loadbalancing rules to be deleted
+     */
     public static void unloadbalance(Collection<LinkLoadbalance> balances) {
         for (LinkLoadbalance balance : balances)
             TranslatorLoadbalancer.unloadbalance(balance.srcPort);
     }
 
+    /**
+     * Undeploys the current service and shuts down monitoring
+     * in case of application end.
+     */
     public static void tearDown() {
         undeploy(null);
         MonitorManager.closeConnectionPool();
     }
 
-    public static void undeployStack(PopResource pop, String stackName) {
-        OSClient.OSClientV2 os = OSFactory.builderV2()
-                .endpoint(pop.getEndpoint())
-                .credentials(pop.getUserName(), pop.getPassword())
-                .tenantName(pop.getTenantName())
-                .authenticate();
-
-        // Get all stacks from datacenter
-        List<? extends Stack> stackList = os.heat().stacks().list();
-
-        // Find correct stack
-        for (Stack stack : stackList) {
-            if (stack.getName().equals(stackName))
-                os.heat().stacks().delete(stack.getName(), stack.getId());
-        }
-    }
-
     // Utility
-
+    /**
+     * Sleeps for given amount of milliseconds to wait inbetween of network operations.
+     * @param msSleep amount of time to sleep in milliseconds
+     */
     public static void networkWait(int msSleep){
         try {
             Thread.sleep(msSleep);
@@ -967,6 +1009,11 @@ public class DeploymentManager implements Runnable {
         }
     }
 
+    /**
+     * Extracts the list of servers from a HeatTemplate.
+     * @param template A HeatTemplate
+     * @return The list of servers defined in the given HeatTemplate
+     */
     public static List<String> getServerListFromHeatTemplate(HeatTemplate template) {
 
         List<String> popNodes = new ArrayList<String>();
@@ -997,10 +1044,13 @@ public class DeploymentManager implements Runnable {
         module.addDeserializer(Unit.class, new UnitDeserializer());
         mapper.registerModule(module);
         mapper.enable(DeserializationFeature.READ_ENUMS_USING_TO_STRING);
-
-        inputFloatingNode = null;
     }
 
+    /**
+     * Maps a HeatTemplate to a JSON String.
+     * @param template The HeatTemplate to be mapped
+     * @return A JSON String representing the given HeatTemplate
+     */
     public static String templateToJson(HeatTemplate template) {
         try {
             return mapper.writeValueAsString(template);

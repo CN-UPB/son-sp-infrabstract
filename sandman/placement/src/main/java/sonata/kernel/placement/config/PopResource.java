@@ -2,18 +2,57 @@ package sonata.kernel.placement.config;
 
 import java.util.ArrayList;
 
+/**
+ * Details about datacenter configuration
+ */
 public class PopResource {
 
+    /**
+     * Name of the datacenter.
+     * Must be identical to the datacenter name in the emulator.
+     */
     String popName;
+    /**
+     * HTTP-URL to the Keystone endpoint of the datacenter
+     * Example:
+     * "http://127.0.0.1:5001/v2.0"
+     */
     String endpoint;
+    /**
+     * HTTP-URL to the Chaining endpoint of the datacenter
+     * Example:
+     * "http://127.0.0.1:4000/"
+     */
     String chainingEndpoint;
+    /**
+     * HTTP-URL to the Monitoring endpoint of the datacenter
+     * "http://127.0.0.1:3000/"
+     */
     String monitoringEndpoint;
+    /**
+     * Tenant id for the datacenter
+     */
     String tenantName;
+    /**
+     * User id for the datacenter
+     */
     String userName;
+    /**
+     * Password for the datacenter
+     */
     String password;
-
+    /**
+     * List of node sets
+     */
     ArrayList<NodeResource> nodes;
+    /**
+     * List of network resources
+     * Unused since network configuration is solely assigned by the emulator
+     */
     ArrayList<NetworkResource> networks;
+    /**
+     * Details about the resources served by the datacenter
+     */
     SystemResource resource;
 
     public SystemResource getResource() {

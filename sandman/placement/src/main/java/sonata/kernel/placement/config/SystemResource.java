@@ -1,10 +1,21 @@
 package sonata.kernel.placement.config;
 
-
+/**
+ * Resources served by a datacenter
+ */
 public class SystemResource {
 
+    /**
+     * Number of cpus
+     */
     public int cpu;
+    /**
+     * Amount of memory in GB
+     */
     public double memory;
+    /**
+     * Amount of storage in GB
+     */
     public double storage;
 
     public int getCpu() {

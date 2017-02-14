@@ -1,10 +1,18 @@
 package sonata.kernel.placement.config;
 
-import java.util.ArrayList;
-
+/**
+ * Configuration details about the REST interface served.
+ */
 public class RestInterface {
 
+    /**
+     * Interface ip the REST server should listen to.
+     * Use "0.0.0.0" to listen to all interface ips.
+     */
     String serverIp;
+    /**
+     * Port the REST server should listen to.
+     */
     int port;
 
     public String getServerIp() {

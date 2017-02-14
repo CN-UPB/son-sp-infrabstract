@@ -12,8 +12,6 @@ import sonata.kernel.VimAdaptor.commons.nsd.ServiceDescriptor;
 import sonata.kernel.VimAdaptor.commons.vnfd.Unit;
 import sonata.kernel.VimAdaptor.commons.vnfd.UnitDeserializer;
 import sonata.kernel.VimAdaptor.commons.vnfd.VnfDescriptor;
-import sonata.kernel.placement.pd.PackageContentObject;
-import sonata.kernel.placement.pd.PackageDescriptor;
 
 import java.io.*;
 import java.math.BigInteger;
@@ -28,12 +26,24 @@ import java.util.zip.ZipEntry;
 import java.util.zip.ZipInputStream;
 
 import org.apache.log4j.Logger;
-import sonata.kernel.placement.pd.SonataPackage;
 
-public final class PackageLoader {
+/**
+ * Utility functions to extract a Sonata package
+ */
+public class PackageLoader {
+
 	final static Logger logger = Logger.getLogger(PackageLoader.class);
+    /**
+     * Path to save debug files from extracted Sonata packages to.
+     */
     public final static String basedir = Paths.get(System.getProperty("java.io.tmpdir"), "placementtmp").toString();
 
+    /**
+     * Extracts a Sonata package and saves contents to disk.
+     * @param data Sonata package as byte[]
+     * @return Path to the directory containing the extracted package
+     * @throws IOException
+     */
     public static String processZipFile(byte[] data) throws IOException {
     	logger.debug("Processing ZIP file");
         // Create destination paths
@@ -80,6 +90,11 @@ public final class PackageLoader {
         return currentDir;
     }
 
+    /**
+     * Loads a Sonata package from disk and extracts it.
+     * @param packagePath Path to the Sonata package
+     * @return Contents of the Sonata package
+     */
     public static DeployServiceData loadPackageFromDisk(String packagePath) {
     	logger.debug("Loading package from disk");
         File packageFile = new File(packagePath);
@@ -108,6 +123,11 @@ public final class PackageLoader {
         return null;
     }
 
+    /**
+     * Loads a Sonata package from disk and extracts it.
+     * @param packagePath Path to the Sonata package
+     * @return Contents of the Sonata package
+     */
     public static SonataPackage loadSonataPackageFromDisk(String packagePath) {
         logger.debug("Loading sonata package from disk");
         File packageFile = new File(packagePath);
@@ -122,7 +142,6 @@ public final class PackageLoader {
 
             SonataPackage pack = zipByteArrayToSonataPackage(data);
 
-
             return pack;
 
         } catch (IOException e) {
@@ -132,6 +151,11 @@ public final class PackageLoader {
         return null;
     }
 
+    /**
+     * Extracts Sonata package from a byte[]
+     * @param data Sonata package as byte[]
+     * @return Sonata package object
+     */
     public static SonataPackage zipByteArrayToSonataPackage(byte[] data){
 
         List<byte[]> servicesDataList = new ArrayList<byte[]>();
@@ -175,6 +199,12 @@ public final class PackageLoader {
         return pack;
     }
 
+    /**
+     * Maps a byte[] to a ServiceDescriptor object
+     * @param data ServiceDescriptor as byte[]
+     * @return ServiceDescriptor object
+     * @throws Exception
+     */
     public static ServiceDescriptor byteArrayToServiceDescriptor(byte[] data) throws Exception {
         ObjectMapper mapper = new ObjectMapper(new YAMLFactory());
         SimpleModule module = new SimpleModule();
@@ -199,6 +229,11 @@ public final class PackageLoader {
         return sd;
     }
 
+    /**
+     * Reads in a file and maps it to a VnfDescriptor
+     * @param vnfFile File referencing a VnfDescriptor
+     * @return
+     */
     public static VnfDescriptor fileToVnfDescriptor(File vnfFile){
         try {
             return byteArrayToVnfDescriptor(IOUtils.toByteArray(new FileInputStream(vnfFile)));
@@ -208,6 +243,12 @@ public final class PackageLoader {
         }
     }
 
+    /**
+     * Maps a byte[] to a VnfDescriptor
+     * @param data VnfDescriptor as byte[]
+     * @return
+     * @throws Exception
+     */
     public static VnfDescriptor byteArrayToVnfDescriptor(byte[] data) throws Exception {
     	logger.debug("Byte array to VNF descriptor");
         ObjectMapper mapper = new ObjectMapper(new YAMLFactory());
@@ -230,6 +271,14 @@ public final class PackageLoader {
         return vnfd;
     }
 
+    /**
+     * Extracts a Sonata package to binary Service and Vnf descriptors
+     * @param data Sonata package as byte[]
+     * @param services List for binary Service descriptors to be filled
+     * @param functions List for binary Vnf descriptors to be filled
+     * @return Contents of the Sonata package mapped to an PackageDescriptor object
+     * @throws IOException
+     */
     public static PackageDescriptor processZipFileData(byte[] data, List<byte[]> services, List<byte[]> functions) throws IOException {
     	
     	logger.debug("Processing zip file data");
@@ -356,6 +405,13 @@ public final class PackageLoader {
         return pd;
     }
 
+    /**
+     * Turns a ZipEntry to a byte[]
+     * @param zipstream Contains the file
+     * @param ze Describes the file entry
+     * @return The zipped file as byt[]
+     * @throws IOException
+     */
     public static byte[] readFile(ZipInputStream zipstream, ZipEntry ze) throws IOException {
         long size = ze.getSize();
         ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
@@ -368,5 +424,4 @@ public final class PackageLoader {
         }
         return outputStream.toByteArray();
     }
-
 }

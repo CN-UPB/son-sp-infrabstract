@@ -285,7 +285,7 @@ class RestInterfaceServerApi extends NanoHTTPD implements Runnable {
     public static byte[] stripMultiPartFormDataHeader(IHTTPSession session, byte[] buffer) {
         // Check if POST request contains multipart/form-data
         if (session.getMethod().compareTo(Method.POST) == 0 && session.getHeaders().containsKey("content-type") &&
-                (session.getHeaders().get("content-type").startsWith("multipart/form-data") || session.getHeaders().get("content-type").startsWith("application/zip"))) {
+                (session.getHeaders().get("content-type").startsWith("multipart/form-data"))) {
 
             // Assume UTF-8 encoding
             CharsetDecoder dec = Charset.forName("UTF-8").newDecoder();

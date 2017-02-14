@@ -1,29 +1,43 @@
-package sonata.kernel.placement;
+package sonata.kernel.placement.config;
 
-
-import com.fasterxml.jackson.core.JsonParseException;
 import com.fasterxml.jackson.databind.DeserializationFeature;
-import com.fasterxml.jackson.databind.JsonMappingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.module.SimpleModule;
 import com.fasterxml.jackson.dataformat.yaml.YAMLFactory;
-import sonata.kernel.VimAdaptor.commons.nsd.ServiceDescriptor;
-import sonata.kernel.placement.config.PlacementConfig;
-
 import java.io.*;
 import java.nio.charset.Charset;
 import java.nio.file.Paths;
-
 import org.apache.log4j.Logger;
 
+/**
+ * Finds, loads and stores the translator configuration file.
+ */
 public final class PlacementConfigLoader {
+
 	final static Logger logger = Logger.getLogger(PlacementConfigLoader.class);
+
+    /**
+     * Default name of the configuration file
+     */
     public final static String CONFIG_FILENAME = "placementd.yml";
 
+    /**
+     * Paths where to search for the configuration file.
+     * Paths are checked in the order of definition inside the array.
+     */
     public final static String[] CONFIG_FOLDERS = new String[]{"config","defaultConfig"};
 
+    /**
+     * Instance of the configuration object.
+     */
     private static PlacementConfig config = null;
 
+    /**
+     * Loads, stores and returns the configuration file.
+     * If the configuration file aready exists, simply returns it.
+     * If no suitable file is found, a default object is created and returned.
+     * @return translator configuration file
+     */
     public static PlacementConfig loadPlacementConfig(){
 
         if(config!=null)
@@ -50,6 +64,11 @@ public final class PlacementConfigLoader {
         return config;
     }
 
+    /**
+     * Reads a file and uses the YAML mapper to create a @PlacementConfig object.
+     * @param configFile File to read in
+     * @return null if the file does not exist or the mapping fails, else the mapped configuration object
+     */
     public static PlacementConfig mapConfigFile(File configFile) {
     	logger.info("Map config file");
         PlacementConfig config = null;
@@ -77,6 +96,10 @@ public final class PlacementConfigLoader {
         return config;
     }
 
+    /**
+     * Creates a very empty configuration object.
+     * @return a very empty configuration object
+     */
     public static PlacementConfig createDefaultConfig(){
     	logger.info("Create Default Config");
         PlacementConfig config = new PlacementConfig();

@@ -1,7 +1,7 @@
 package sonata.kernel.placement.service;
 
 import org.apache.log4j.Logger;
-import sonata.kernel.placement.PlacementConfigLoader;
+import sonata.kernel.placement.config.PlacementConfigLoader;
 import sonata.kernel.placement.config.PerformanceThreshold;
 import sonata.kernel.placement.config.PlacementConfig;
 import sonata.kernel.placement.monitor.MonitorHistory;

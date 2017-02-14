@@ -12,7 +12,7 @@ import org.apache.http.impl.nio.client.CloseableHttpAsyncClient;
 import org.apache.log4j.Logger;
 import sonata.kernel.VimAdaptor.commons.vnfd.Unit;
 import sonata.kernel.VimAdaptor.commons.vnfd.UnitDeserializer;
-import sonata.kernel.placement.PlacementConfigLoader;
+import sonata.kernel.placement.config.PlacementConfigLoader;
 import sonata.kernel.placement.config.PopResource;
 import sonata.kernel.placement.service.FunctionInstance;
 import java.io.IOException;

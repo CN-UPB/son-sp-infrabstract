@@ -12,6 +12,7 @@ import fi.iki.elonen.NanoHTTPD;
 import org.apache.log4j.Logger;
 import sonata.kernel.VimAdaptor.commons.vnfd.Unit;
 import sonata.kernel.VimAdaptor.commons.vnfd.UnitDeserializer;
+import sonata.kernel.placement.config.PlacementConfigLoader;
 import sonata.kernel.placement.monitor.FunctionMonitor;
 import sonata.kernel.placement.monitor.MonitorManager;
 import sonata.kernel.placement.monitor.MonitorStats;
@@ -171,7 +172,7 @@ public class MiniStatusServer {
                 graph.put("forwardGraphs",serviceInstance.service.getForwardingGraphs());
                 statusObj.put("graph",graph);
 
-                statusObj.put("thresholds",PlacementConfigLoader.loadPlacementConfig().getThreshold());
+                statusObj.put("thresholds", PlacementConfigLoader.loadPlacementConfig().getThreshold());
 
                 statusObj.put("functions", instanceMap);
                 statusObj.put("monitorHistoryData", monitorData.statsHistoryMap);

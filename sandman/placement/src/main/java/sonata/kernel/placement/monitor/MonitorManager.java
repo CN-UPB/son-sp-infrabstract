@@ -9,7 +9,7 @@ import org.apache.http.nio.reactor.ConnectingIOReactor;
 import org.apache.http.nio.reactor.IOReactorException;
 import org.apache.log4j.Logger;
 import sonata.kernel.placement.MessageQueue;
-import sonata.kernel.placement.PlacementConfigLoader;
+import sonata.kernel.placement.config.PlacementConfigLoader;
 
 import java.io.IOException;
 import java.util.ArrayList;

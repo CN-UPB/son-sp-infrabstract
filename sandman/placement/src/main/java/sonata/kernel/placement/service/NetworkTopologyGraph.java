@@ -2,7 +2,7 @@ package sonata.kernel.placement.service;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 import org.apache.log4j.Logger;
-import sonata.kernel.placement.PlacementConfigLoader;
+import sonata.kernel.placement.config.PlacementConfigLoader;
 import sonata.kernel.placement.config.PlacementConfig;
 import sonata.kernel.placement.config.PopResource;
 import sonata.kernel.placement.net.TranslatorTopo;

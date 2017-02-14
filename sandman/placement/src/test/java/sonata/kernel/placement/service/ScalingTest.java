@@ -14,7 +14,7 @@ import sonata.kernel.VimAdaptor.commons.vnfd.Unit;
 import sonata.kernel.VimAdaptor.commons.vnfd.UnitDeserializer;
 import sonata.kernel.placement.DatacenterManager;
 import sonata.kernel.placement.HeatStackCreate;
-import sonata.kernel.placement.PackageLoader;
+import sonata.kernel.placement.pd.PackageLoader;
 import sonata.kernel.placement.config.PlacementConfigLoader;
 import sonata.kernel.placement.config.PerformanceThreshold;
 import sonata.kernel.placement.config.PlacementConfig;

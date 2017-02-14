@@ -17,10 +17,7 @@ import sonata.kernel.VimAdaptor.commons.vnfd.UnitDeserializer;
 import sonata.kernel.VimAdaptor.commons.vnfd.VnfDescriptor;
 import sonata.kernel.placement.config.PlacementConfig;
 import sonata.kernel.placement.config.PlacementConfigLoader;
-import sonata.kernel.placement.pd.PackageContentObject;
-import sonata.kernel.placement.pd.PackageDescriptor;
-import sonata.kernel.placement.pd.SonataPackage;
-import sonata.kernel.placement.pd.Validation;
+import sonata.kernel.placement.pd.*;
 
 import java.io.File;
 import java.io.FilenameFilter;

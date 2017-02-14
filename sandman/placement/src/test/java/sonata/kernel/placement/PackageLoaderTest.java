@@ -3,6 +3,7 @@ package sonata.kernel.placement;
 import org.junit.Assert;
 import org.junit.Test;
 import sonata.kernel.VimAdaptor.commons.DeployServiceData;
+import sonata.kernel.placement.pd.PackageLoader;
 
 import java.nio.file.Paths;
 

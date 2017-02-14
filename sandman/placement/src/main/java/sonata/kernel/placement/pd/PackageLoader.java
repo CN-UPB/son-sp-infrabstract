@@ -1,4 +1,4 @@
-package sonata.kernel.placement;
+package sonata.kernel.placement.pd;
 
 import com.fasterxml.jackson.core.JsonParseException;
 import com.fasterxml.jackson.databind.DeserializationFeature;

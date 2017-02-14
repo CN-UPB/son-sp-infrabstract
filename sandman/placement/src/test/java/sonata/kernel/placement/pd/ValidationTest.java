@@ -2,7 +2,7 @@ package sonata.kernel.placement.pd;
 
 import org.junit.Test;
 import sonata.kernel.VimAdaptor.commons.DeployServiceData;
-import sonata.kernel.placement.PackageLoader;
+import sonata.kernel.placement.pd.PackageLoader;
 
 import java.nio.file.Paths;
 

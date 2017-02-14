@@ -32,6 +32,7 @@ import sonata.kernel.VimAdaptor.commons.nsd.ServiceDescriptor;
 import sonata.kernel.VimAdaptor.commons.vnfd.Unit;
 import sonata.kernel.VimAdaptor.commons.vnfd.UnitDeserializer;
 import sonata.kernel.placement.monitor.MonitorManager;
+import sonata.kernel.placement.pd.PackageLoader;
 import sonata.kernel.placement.pd.SonataPackage;
 import sonata.kernel.placement.service.MonitorMessage;
 

@@ -7,7 +7,6 @@ import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
 import com.fasterxml.jackson.databind.module.SimpleModule;
-//import com.sun.xml.internal.ws.api.wsdl.parser.ServiceDescriptor;
 
 import org.apache.log4j.Logger;
 import sonata.kernel.VimAdaptor.commons.DeployServiceData;
@@ -24,20 +23,42 @@ import java.io.FilenameFilter;
 import java.nio.file.Paths;
 import java.util.*;
 
+/**
+ * Manages a list of the received packages
+ */
 public class Catalogue {
 
     final static Logger logger = Logger.getLogger(Catalogue.class);
 
+    /**
+     * List of received packages
+     * Index in this list can be used to deploy a package.
+     */
     static public List<SonataPackage> packages = new ArrayList<SonataPackage>();
 
-    // Maps Vnf name to VnfDescriptor
+    /**
+     * Maps Vnf name to VnfDescriptor
+     */
     static public Map<String,VnfDescriptor> functions = new HashMap<String,VnfDescriptor>();
 
+    /**
+     * Maps Vnf name to VnfDescriptor
+     * Map contains only "internal" functions
+     */
     static public Map<String,VnfDescriptor> internalFunctions = new HashMap<String,VnfDescriptor>();
 
+    /**
+     * Default search path for internal functions
+     */
     public final static String[] INTERNAL_VNF_FOLDERS = new String[]{Paths.get("defaultConfig","internal").toString()};
 
-    static public int addPackage(SonataPackage sPackage){
+    /**
+     * Add a package to the list.
+     * Packages with the same package descriptor name are replaced.
+     * @param sPackage New Sonata package
+     * @return The index of the new package
+     */
+    public static int addPackage(SonataPackage sPackage){
         // Validate package
         sPackage.validation.validate();
         sPackage.validation.fixCustomAssumptions();
@@ -67,8 +88,13 @@ public class Catalogue {
         logger.info("Added package: "+sPackage.descriptor.getName());
         return newIndex;
     }
-    
-    static public DeployServiceData getPackagetoDeploy(int index) {
+
+    /**
+     * Returns data to deploy a service.
+     * @param index Index of the service to deploy
+     * @return Data necessary for deployment
+     */
+    public static DeployServiceData getPackagetoDeploy(int index) {
     	DeployServiceData data = new DeployServiceData();
     	List<VnfDescriptor> vnf = packages.get(index).functions;
     	for (int i = 0; i < vnf.size(); i++) {
@@ -88,7 +114,12 @@ public class Catalogue {
     	return data;
     }
 
-    static public String getJsonPackageDescriptor(int index){
+    /**
+     * Returns a package descriptor as JSON String
+     * @param index Index of the package descriptor
+     * @return JSON String
+     */
+    public static String getJsonPackageDescriptor(int index){
         String jsonData = null;
         ObjectMapper mapper = getJsonMapper();
 
@@ -104,7 +135,11 @@ public class Catalogue {
         return jsonData;
     }
 
-    static public String getJsonPackageList(){
+    /**
+     * Returns a list of package descriptors as JSON String.
+     * @return JSON String
+     */
+    public static String getJsonPackageList(){
         String jsonList = null;
 
         List<PackageDescriptor> packageList = new ArrayList<PackageDescriptor>();
@@ -120,7 +155,12 @@ public class Catalogue {
 		
         return jsonList;
     }
-    static protected ObjectMapper getJsonMapper(){
+
+    /**
+     * Returns a mapper that maps an object to a JSON String.
+     * @return JSON mapper
+     */
+    protected static ObjectMapper getJsonMapper(){
         ObjectMapper mapper = new ObjectMapper(new JsonFactory());
         mapper.disable(SerializationFeature.WRITE_EMPTY_JSON_ARRAYS);
         mapper.enable(SerializationFeature.WRITE_ENUMS_USING_TO_STRING);
@@ -134,7 +174,12 @@ public class Catalogue {
         return mapper;
     }
 
-    static public void loadInternalFunctions(){
+    /**
+     * Loads internal functions from disk
+     * First the path from the configuration file is used.
+     * In case of failure the default search path is used.
+     */
+    public static void loadInternalFunctions(){
         logger.info("Load internal functions");
 
         List<String> internalFolders = new ArrayList<String>();

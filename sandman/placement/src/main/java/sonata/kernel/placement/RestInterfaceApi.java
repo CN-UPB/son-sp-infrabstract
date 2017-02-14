@@ -1,6 +1,5 @@
 package sonata.kernel.placement;
 
-//import com.sun.xml.internal.bind.v2.runtime.reflect.Lister;
 import fi.iki.elonen.NanoHTTPD;
 
 import java.io.IOException;
@@ -11,48 +10,55 @@ import java.nio.charset.Charset;
 import java.nio.charset.CharsetDecoder;
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.HashMap;
 import java.util.List;
 
-import org.apache.commons.io.IOUtils;
 import org.apache.log4j.Logger;
 import org.json.JSONArray;
 import org.json.JSONObject;
-import org.json.JSONWriter;
 
-import com.fasterxml.jackson.annotation.JsonInclude;
-import com.fasterxml.jackson.core.JsonFactory;
-import com.fasterxml.jackson.databind.DeserializationFeature;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.SerializationFeature;
-import com.fasterxml.jackson.databind.module.SimpleModule;
-import com.fasterxml.jackson.dataformat.yaml.YAMLFactory;
-
-import sonata.kernel.VimAdaptor.commons.nsd.ServiceDescriptor;
-import sonata.kernel.VimAdaptor.commons.vnfd.Unit;
-import sonata.kernel.VimAdaptor.commons.vnfd.UnitDeserializer;
-import sonata.kernel.placement.monitor.MonitorManager;
 import sonata.kernel.placement.pd.PackageLoader;
 import sonata.kernel.placement.pd.SonataPackage;
 import sonata.kernel.placement.service.MonitorMessage;
 
+/**
+ * Serves REST API.
+ * Implements a small subset of the Gatekeeper API to receive packages from the Editor.
+ * Also implements a few API calls to control the Translator and request status information.
+ */
 class RestInterfaceServerApi extends NanoHTTPD implements Runnable {
     final Logger logger = Logger.getLogger(RestInterfaceServerApi.class);
 
+    /**
+     * Create a REST Server on port 8080
+     */
     public RestInterfaceServerApi() {
         super(8080);
     }
 
+    /**
+     * Create a REST Server listening on given interface and port
+     * @param hostname interface to listen to
+     * @param port port to listen to
+     * @throws IOException
+     */
     public RestInterfaceServerApi(String hostname, int port) throws IOException {
         super(hostname, port);
         logger.info("Started RESTful server Hostname: "
                 + hostname + " Port: " + port);
     }
 
+    /**
+     * Starts the REST server and blocks.
+     * @throws IOException
+     */
     public void start_server() throws IOException {
         start(NanoHTTPD.SOCKET_READ_TIMEOUT, false);
     }
 
+    /**
+     * Server thread run method.
+     * Starts the REST server
+     */
     public void run() {
         try {
             start_server();
@@ -60,6 +66,12 @@ class RestInterfaceServerApi extends NanoHTTPD implements Runnable {
             logger.error("Failed to start server ",ioe);
         }
     }
+
+    /**
+     * Extracts a number from the given String
+     * @param str String to extract number from
+     * @return Extract number as String
+     */
     public static String extractNumber(String str) {                
 
         if(str == null || str.isEmpty()) return "";
@@ -79,12 +91,26 @@ class RestInterfaceServerApi extends NanoHTTPD implements Runnable {
         return sb.toString();
     }
 
+    /**
+     * Create responses for HTTP requests to this REST server.
+     * / - redirects to status frontend
+     * /status - served by MiniStatusServer
+     * /static - served by MiniStatusServer
+     * /api/v2/packages - POST - receives a package to add to Catalogue
+     * /api/v2/packages - GET - returns a list of packages in Catalogue as JSON array
+     * /undeploy - undeploys the currently deployed service
+     * /scaleout - triggers a fake scale out message
+     * /scalein - triggers a fake scale in message
+     * else - deploys a package with the given index
+     *
+     * @param session HTTP Request details
+     * @return HTTP Response
+     */
     @Override
     public Response serve(IHTTPSession session) {
         final Logger logger = Logger.getLogger(RestInterfaceServerApi.class);
         try {
             String uri = session.getUri();
-            String req_index = extractNumber(uri);
             String req_uri = uri;
 
             if(uri.equals("/")){
@@ -189,18 +215,8 @@ class RestInterfaceServerApi extends NanoHTTPD implements Runnable {
                 MessageQueue.MessageQueueMonitorData message = new MessageQueue.MessageQueueMonitorData(null);
                 message.fakeScaleType = MonitorMessage.SCALE_TYPE.SCALE_OUT;
                 MessageQueue.get_deploymentQ().put(message);
-                /*
-                synchronized(message) {
-                    message.wait(10000);
-                }
 
-                if(message.responseId == -1) {
-                    logger.debug("Undeployment timed out.");
-                    return newFixedLengthResponse(new Status(504, "Undeployment is pending"), null, null);
-                }
-                else
-                    return newFixedLengthResponse(new Status(message.responseId, message.responseMessage), null, null);
-                */
+                // do not wait for any response
                 return newFixedLengthResponse(new Status(200, "OK"), null, null);
             }
             else
@@ -210,18 +226,8 @@ class RestInterfaceServerApi extends NanoHTTPD implements Runnable {
                 MessageQueue.MessageQueueMonitorData message = new MessageQueue.MessageQueueMonitorData(null);
                 message.fakeScaleType = MonitorMessage.SCALE_TYPE.SCALE_IN;
                 MessageQueue.get_deploymentQ().put(message);
-                /*
-                synchronized(message) {
-                    message.wait(10000);
-                }
 
-                if(message.responseId == -1) {
-                    logger.debug("Undeployment timed out.");
-                    return newFixedLengthResponse(new Status(504, "Undeployment is pending"), null, null);
-                }
-                else
-                    return newFixedLengthResponse(new Status(message.responseId, message.responseMessage), null, null);
-                */
+                // do not wait for any response
                 return newFixedLengthResponse(new Status(200, "OK"), null, null);
             }
             else
@@ -273,16 +279,16 @@ class RestInterfaceServerApi extends NanoHTTPD implements Runnable {
 
         return newFixedLengthResponse(Response.Status.INTERNAL_ERROR, null, null);
     }
-    
-    public static ObjectMapper getJSONMapper(){
-    	ObjectMapper mapper = new ObjectMapper(new JsonFactory());
-        SimpleModule module = new SimpleModule();
-        module.addDeserializer(Unit.class, new UnitDeserializer());
-        mapper.registerModule(module);
-        mapper.enable(DeserializationFeature.READ_ENUMS_USING_TO_STRING);
-        return mapper;
-    }
 
+    /**
+     * Lazy method to get the multipart/form-data body.
+     * Assumes that the body contains only one part.
+     * Strips the first border and the header lines.
+     * Returns the rest.
+     * @param session HTTP Request details
+     * @param buffer HTTP Request Content Body
+     * @return multipart/form-data body with stripped first border and header lines
+     */
     public static byte[] stripMultiPartFormDataHeader(IHTTPSession session, byte[] buffer) {
         // Check if POST request contains multipart/form-data
         if (session.getMethod().compareTo(Method.POST) == 0 && session.getHeaders().containsKey("content-type") &&
@@ -325,6 +331,13 @@ class RestInterfaceServerApi extends NanoHTTPD implements Runnable {
             return buffer;
     }
 
+    /**
+     * Extracts parts from a multipart/form-data body.
+     * Uses boundary to extract header lines and body from the parts of a multipart/form-data body.
+     * @param session HTTP Request details
+     * @param buffer Request body
+     * @return List of multipart/form-data parts
+     */
     public static List<MultiPartFormDataPart> parseMultiPartFormData(IHTTPSession session, byte[] buffer){
         List<MultiPartFormDataPart> partList = new ArrayList<MultiPartFormDataPart>();
 
@@ -388,10 +401,11 @@ class RestInterfaceServerApi extends NanoHTTPD implements Runnable {
     }
 
     /**
+     * Splits multipart/form-data body into parts without boundaries.
      * https://tools.ietf.org/html/rfc2046#section-5.1
-     * @param boundaryStr
-     * @param data
-     * @return
+     * @param boundaryStr Boundary to search for
+     * @param data Request body
+     * @return List of multipart/form-data parts as byte[] containing header lines and binary body without boundaries
      */
     protected static List<byte[]> parseMultiPartFormDataBinaryPart(String boundaryStr, byte[] data){
         List<byte[]> parts = new ArrayList<byte[]>();
@@ -506,28 +520,59 @@ class RestInterfaceServerApi extends NanoHTTPD implements Runnable {
         return parts;
     }
 
+    /**
+     * Part of a multipart/form-data request body
+     */
     public static class MultiPartFormDataPart{
 
+        /**
+         * Header lines defined in this part
+         */
         public List<String> header = new ArrayList<String>();
+        /**
+         * Body data defined in this part
+         */
         public byte[] data = null;
     }
 
+    /**
+     * Allows for arbitrary HTTP Response Status
+     */
     public static class Status implements Response.IStatus {
 
+        /**
+         * HTTP Response Status Code
+         */
         private final int requestStatus;
 
+        /**
+         * HTTP Response Status Message
+         */
         private final String description;
 
+        /**
+         * Create a new HTTP Response Status
+         * @param requestStatus Status Code
+         * @param description Status Message
+         */
         public Status(int requestStatus, String description) {
             this.requestStatus = requestStatus;
             this.description = description;
         }
 
+        /**
+         * Returns informational String about this status
+         * @return
+         */
         @Override
         public String getDescription() {
             return "" + this.requestStatus + " " + this.description;
         }
 
+        /**
+         * Returns Status Code
+         * @return
+         */
         @Override
         public int getRequestStatus() {
             return this.requestStatus;

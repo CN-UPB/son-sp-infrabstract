@@ -1,9 +1,7 @@
 package sonata.kernel.placement.monitor;
 
-import com.google.common.collect.Lists;
 import org.apache.http.impl.nio.client.CloseableHttpAsyncClient;
 import org.apache.http.impl.nio.client.HttpAsyncClientBuilder;
-import org.apache.http.impl.nio.client.HttpAsyncClients;
 import org.apache.http.impl.nio.conn.PoolingNHttpClientConnectionManager;
 import org.apache.http.impl.nio.reactor.DefaultConnectingIOReactor;
 import org.apache.http.impl.nio.reactor.IOReactorConfig;
@@ -21,25 +19,61 @@ import java.util.Map;
 import java.util.concurrent.locks.Condition;
 import java.util.concurrent.locks.ReentrantLock;
 
+/**
+ * Manages the monitoring. In particular:
+ * - maintains a list of currently monitored vnfs as @FunctionMonitor objects
+ * - runs a thread that regularly requests for new monitoring data
+ * - sends messages with new monitoring data to the DeploymentManager
+ */
 public class MonitorManager implements Runnable {
 
     final static Logger logger = Logger.getLogger(MonitorManager.class);
 
-    public static List<FunctionMonitor> monitors = new ArrayList<FunctionMonitor>();
+    /**
+     * List of current FunctionMonitors
+     */
+    public final static List<FunctionMonitor> monitors = new ArrayList<FunctionMonitor>();
 
+    /**
+     * Interval for monitoring requests
+     */
     public static long intervalMillis = 2000;
+    /**
+     * Indicates to the monitoring thread to stay alive
+     */
     public static volatile boolean active = false;
 
+    /**
+     * Manages the request connections
+     */
     public static ConnectingIOReactor ioreactor;
+    /**
+     * Pool of HTTP request threads
+     */
     public static PoolingNHttpClientConnectionManager pool;
+    /**
+     * Executes the HTTP requests
+     */
     public static CloseableHttpAsyncClient asyncClient;
 
-
+    /*
+     * Locks the counter of completed (successful or failed) monitoring requests
+     */
     public static ReentrantLock monitoringLock = new ReentrantLock();
+    /**
+     * Used to wake up threads waiting for the monitoringLock. This can be:
+     *  - the monitoring thread when waiting for all requests to complete
+     *  - threads that want to notify of completed requests
+     */
     public static Condition pendingRequestsCondition = monitoringLock.newCondition();
+    /**
+     * Counts uncompleted requests
+     */
     private static int pendingRequests = 0;
 
-
+    /**
+     * Monitoring thread
+     */
     public static Thread monitorThread;
 
     static {
@@ -58,8 +92,9 @@ public class MonitorManager implements Runnable {
         asyncClient.start();
     }
 
-
-
+    /**
+     * Creates and starts the monitoring thread
+     */
     public static void startMonitor(){
         if(monitorThread != null)
             logger.debug("MonitorThread not null!!!");
@@ -74,6 +109,9 @@ public class MonitorManager implements Runnable {
         }
     }
 
+    /**
+     * Stops the monitoring thread
+     */
     public static void stopMonitor(){
         Thread oldThread = monitorThread;
         if(oldThread != null) {
@@ -94,6 +132,10 @@ public class MonitorManager implements Runnable {
         }
     }
 
+    /**
+     * Adds a FunctionMonitor object and starts the monitoringThread
+     * @param monitor FunctionMonitor object
+     */
     public static void addAndStartMonitor(FunctionMonitor monitor){
         synchronized (monitors) {
             monitors.add(monitor);
@@ -101,6 +143,10 @@ public class MonitorManager implements Runnable {
         startMonitor();
     }
 
+    /**
+     * Adds FunctionMonitor objects and starts the monitoringThread
+     * @param monitorList list of FunctionMonitor objects
+     */
     public static void addAndStartMonitor(List<FunctionMonitor> monitorList){
         synchronized (monitors) {
             monitors.addAll(monitorList);
@@ -108,6 +154,11 @@ public class MonitorManager implements Runnable {
         startMonitor();
     }
 
+    /**
+     * Updates the list of FunctionMonitor objects by adding and removing objects
+     * @param addMonitors monitors to add
+     * @param removeMonitors monitors to remove
+     */
     public static void updateMonitors(List<FunctionMonitor> addMonitors, List<FunctionMonitor> removeMonitors){
         synchronized (monitors){
             monitors.removeAll(removeMonitors);
@@ -117,6 +168,9 @@ public class MonitorManager implements Runnable {
         }
     }
 
+    /**
+     * Stops the monitoring thread and clears the list of FunctionMonitor objects.
+     */
     public static void stopAndRemoveAllMonitors(){
         stopMonitor();
         synchronized (monitors) {
@@ -124,6 +178,10 @@ public class MonitorManager implements Runnable {
         }
     }
 
+    /**
+     * Shuts down the connection pool.
+     * Used when shutting down the application.
+     */
     public static void closeConnectionPool(){
         try {
             pool.shutdown();
@@ -132,6 +190,10 @@ public class MonitorManager implements Runnable {
         }
     }
 
+    /**
+     * Decreases the request counter and wakes up other waiting threads.
+     * Called by FunctionMonitor objects on request completion.
+     */
     public static void requestFinished(){
         monitoringLock.lock();
 
@@ -141,12 +203,21 @@ public class MonitorManager implements Runnable {
         monitoringLock.unlock();
     }
 
+    /**
+     * Creates a list of the current FunctionMonitor objects.
+     * The list object is a copy of the internal list.
+     * @return A list of the current FunctionMonitor objects.
+     */
     public static List<FunctionMonitor> getMonitorListCopy(){
         synchronized (monitors){
             return new ArrayList<FunctionMonitor>(monitors);
         }
     }
 
+    /**
+     * Creates a monitoring message containing the lastly added monitoring data.
+     * @return A monitoring message as used by the DeploymentManager
+     */
     public static MessageQueue.MessageQueueMonitorData getMonitorData(){
         Map<String,List<MonitorStats>> statsHistoryMap;
         synchronized (monitors) {
@@ -158,19 +229,25 @@ public class MonitorManager implements Runnable {
                 monitor = monitors.get(i);
                 statsHistory = new ArrayList<MonitorStats>();
                 statsHistory.addAll(monitor.statsList);
-                statsHistoryMap.put(monitor.instanceName, statsHistory);
+                statsHistoryMap.put(monitor.function, statsHistory);
             }
         }
         return new MessageQueue.MessageQueueMonitorData(statsHistoryMap);
     }
 
     private MonitorManager(){
-
     }
 
+    /**
+     * Monitoring thread loop.
+     * Loop:
+     * - starts request for all FunctionMonitor objects
+     * - waits for request completion
+     * - sends a monitoring message to the DeploymentManager
+     * - waits a certain interval
+     * The loop loops while it is @active.
+     */
     public void run(){
-
-
 
         monitoringLock.lock();
 
@@ -216,8 +293,4 @@ public class MonitorManager implements Runnable {
 
         monitorThread = null;
     }
-
-
-
-
 }

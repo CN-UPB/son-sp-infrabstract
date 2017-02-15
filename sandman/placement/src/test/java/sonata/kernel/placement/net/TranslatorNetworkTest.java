@@ -1,6 +1,5 @@
 package sonata.kernel.placement.net;
 
-import org.junit.Test;
 import org.openstack4j.api.OSClient.OSClientV2;
 import org.openstack4j.model.network.Network;
 import org.openstack4j.model.network.Port;
@@ -19,25 +18,18 @@ import sonata.kernel.VimAdaptor.commons.heat.HeatTemplate;
 import sonata.kernel.VimAdaptor.commons.vnfd.Unit;
 import sonata.kernel.VimAdaptor.commons.vnfd.UnitDeserializer;
 import sonata.kernel.placement.DatacenterManager;
-import sonata.kernel.placement.DeploymentManager;
-import sonata.kernel.placement.PackageLoader;
-import sonata.kernel.placement.PlacementConfigLoader;
+import sonata.kernel.placement.pd.PackageLoader;
+import sonata.kernel.placement.config.PlacementConfigLoader;
 import sonata.kernel.placement.config.PlacementConfig;
 import sonata.kernel.placement.config.PopResource;
 import sonata.kernel.placement.service.DefaultPlacementPlugin;
-import sonata.kernel.placement.service.PlacementMapping;
 import sonata.kernel.placement.service.PlacementPlugin;
 import sonata.kernel.placement.service.ServiceHeatTranslator;
 import sonata.kernel.placement.service.ServiceInstance;
 
-import java.io.BufferedReader;
-import java.io.File;
-import java.io.FileReader;
-import java.nio.charset.StandardCharsets;
 import java.nio.file.Paths;
 import java.util.List;
 
-import static org.junit.Assert.*;
 
 /**
  * Created by Manoj.
@@ -69,7 +61,7 @@ public class TranslatorNetworkTest {
         }
         
         try {
-            DeploymentManager.deployStack(pop1, stackName, template);
+            TranslatorHeat.deployStack(pop1, stackName, template);
         } catch(Exception e) {
             e.printStackTrace();
             // Ignore deploy failure for now
@@ -95,7 +87,7 @@ public class TranslatorNetworkTest {
             TranslatorNetwork.delete_network(os, netId);
 		}
 		try {
-            DeploymentManager.undeployStack(pop1, stackName);
+            TranslatorHeat.undeployStack(pop1, stackName);
         } catch(Exception e){
             e.printStackTrace();
             // Ignore undeploy failure for now

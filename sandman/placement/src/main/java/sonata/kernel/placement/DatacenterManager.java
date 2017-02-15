@@ -2,6 +2,7 @@ package sonata.kernel.placement;
 
 import org.apache.log4j.Logger;
 import sonata.kernel.placement.config.PlacementConfig;
+import sonata.kernel.placement.config.PlacementConfigLoader;
 import sonata.kernel.placement.config.PopResource;
 
 import java.util.ArrayList;

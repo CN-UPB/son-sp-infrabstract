@@ -2,18 +2,47 @@ package sonata.kernel.placement.config;
 
 import java.util.ArrayList;
 
+/**
+ * Configuration for the translator.
+ * This class is used to map the YAML configuration file.
+ */
 public class PlacementConfig {
 
+    /**
+     * The path to the placement plugin class file.
+     * The path can be relative to the application working directory or an absolute path.
+     */
     public String pluginPath;
+    /**
+     * Class name of the placement plugin to use.
+     * The name must include the package name.
+     */
     public String placementPlugin;
+    /**
+     * An array of PopResource objects containing details about the usable Datacenter servers.
+     */
     public ArrayList<PopResource> resources;
+    /**
+     * Details about the REST Api that serves the Gatekeeper API and control options.
+     */
     public RestInterface restApi;
+    /**
+     * An array of PerformanceThreshold objects containing details about the known thresholds of the used vnfs.
+     */
     public ArrayList<PerformanceThreshold> perfThreshold;
-
+    /**
+     * Number monitoring samples to store.
+     * If more samples are being received the oldest one is removed accordingly.
+     */
     public long monitorHistoryLimit;
-
+    /**
+     * The interval of sampling monitoring data per Vnf in Milliseconds.
+     */
     public long monitorIntervalMs;
-
+    /**
+     * Path to Sonata descriptor files that are always usable by the placement plugin.
+     * The path can be relative to the application working directory or an absolute path.
+     */
     public String internalFunctionsPath;
 
 	public ArrayList<PopResource> getResources() {

@@ -1,16 +1,12 @@
 package sonata.kernel.placement.pd;
 
-
 import com.fasterxml.jackson.annotation.JsonProperty;
-
-import sonata.kernel.placement.TranslatorCore;
-
 import java.util.ArrayList;
 
-import org.apache.log4j.Logger;
-
+/**
+ * Class to map Sonata package descriptors from YAML files.
+ */
 public class PackageDescriptor {
-	final static Logger logger = Logger.getLogger(PackageDescriptor.class);
 
     @JsonProperty("descriptor_version")
     private String descriptorVersion;

@@ -8,7 +8,6 @@ import sonata.kernel.placement.Catalogue;
 
 import java.io.ByteArrayOutputStream;
 import java.io.PrintStream;
-import java.nio.CharBuffer;
 import java.nio.charset.StandardCharsets;
 import java.util.HashMap;
 import java.util.List;
@@ -16,6 +15,20 @@ import java.util.ArrayList;
 import java.util.Map;
 import java.util.regex.Pattern;
 
+/**
+ * "Validates" Sonata service and function descriptors.
+ * After object mapping (and therefore syntactical YAML check) the descriptor objects are checked for
+ * possible inconsistencies.
+ * Also some "custom assupmtions", made in the further usage of the objects in the Translator, are
+ * checked.
+ * Note: only some obvious problems are checked, many problems might not be addressed.
+ *       Also only a subset of the schemas are checked.
+ *
+ * Usage:
+ * After creation of the Validation object the validate() and fixCustomAssumptions() methods can be called.
+ * Found problems can be found in the log returned by the getValidationLog() method.
+ * The log can not be reset. To do a fresh validation a new Validation object has to be created.
+ */
 public class Validation {
 
 /*
@@ -46,7 +59,7 @@ public class Validation {
 
 //TODO: add meaningful version check (function dependencies)
 
-    /*Regex*/
+    /* Regex from the Sonata descriptor schemas*/
     //static Pattern pattern_memory_units = Pattern.compile("B|kB|KiB|MB|MiB|GB|TB|TiB|PT|PiT");
     static Pattern pattern_md5 = Pattern.compile("^[A-Fa-f0-9]{32}$");
 
@@ -72,20 +85,38 @@ public class Validation {
     static Pattern pattern_vnfd_version = Pattern.compile("^[0-9\\-_.]+$");
     static Pattern pattern_vnfd_descriptor_version = Pattern.compile("^[A-Za-z0-9\\-_.]+$");
 
-
-
     final static Logger logger = Logger.getLogger(Validation.class);
 
+    /**
+     * Package object with service and function descriptor objects
+     */
     SonataPackage pkg;
-    List<String> functions = new ArrayList<String>();
 
+    /**
+     * OutputStream to back the error stream
+     */
     protected ByteArrayOutputStream osError;
+    /**
+     * Stream for validation error messages
+     */
     protected PrintStream psError;
+    /**
+     * OutputStream to back the fix stream
+     */
     protected ByteArrayOutputStream osFix;
+    /**
+     * Stream for repair measurement messages
+     */
     protected PrintStream psFix;
+    /**
+     * List for exceptions from previous steps, e.g. Object mapping
+     */
     public final List<Exception> exceptions = new ArrayList<Exception>();
 
-
+    /**
+     * Creates a Validation object that holds the log for validating the given package
+     * @param pkg Package to be validated
+     */
     public Validation(SonataPackage pkg){
         this.pkg = pkg;
         this.osError = new ByteArrayOutputStream();
@@ -94,16 +125,28 @@ public class Validation {
         this.psFix = new PrintStream(osFix);
     }
 
+    /**
+     * Add error message to log
+     * @param errorMessage
+     */
     protected void error(String errorMessage){
         logger.error(errorMessage);
         psError.println(errorMessage);
     }
 
+    /**
+     * Add repair message to log
+     * @param fixMessage
+     */
     protected void fix(String fixMessage){
         logger.debug(fixMessage);
         psFix.println(fixMessage);
     }
 
+    /**
+     * Creates a textual log containing error and repair messages and Exceptions
+     * @return
+     */
     public String getValidationLog(){
         String log = "";
         if (exceptions.size() > 0) {
@@ -124,6 +167,10 @@ public class Validation {
         return log;
     }
 
+    /**
+     * Validates the package
+     * Goes through service and function descriptors and calls respective validation methods.
+     */
     public void validate(){
         // Check descriptor
         if(pkg.descriptor == null)
@@ -148,8 +195,10 @@ public class Validation {
                 error("(" + (pkg.descriptor!=null?pkg.descriptor.getName():"null") + ") invalid YAML function descriptor");
     }
 
-    /* package descriptor */
-
+    /**
+     * Validates a package descriptor object
+     * @param pkgd
+     */
     protected void validatePackage(PackageDescriptor pkgd){
         // Check name
         if(pkgd.getName() == null || !pattern_pkg_name.matcher(pkgd.getName()).matches())
@@ -204,8 +253,10 @@ public class Validation {
         //TODO: artifact_dependencies optional
     }
 
-    /* service descriptor */
-
+    /**
+     * Validates a service descriptor
+     * @param serviced
+     */
     protected void validateService(ServiceDescriptor serviced){
         // Check for necessary simple attributes
             // Check name
@@ -442,8 +493,10 @@ public class Validation {
 
     }
 
-    /* function descriptor */
-
+    /**
+     * Validates a function descriptor
+     * @param vnfd
+     */
     protected void validateFunction(VnfDescriptor vnfd){
         // Check for necessary simple attributes
             // Check name
@@ -893,10 +946,10 @@ public class Validation {
     }
 
     /**
-     * Count occurences of character in String
-     * @param input
-     * @param c
-     * @return
+     * Count occurrences of character in String
+     * @param input Base String to search in
+     * @param c Character searched for
+     * @return Number of occurrences
      */
     public static int countChar(String input, char c){
         int count = 0;
@@ -907,11 +960,12 @@ public class Validation {
     }
 
     /**
-     * Replaces characters in String but skips certain amount of occurences
-     * @param input
-     * @param c
-     * @param skip
-     * @return
+     * Replaces characters in String but skips certain amount of occurrences
+     * @param input Base String
+     * @param c Character to be replaced by r
+     * @param r Character to replace c
+     * @param skip Number of characters to skip before starting to replace
+     * @return Resulting String
      */
     public static String replaceSkip(String input, char c, char r, int skip) {
         StringBuilder output = new StringBuilder(input);
@@ -928,11 +982,26 @@ public class Validation {
         return output.toString();
     }
 
+    /**
+     * Default ResourceRequirements
+     */
     static ResourceRequirements defaultRR = new ResourceRequirements();
+    /**
+     * Default Cpu resource
+     */
     static Cpu defaultCpu = new Cpu();
+    /**
+     * Default Memory resource
+     */
     static Memory defaultMemory = new Memory();
+    /**
+     * Default Storage resource
+     */
     static Storage defaultStorage = new Storage();
 
+    /*
+     * Initialize default resources
+     */
     static {
         defaultCpu.setVcpus(1);
         defaultRR.setCpu(defaultCpu);

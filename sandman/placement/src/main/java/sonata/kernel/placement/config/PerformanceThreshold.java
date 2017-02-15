@@ -1,11 +1,10 @@
 package sonata.kernel.placement.config;
 
-
-import org.apache.log4j.Logger;
-
+/**
+ * Define thresholds for out/in-scaling of a vnf.
+ * All thresholds are point numbers between 0 and 100 and depict percentages.
+ */
 public class PerformanceThreshold {
-
-    final static Logger logger = Logger.getLogger(PerformanceThreshold.class);
 
     public double getCpu_upper_l() {
         return cpu_upper_l;
@@ -85,13 +84,37 @@ public class PerformanceThreshold {
         return builder.toString();
     }
 
+    /**
+     * Upper threshold for CPU load
+     */
     double cpu_upper_l;
+    /**
+     * Lower threshold for CPU load
+     */
     double cpu_lower_l;
+    /**
+     * Upper threshold for memory usage
+     */
     float mem_upper_l;
+    /**
+     * Lower threshold for memory usage
+     */
     float mem_lower_l;
+    /**
+     * Percentage of vnfs that are allowed to exceed the limits before scale out
+     */
     double scale_out_upper_l;
+    /**
+     * Percentage of vnfs that are allowed to stay under the limits before scale in
+     */
     double scale_in_lower_l;
+    /**
+     * Number of monitoring samples to consider
+     */
     int history_check;
+    /**
+     * Name of vnf
+     */
     String vnfId;
 
 

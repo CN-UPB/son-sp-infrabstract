@@ -5,7 +5,7 @@ import org.apache.bcel.generic.POP;
 import org.apache.log4j.Logger;
 import sonata.kernel.VimAdaptor.commons.DeployServiceData;
 import sonata.kernel.placement.DatacenterManager;
-import sonata.kernel.placement.PlacementConfigLoader;
+import sonata.kernel.placement.config.PlacementConfigLoader;
 import sonata.kernel.placement.config.PerformanceThreshold;
 import sonata.kernel.placement.config.PlacementConfig;
 import sonata.kernel.placement.config.PopResource;

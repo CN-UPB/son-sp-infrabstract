@@ -14,11 +14,11 @@ import sonata.kernel.VimAdaptor.commons.DeployServiceData;
 import sonata.kernel.VimAdaptor.commons.heat.HeatTemplate;
 import sonata.kernel.VimAdaptor.commons.vnfd.Unit;
 import sonata.kernel.VimAdaptor.commons.vnfd.UnitDeserializer;
-import sonata.kernel.placement.DeploymentManager;
-import sonata.kernel.placement.PackageLoader;
-import sonata.kernel.placement.PlacementConfigLoader;
+import sonata.kernel.placement.pd.PackageLoader;
+import sonata.kernel.placement.config.PlacementConfigLoader;
 import sonata.kernel.placement.config.PlacementConfig;
 import sonata.kernel.placement.config.PopResource;
+import sonata.kernel.placement.net.TranslatorHeat;
 import sonata.kernel.placement.service.*;
 
 import java.nio.file.Paths;
@@ -54,7 +54,7 @@ public class MonitorManagerTest {
         System.out.println(template);
 
         try {
-            DeploymentManager.deployStack(pop, stackName, template);
+            TranslatorHeat.deployStack(pop, stackName, template);
         } catch(Exception e) {
             e.printStackTrace();
             // Ignore deploy failure for now
@@ -78,7 +78,7 @@ public class MonitorManagerTest {
         MonitorManager.closeConnectionPool();
         logger.info(System.currentTimeMillis()+" \tDeleting stack");
         try {
-            DeploymentManager.undeployStack(pop, stackName);
+            TranslatorHeat.undeployStack(pop, stackName);
         } catch(Exception e){
             e.printStackTrace();
             // Ignore undeploy failure for now

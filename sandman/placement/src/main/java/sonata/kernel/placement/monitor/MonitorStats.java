@@ -2,9 +2,15 @@ package sonata.kernel.placement.monitor;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 
+/**
+ * Contains monitored performance details about a vnf
+ * The attributes are returned from the monitoring call that
+ * takes two monitoring samples at an interval of 1 second
+ * and computes the difference.
+ */
 public class MonitorStats {
 
-    /* example
+    /* example JSON
     {"BLOCK_write/s": 0, "CPU_cores": 4,
     "SYS_time": 1481665658589828864, "PIDS": 2,
     "CPU_%": 0.0056449892973778545, "MEM_limit": 16827117568,
@@ -12,27 +18,66 @@ public class MonitorStats {
     "BLOCK_read/s": 0, "MEM_%": 4.1867657794212184e-05}
     */
 
-    // Network traffic of all network interfaces within the controller
+    /**
+     * Number of bytes outgoing traffic
+     * (All network interfaces within the controller)
+     */
     @JsonProperty("NET_out/s")
     long netOut;
+    /**
+     * Number of bytes incoming traffic
+     * (All network interfaces within the controller)
+     */
     @JsonProperty("NET_in/s")
     long netIn;
+    /**
+     * Number of bytes written to disk
+     */
     @JsonProperty("BLOCK_write/s") // Disk - write in Bytes
     String blockOut;
+    /**
+     * Number of bytes read from disk
+     */
     @JsonProperty("BLOCK_read/s") // Disk - read in Bytes
     String blockIn;
-    @JsonProperty("MEM_used") // Bytes of memory used from the docker container
+    /**
+     * Number of bytes used by the Docker container
+     */
+    @JsonProperty("MEM_used")
     long memoryUsed;
-    @JsonProperty("MEM_limit") // Bytes of memory the docker container could use
+    /**
+     * Maximum number of bytes the Docker container is allowed to use
+     */
+    @JsonProperty("MEM_limit")
     long memoryLimit;
+    /**
+     * Percentage of memory used
+     * Minimum: 0.0
+     * Maximum: 1.0
+     * memoryPercentage = memoryUsed / memoryLimit
+     */
     @JsonProperty("MEM_%")
     float memoryPercentage;
-    @JsonProperty("PIDS") // Number of processes
+    /**
+     * Number of processes in the container
+     */
+    @JsonProperty("PIDS")
     int processes;
+    /**
+     * Load of the CPU.
+     * Minimum: 0.0
+     * Maximum: 1.0 * Docker CPU limit
+     */
     @JsonProperty("CPU_%")
     double cpu;
+    /**
+     * Number of maximum CPU cores assigned to the Docker container
+     */
     @JsonProperty("CPU_cores")
     int cpuCores;
+    /**
+     * Timestamp on the emulator in nanoseconds
+     */
     @JsonProperty("SYS_time")
     long sysTime;
 

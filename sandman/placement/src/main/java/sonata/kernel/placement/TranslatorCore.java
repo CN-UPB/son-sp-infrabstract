@@ -1,29 +1,32 @@
 package sonata.kernel.placement;
 
-
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import sonata.kernel.placement.config.PlacementConfig;
-
 import java.io.File;
 
+import sonata.kernel.placement.config.PlacementConfigLoader;
 import sonata.kernel.placement.service.PlacementPluginLoader;
-
-
-
-
 import java.io.IOException;
 
+/**
+ * The start component of the translator.
+ * Starts all the other necessary components, as the REST Api and the deployment component.
+ */
 public class TranslatorCore {
 
-
+    final static Logger logger = LoggerFactory.getLogger(TranslatorCore.class);
+    /**
+     * Instance object of the deployment manager
+     */
     static DeploymentManager deployment;
+    /**
+     * Thread that hosts the deployment manager
+     */
     static Thread deploymentThread;
 
     public TranslatorCore() {
     }
-
-    final static Logger logger = LoggerFactory.getLogger(TranslatorCore.class);
 
     public static void main(String[] args) throws InterruptedException {
 

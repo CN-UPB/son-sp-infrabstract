@@ -14,7 +14,7 @@ import sonata.kernel.VimAdaptor.commons.vnfd.VnfDescriptor;
 import sonata.kernel.VimAdaptor.commons.vnfd.VnfVirtualLink;
 import sonata.kernel.placement.Catalogue;
 import sonata.kernel.placement.DatacenterManager;
-import sonata.kernel.placement.PlacementConfigLoader;
+import sonata.kernel.placement.config.PlacementConfigLoader;
 import sonata.kernel.placement.config.PlacementConfig;
 
 /*

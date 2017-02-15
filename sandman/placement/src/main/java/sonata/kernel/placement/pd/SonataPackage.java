@@ -7,6 +7,9 @@ import sonata.kernel.VimAdaptor.commons.vnfd.VnfDescriptor;
 import java.util.ArrayList;
 import java.util.List;
 
+/**
+ * Contains the descriptors found in a Sonata package
+ */
 public class SonataPackage {
 
     public PackageDescriptor descriptor;

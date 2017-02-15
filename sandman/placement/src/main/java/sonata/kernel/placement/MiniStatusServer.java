@@ -1,6 +1,5 @@
 package sonata.kernel.placement;
 
-
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.core.JsonFactory;
 import com.fasterxml.jackson.core.JsonProcessingException;
@@ -12,6 +11,7 @@ import fi.iki.elonen.NanoHTTPD;
 import org.apache.log4j.Logger;
 import sonata.kernel.VimAdaptor.commons.vnfd.Unit;
 import sonata.kernel.VimAdaptor.commons.vnfd.UnitDeserializer;
+import sonata.kernel.placement.config.PlacementConfigLoader;
 import sonata.kernel.placement.monitor.FunctionMonitor;
 import sonata.kernel.placement.monitor.MonitorManager;
 import sonata.kernel.placement.monitor.MonitorStats;
@@ -31,21 +31,42 @@ import java.util.*;
 
 import static fi.iki.elonen.NanoHTTPD.newFixedLengthResponse;
 
+/**
+ * Serves static and dynamic data for the status frontend.
+ */
 public class MiniStatusServer {
 
     final static Logger logger = Logger.getLogger(MiniStatusServer.class);
 
+    /**
+     * Default paths for statically served files.
+     */
     public static Path[] rootPaths = new Path[]{
 
             Paths.get("webStatic")
     };
 
+    /**
+     * Found root path for statically served files
+     */
     public static Path rootPath = null;
+    /**
+     * Found root path as String
+     */
     public static String root = null;
+    /**
+     * Found root path as File
+     */
     public static File rootFile = null;
 
+    /**
+     * Maps file extensions to MIME type Strings
+     */
     public static Map<String,String> extMimeMap = new HashMap<String,String>();
 
+    /*
+     * Initializes the root path and MIME type map
+     */
     static {
 
         for(Path rootP: rootPaths) {
@@ -67,11 +88,22 @@ public class MiniStatusServer {
         extMimeMap.put("css","text/css");
         extMimeMap.put("htm","text/html");
         extMimeMap.put("html","text/html");
-
     }
 
+    /**
+     * Maximum number for served monitor data per Vnf
+     */
     static final int maxHistory = 300;
 
+    /**
+     * Serve dynamic status information
+     * /status - general status of deployment
+     * /monitor - monitor data and deployment graph
+     * /packageValidation - validation log of service with given service id
+     * /packages - list of package descriptors
+     * @param session Request details
+     * @return HTTP Response containing the served information
+     */
     public static NanoHTTPD.Response serveDynamic(NanoHTTPD.IHTTPSession session){
         String uri = session.getUri();
         String json = null;
@@ -171,7 +203,7 @@ public class MiniStatusServer {
                 graph.put("forwardGraphs",serviceInstance.service.getForwardingGraphs());
                 statusObj.put("graph",graph);
 
-                statusObj.put("thresholds",PlacementConfigLoader.loadPlacementConfig().getThreshold());
+                statusObj.put("thresholds", PlacementConfigLoader.loadPlacementConfig().getThreshold());
 
                 statusObj.put("functions", instanceMap);
                 statusObj.put("monitorHistoryData", monitorData.statsHistoryMap);
@@ -213,6 +245,11 @@ public class MiniStatusServer {
         return newFixedLengthResponse(NanoHTTPD.Response.Status.NOT_FOUND, null, null);
     }
 
+    /**
+     * Serves static files from root path
+     * @param session Request details
+     * @return HTTP Response containing the served information
+     */
     public static NanoHTTPD.Response serveStatic(NanoHTTPD.IHTTPSession session) {
 
         String uri = session.getUri();
@@ -251,6 +288,11 @@ public class MiniStatusServer {
         return newFixedLengthResponse(NanoHTTPD.Response.Status.NOT_FOUND, null, null);
     }
 
+    /**
+     * Searches for file in root path
+     * @param file requested file
+     * @return Found file as File object
+     */
     public static File searchForFile(String file){
         File requestFile;
         File rootDirectory;
@@ -269,8 +311,14 @@ public class MiniStatusServer {
         return null;
     }
 
+    /**
+     * Maps objects to JSON Strings
+     */
     static ObjectMapper jsonMapper;
 
+    /*
+     * Initialize JSON mapper
+     */
     static {
         jsonMapper = new ObjectMapper(new JsonFactory());
         jsonMapper.disable(SerializationFeature.WRITE_EMPTY_JSON_ARRAYS);
@@ -283,5 +331,4 @@ public class MiniStatusServer {
         jsonMapper.registerModule(module);
         jsonMapper.enable(DeserializationFeature.READ_ENUMS_USING_TO_STRING);
     }
-
 }

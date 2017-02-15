@@ -1,14 +1,12 @@
 package sonata.kernel.placement.pd;
 
-import org.apache.log4j.Logger;
-
 import com.fasterxml.jackson.annotation.JsonProperty;
 
-import sonata.kernel.placement.TranslatorCore;
-
+/**
+ * Class to map PackageContent objects from Sonata package descriptors.
+ */
 public class PackageContentObject {
 
-	final static Logger logger = Logger.getLogger(PackageContentObject.class);
     private String name;
     @JsonProperty("content-type")
     private String contentType;

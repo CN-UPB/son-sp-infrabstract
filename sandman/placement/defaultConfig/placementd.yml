@@ -57,6 +57,7 @@ perfThreshold:
     scale_in_lower_l: "70"
     history_check: "3"
 
+logLevelOverride: "ALL"
 
 restApi:
    serverIp: "0.0.0.0"

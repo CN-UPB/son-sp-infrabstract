@@ -9,6 +9,17 @@ import java.util.ArrayList;
 public class PlacementConfig {
 
     /**
+     * Overrides the log level specified in the log4j.properties file.
+     * Possible values:
+     *   ALL, TRACE, DEBUG, INFO, WARN, ERROR, FATAL, OFF
+     * (Only INFO and DEBUG are used in the Translator.)
+     * The value is a direct mapping of the predefined org.apache.log4j.Level values.
+     */
+    public enum LogLevel {
+        ALL, TRACE, DEBUG, INFO, WARN, ERROR, FATAL, OFF
+    };
+    public LogLevel logLevelOverride;
+    /**
      * The path to the placement plugin class file.
      * The path can be relative to the application working directory or an absolute path.
      */
@@ -104,5 +115,13 @@ public class PlacementConfig {
 
     public void setMonitorIntervalMs(long monitorIntervalMs) {
         this.monitorIntervalMs = monitorIntervalMs;
+    }
+
+    public LogLevel getLogLevelOverride() {
+        return logLevelOverride;
+    }
+
+    public void setLogLevelOverride(LogLevel logLevelOverride) {
+        this.logLevelOverride = logLevelOverride;
     }
 }

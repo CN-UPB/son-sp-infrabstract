@@ -11,6 +11,7 @@ import java.util.Properties;
 
 import org.apache.log4j.Level;
 import org.apache.log4j.Logger;
+import sonata.kernel.placement.monitor.MonitorManager;
 
 /**
  * Finds, loads and stores the translator configuration file.
@@ -68,6 +69,11 @@ public final class PlacementConfigLoader {
 
         if(config == null)
             config = createDefaultConfig();
+
+        if(config.isMonitoringDeactivated()){
+            logger.info("Deactivate Monitoring");
+            MonitorManager.monitoringDeactivated = true;
+        }
 
         if (config.getLogLevelOverride() != null) {
             logger.info("Override logging level with: "+config.getLogLevelOverride());

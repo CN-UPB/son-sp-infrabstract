@@ -39,6 +39,12 @@ public class MonitorManager implements Runnable {
      */
     public static long intervalMillis = 2000;
     /**
+     * Deactivates the monitoring requests.
+     * The monitoring thread will never be created
+     * but the FunctionMonitor objects will be created and deleted.
+     */
+    public static boolean monitoringDeactivated = false;
+    /**
      * Indicates to the monitoring thread to stay alive
      */
     public static volatile boolean active = false;
@@ -96,6 +102,8 @@ public class MonitorManager implements Runnable {
      * Creates and starts the monitoring thread
      */
     public static void startMonitor(){
+        if(monitoringDeactivated)
+            return;
         if(monitorThread != null)
             logger.debug("MonitorThread not null!!!");
         if(monitorThread == null) {

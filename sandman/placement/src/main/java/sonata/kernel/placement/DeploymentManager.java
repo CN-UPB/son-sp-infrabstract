@@ -469,7 +469,11 @@ public class DeploymentManager implements Runnable {
 
             if (message.fakeScaleType != null) {
                 nextScale = message.fakeScaleType;
-                return;
+                if(MonitorManager.monitoringDeactivated == false) {
+                    // If monitoring is active pass fake message with next "real" monitoring data
+                    // Ff monitoring is deactivated pass the fake message directly (since there will be no "next real" monitoring data)
+                    return;
+                }
             }
 
             if (nextScale == null)

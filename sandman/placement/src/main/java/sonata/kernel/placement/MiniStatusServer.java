@@ -136,6 +136,7 @@ public class MiniStatusServer {
             if(DeploymentManager.currentInstance != null) {
                 Map<String,Object> statusObj = new HashMap<String, Object>();
                 // Deployed instance monitor information
+                boolean monitoringDeactivated = MonitorManager.monitoringDeactivated;
                 MessageQueue.MessageQueueMonitorData monitorData = MonitorManager.getMonitorData();
                 statusObj.put("monitorFunctions", monitorData.statsHistoryMap.keySet());
                 // Clear unnecessary data
@@ -207,6 +208,7 @@ public class MiniStatusServer {
 
                 statusObj.put("functions", instanceMap);
                 statusObj.put("monitorHistoryData", monitorData.statsHistoryMap);
+                statusObj.put("monitoringDeactivated", monitoringDeactivated);
 
                 jsonObj = statusObj;
             }

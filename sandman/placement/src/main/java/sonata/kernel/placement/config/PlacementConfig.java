@@ -51,6 +51,12 @@ public class PlacementConfig {
      */
     public long monitorIntervalMs;
     /**
+     * If set to true this option will deactivate the monitoring at all.
+     * FunctionMonitors will be created but no requests will be sent.
+     * Also no scale in/out can occur (except for fake scale in/out).
+     */
+    public boolean monitoringDeactivated;
+    /**
      * Path to Sonata descriptor files that are always usable by the placement plugin.
      * The path can be relative to the application working directory or an absolute path.
      */
@@ -123,5 +129,13 @@ public class PlacementConfig {
 
     public void setLogLevelOverride(LogLevel logLevelOverride) {
         this.logLevelOverride = logLevelOverride;
+    }
+
+    public boolean isMonitoringDeactivated() {
+        return monitoringDeactivated;
+    }
+
+    public void setMonitoringDeactivated(boolean monitoringDeactivated) {
+        this.monitoringDeactivated = monitoringDeactivated;
     }
 }

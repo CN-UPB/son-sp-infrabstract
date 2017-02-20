@@ -7,7 +7,11 @@ import com.fasterxml.jackson.dataformat.yaml.YAMLFactory;
 import java.io.*;
 import java.nio.charset.Charset;
 import java.nio.file.Paths;
+import java.util.Properties;
+
+import org.apache.log4j.Level;
 import org.apache.log4j.Logger;
+import sonata.kernel.placement.monitor.MonitorManager;
 
 /**
  * Finds, loads and stores the translator configuration file.
@@ -45,32 +49,75 @@ public final class PlacementConfigLoader {
 
     	logger.info("Placement config loader");
 
+    	// Debug: print properties
+    	//System.getProperties().list(System.out);
+
         for (String configFolder : CONFIG_FOLDERS){
 
             File configFile = new File(Paths.get(configFolder,CONFIG_FILENAME).toString());
-            logger.info("Config Folder is: "+ configFile.getPath());
+            logger.debug("Check config file: "+ configFile.getPath());
             if (configFile.exists()) {
 
                 config = mapConfigFile(configFile);
 
-                if(config != null)
+                if(config != null) {
+                    logger.info("Use config file: "+ configFile.getPath());
                     break;
+                }
             }
         }
 
         if(config == null)
             config = createDefaultConfig();
 
+        if(config.isMonitoringDeactivated()){
+            logger.info("Deactivate Monitoring");
+            MonitorManager.monitoringDeactivated = true;
+        }
+
+        if (config.getLogLevelOverride() != null) {
+            logger.info("Override logging level with: "+config.getLogLevelOverride());
+            switch(config.getLogLevelOverride()) {
+                case ALL:
+                    Logger.getRootLogger().setLevel(Level.ALL);
+                    break;
+                case TRACE:
+                    Logger.getRootLogger().setLevel(Level.TRACE);
+                    break;
+                case DEBUG:
+                    Logger.getRootLogger().setLevel(Level.DEBUG);
+                    break;
+                case INFO:
+                    Logger.getRootLogger().setLevel(Level.INFO);
+                    break;
+                case WARN:
+                    Logger.getRootLogger().setLevel(Level.WARN);
+                    break;
+                case ERROR:
+                    Logger.getRootLogger().setLevel(Level.ERROR);
+                    break;
+                case FATAL:
+                    Logger.getRootLogger().setLevel(Level.FATAL);
+                    break;
+                case OFF:
+                    Logger.getRootLogger().setLevel(Level.OFF);
+                    break;
+            }
+        } else
+            logger.info("Logging level: "+Logger.getRootLogger().getLevel());
+
+
+
         return config;
     }
 
     /**
      * Reads a file and uses the YAML mapper to create a @PlacementConfig object.
+     * Also overrides the logging level if specified in the config file.
      * @param configFile File to read in
      * @return null if the file does not exist or the mapping fails, else the mapped configuration object
      */
     public static PlacementConfig mapConfigFile(File configFile) {
-    	logger.info("Map config file");
         PlacementConfig config = null;
         ObjectMapper mapper = new ObjectMapper(new YAMLFactory());
         SimpleModule module = new SimpleModule();
@@ -105,6 +152,7 @@ public final class PlacementConfigLoader {
         PlacementConfig config = new PlacementConfig();
         config.pluginPath = "";
         config.placementPlugin = "";
+        config.logLevelOverride = PlacementConfig.LogLevel.DEBUG;
         return config;
     }
 }

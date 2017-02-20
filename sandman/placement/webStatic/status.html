@@ -279,6 +279,7 @@ var currentMonitorFunctionList = null;
 var currentMonitorData = null;
 var currentMonitorD3 = null;
 var currentMonitorDivs = null;
+var currentGraphNode = null;
 
 function removeMonitorView() {
     var monitordiv = document.getElementById("monitordiv");
@@ -292,8 +293,11 @@ var graphSizes = {vnfnode:30,nsnode:20};
 
 d3cola = cola.d3adaptor();
 function addGraph(graph){
+    if (currentGraphNode != null)
+        return;
     var graphdiv = document.getElementById("graphdiv");
     var svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+    currentGraphNode = svg;
     svg.setAttributeNS("http://www.w3.org/2000/xmlns/", "xmlns:xlink", "http://www.w3.org/1999/xlink");
     graphdiv.appendChild(svg);
     var svgd3 = d3.select(svg);
@@ -812,13 +816,27 @@ function setupD3Svg(svg, dataKey) {
 }
 
 function createMonitorView(monitorData) {
+
+    if(currentGraphNode == null) {
+        console.log(monitorData);
+        console.log("createGraph");
+        addGraph(monitorData.graph);
+    }
+
+    // check if monitoring deactivated
+    if (monitorData.monitoringDeactivated == true) {
+        var monh = document.getElementById("monitoringh");
+        if (monh.getAttribute("mondeactivated","false") != "true") {
+            monh.firstChild.data = monh.firstChild.data+" (deactivated)";
+            monh.setAttribute("mondeactivated","true");
+        }
+        
+        
+    }
+
     // first check monitor data
     if (monitorData.monitorHistoryData[monitorData.monitorFunctions[0]].length == 0)
         return;
-
-    console.log(monitorData);
-    console.log("createGraph");
-    addGraph(monitorData.graph);
 
     console.log("createMonitorView");
     var monitordiv = document.getElementById("monitordiv");
@@ -882,7 +900,7 @@ function init() {
 <button id="scaleinbtn" onclick="scalein();" >ScaleIn</button>
 </div>
 <div id="graphdiv"></div>
-<h3>Monitoring</h3>
+<h3 id="monitoringh">Monitoring</h3>
 <div id="monitordiv"></div>
 <br/>
 <h3 style="clear:both;">Package list</h3>

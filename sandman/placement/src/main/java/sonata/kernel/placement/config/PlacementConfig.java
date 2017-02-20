@@ -9,6 +9,17 @@ import java.util.ArrayList;
 public class PlacementConfig {
 
     /**
+     * Overrides the log level specified in the log4j.properties file.
+     * Possible values:
+     *   ALL, TRACE, DEBUG, INFO, WARN, ERROR, FATAL, OFF
+     * (Only INFO and DEBUG are used in the Translator.)
+     * The value is a direct mapping of the predefined org.apache.log4j.Level values.
+     */
+    public enum LogLevel {
+        ALL, TRACE, DEBUG, INFO, WARN, ERROR, FATAL, OFF
+    };
+    public LogLevel logLevelOverride;
+    /**
      * The path to the placement plugin class file.
      * The path can be relative to the application working directory or an absolute path.
      */
@@ -39,6 +50,12 @@ public class PlacementConfig {
      * The interval of sampling monitoring data per Vnf in Milliseconds.
      */
     public long monitorIntervalMs;
+    /**
+     * If set to true this option will deactivate the monitoring at all.
+     * FunctionMonitors will be created but no requests will be sent.
+     * Also no scale in/out can occur (except for fake scale in/out).
+     */
+    public boolean monitoringDeactivated;
     /**
      * Path to Sonata descriptor files that are always usable by the placement plugin.
      * The path can be relative to the application working directory or an absolute path.
@@ -104,5 +121,21 @@ public class PlacementConfig {
 
     public void setMonitorIntervalMs(long monitorIntervalMs) {
         this.monitorIntervalMs = monitorIntervalMs;
+    }
+
+    public LogLevel getLogLevelOverride() {
+        return logLevelOverride;
+    }
+
+    public void setLogLevelOverride(LogLevel logLevelOverride) {
+        this.logLevelOverride = logLevelOverride;
+    }
+
+    public boolean isMonitoringDeactivated() {
+        return monitoringDeactivated;
+    }
+
+    public void setMonitoringDeactivated(boolean monitoringDeactivated) {
+        this.monitoringDeactivated = monitoringDeactivated;
     }
 }

@@ -42,10 +42,6 @@ public class PopResource {
      */
     String password;
     /**
-     * List of node sets
-     */
-    ArrayList<NodeResource> nodes;
-    /**
      * List of network resources
      * Unused since network configuration is solely assigned by the emulator
      */
@@ -69,14 +65,6 @@ public class PopResource {
 
     public void setPopName(String popName) {
         this.popName = popName;
-    }
-
-    public ArrayList<NodeResource> getNodes() {
-        return nodes;
-    }
-
-    public void setNodes(ArrayList<NodeResource> nodes) {
-        this.nodes = nodes;
     }
 
     public ArrayList<NetworkResource> getNetworks() {

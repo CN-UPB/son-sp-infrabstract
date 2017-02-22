@@ -57,7 +57,7 @@ perfThreshold:
     scale_in_lower_l: "70"
     history_check: "3"
 
-logLevelOverride: "ALL"
+logLevelOverride: "DEBUG"
 
 restApi:
    serverIp: "0.0.0.0"
@@ -73,6 +73,8 @@ monitorHistoryLimit: 300
 
 monitorIntervalMs: 2000
 
+monitoringDeactivated: false
+
 resources:
   - popName: "dc1"
     endpoint: "http://131.234.31.45:5001/v2.0"
@@ -86,6 +88,3 @@ resources:
       cpu: 100
       memory: 100
       storage: 100
-    nodes:
-      - name: "NodeSet1"
-        quantity: 100

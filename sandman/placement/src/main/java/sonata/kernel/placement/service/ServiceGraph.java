@@ -11,6 +11,9 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+/*
+ Helper class to determine the current deployed service graph.
+ */
 public class ServiceGraph {
     final static Logger logger = Logger.getLogger(ComputeMetrics.class);
 
@@ -19,6 +22,7 @@ public class ServiceGraph {
     private final Map<String, Map<String, Node>> f_graph;
     private final Map<String, Node> m_vnf_node;
 
+    //Initialize with service instance.
     public ServiceGraph(ServiceInstance instance) {
         this.s_instance = instance;
         m_nodes = new HashMap<String, Node>();
@@ -27,6 +31,9 @@ public class ServiceGraph {
         initialize();
     }
 
+    /*
+     Initialize the internal variables.
+     */
     private void initialize() {
         logger.debug("ServiceGraph::initialize ENTER");
         for (Map.Entry<String, Map<String, FunctionInstance>> finst_list : s_instance.function_list.entrySet()) {
@@ -51,6 +58,7 @@ public class ServiceGraph {
         }
 
 
+        //Initialise the forwarding graph/path
         for(ForwardingGraph ff : s_instance.service.getForwardingGraphs())
         {
             Map<String, Node> f_path_m = new HashMap<String, Node>();
@@ -82,6 +90,9 @@ public class ServiceGraph {
 
     }
 
+    /*
+     Method returns the initial service graph (non-deployed) based on the forwarding graph/path identifier.
+     */
     public Node get_forwarding_path(String f_graph_id, String f_path_id)
     {
         logger.debug("ServiceGraph::get_forwarding_path ENTER");
@@ -96,12 +107,16 @@ public class ServiceGraph {
 
     }
 
+    /*
+     Method returns the service graph associated with the current service instance.
+     */
     public Node generate_graph() {
         logger.debug("ServiceGraph::generate_graph ENTER");
         for (Map.Entry<String, Map<String, LinkInstance>> link_m : s_instance.outerlink_list.entrySet()) {
 
             for (LinkInstance link : link_m.getValue().values()) {
 
+                //Management links are not considered in the service graph.
                 if(link.isMgmtLink())
                     continue;
 
@@ -131,6 +146,7 @@ public class ServiceGraph {
             for (Map.Entry<String, LinkInstance> link : link_m.getValue().entrySet()) {
                 Object[] listt = link.getValue().interfaceList.entrySet().toArray();
 
+                //Not an inner link.
                 if(listt.length < 2)
                     continue;
 
@@ -142,7 +158,7 @@ public class ServiceGraph {
                         ((HashMap.Entry<FunctionInstance, String>) listt[1]).getValue().contains("output")) {
                     m_nodes.get(((HashMap.Entry<FunctionInstance, String>) listt[1]).getKey().name).add_output_link(m_nodes.get(((HashMap.Entry<FunctionInstance, String>) listt[0]).getKey().name));
                     m_nodes.get(((HashMap.Entry<FunctionInstance, String>) listt[0]).getKey().name).add_input_link(m_nodes.get(((HashMap.Entry<FunctionInstance, String>) listt[1]).getKey().name));
-                } else {
+                } else { //Handle only connection points input/output/mgmt.
                     logger.error("ServiceGraph::generate_graph: Unidentified linkage");
                 }
 
@@ -153,6 +169,9 @@ public class ServiceGraph {
     }
 }
 
+/*
+ Class for VNF instance or external connection points.
+ */
 class Node {
     public String get_instance_name() {
         return vnf_instance_name;
@@ -214,15 +233,24 @@ class Node {
         this.data_center = data_center;
     }
 
+    //VNF instance details.
     private String vnf_instance_name;
     private String vnf_id;
     private String vnf_name;
+
+    //The datacenter on which the vnf instance is deployed.
     private String data_center;
 
+    //List of egress links from this vnf instance
     private List<Node> output_links = new ArrayList<Node>();
+
+    //List of ingress links to this vnf instance
     private List<Node> input_links = new ArrayList<Node>();
+
     private List<Node> mgmt_links = new ArrayList<Node>();
 
+    //is_service_endpoint = false : ns:input/ns:output
+    //is_service_endpoint = true : vnf
     boolean is_service_endpoint = false;
 }
 

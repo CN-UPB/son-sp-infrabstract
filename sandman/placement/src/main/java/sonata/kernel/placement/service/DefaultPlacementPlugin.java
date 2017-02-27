@@ -2,7 +2,6 @@ package sonata.kernel.placement.service;
 
 import sonata.kernel.VimAdaptor.commons.DeployServiceData;
 import sonata.kernel.placement.DatacenterManager;
-import sonata.kernel.placement.config.NodeResource;
 import sonata.kernel.placement.config.PopResource;
 
 
@@ -120,15 +119,15 @@ public class DefaultPlacementPlugin implements PlacementPlugin {
 
             ///instance_manager.update_functions_list("vnf_tcpdump", null, "datacenter3", ServiceInstanceManager.ACTION_TYPE.ADD_INSTANCE);
 
-            pm.AddNetworkFunctionInstance("vnf_tcpdump", "dc1");
+            pm.AddNetworkFunctionInstance("vnf_tcpdump", "dc2");
 
-            List<String> s1 = new ArrayList<String>();
+            /*List<String> s1 = new ArrayList<String>();
             s1.add("s1");
-            s1.add("s2");
+            s1.add("s2");*/
             ///ServiceInstance instance_t =  instance_manager.update_vlink_list("vnf_firewall", "vnf_tcpdump", "vnf_firewall1", "vnf_tcpdump3", s1,
             ///     ServiceInstanceManager.ACTION_TYPE.ADD_INSTANCE);
 
-            pm.AddVirtualLink("firewall1", "tcpdump3", s1);
+            pm.AddVirtualLink("firewall1", "tcpdump3", null);
 
             pm.AddNetworkFunctionInstance("vnf_iperf", "dc1");
             pm.AddVirtualLink("iperf2", "firewall1", null);
@@ -157,7 +156,7 @@ public class DefaultPlacementPlugin implements PlacementPlugin {
 
             pm.MoveNetworkFunctionInstance("tcpdump3", "dc1");
             pm.DeleteNetworkFunctionInstance("firewall1");
-            pm.DeleteNetworkFunctionInstance("tcpdump3");
+            //pm.DeleteNetworkFunctionInstance("tcpdump3");
 
             return pm.GetServiceInstance();
         }

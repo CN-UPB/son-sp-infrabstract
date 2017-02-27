@@ -12,6 +12,9 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+/*
+  Helper class to compute the Overloaded and Underloaded VNF types.
+ */
 public class ComputeMetrics {
     final static Logger logger = Logger.getLogger(ComputeMetrics.class);
 
@@ -32,6 +35,9 @@ public class ComputeMetrics {
         initialize_threshold();
     }
 
+    /*
+     Initialize with the service instance graph and the recent available monitoring data.
+     */
     public void initialize(ServiceInstance instance, Map<String, List<MonitorStats>> stats_history)
     {
         this.instance = instance;
@@ -39,6 +45,9 @@ public class ComputeMetrics {
     }
 
 
+    /*
+      Initialize the default performance thresholds from the configuration.
+     */
     private void initialize_threshold() {
         logger.debug("ComputeMetrics::initialize_threshold ENTER");
         PlacementConfig config = PlacementConfigLoader.loadPlacementConfig();
@@ -52,7 +61,9 @@ public class ComputeMetrics {
 
     }
 
-
+    /*
+      Update performance threshold parameters for VNF type.
+     */
     public void update_threshold(String vnf_id, PerformanceThreshold threshold) {
         logger.debug("ComputeMetrics::update_threshold ENTER");
         logger.info("ComputeMetrics::update_threshold: Updating VNF type: " + vnf_id + " with " + threshold);
@@ -66,11 +77,15 @@ public class ComputeMetrics {
         return;
     }
 
+    /*
+     Determines the list of overloaded/underloaded vnf types.
+     */
     private void evaluate_vnf_load(Map<String, List<String>> m_overload,
-                                     Map<String, List<String>> m_underload,
-                                     List<String> overload_vnf_list,
-                                     List<String> underload_vnf_list) {
+                                   Map<String, List<String>> m_underload,
+                                   List<String> overload_vnf_list,
+                                   List<String> underload_vnf_list) {
         logger.debug("ComputeMetrics::evaluate_vnf_load ENTER");
+        //Get the list of overloaded VNF types
         for (Map.Entry<String, List<String>> entry : m_overload.entrySet()) {
             if (instance.function_list.get(entry.getKey()).size() * (threshold_m.get(entry.getKey()).getScale_out_upper_l()) / 100
                     < entry.getValue().size()) {
@@ -80,6 +95,7 @@ public class ComputeMetrics {
             }
         }
 
+        //Get the list of underloaded VNF types
         for (Map.Entry<String, List<String>> entry : m_underload.entrySet()) {
             if (instance.function_list.get(entry.getKey()).size() * (threshold_m.get(entry.getKey()).getScale_in_lower_l()) / 100
                     < entry.getValue().size()) {
@@ -92,9 +108,12 @@ public class ComputeMetrics {
         return;
     }
 
+    /*
+     Determines the list of overloaded/underloaded vnf instances.
+     */
     private void evaluate_vnf_instance_load(FunctionInstance f_inst,
-                                              List<String> overload_vnf_list_t,
-                                              List<String> underload_vnf_list_t) {
+                                            List<String> overload_vnf_list_t,
+                                            List<String> underload_vnf_list_t) {
         logger.debug("ComputeMetrics::evaluate_vnf_instance_load ENTER");
         List<MonitorStats> stats_history_t = stats_history.get(f_inst.name);
 
@@ -140,17 +159,21 @@ public class ComputeMetrics {
         return;
     }
 
-    //Function to compute VNF types that are overloaded and underloaded.
+    /*
+     Function to compute VNF types that are overloaded and underloaded.
+     */
     public void compute_vnf_load(List<String> overload_vnf_list_t, List<String> underload_vnf_list_t) {
         logger.debug("ComputeMetrics::compute_vnf_load ENTER");
         Map<String, List<String>> m_overload = new HashMap<String, List<String>>();
         Map<String, List<String>> m_underload = new HashMap<String, List<String>>();
 
+        //Loop through all the vnf type associated with the service graph.
         for (Map.Entry<String, Map<String, FunctionInstance>> finst_l : instance.function_list.entrySet()) {
 
             List<String> overload_l = new ArrayList<String>();
             List<String> underload_l = new ArrayList<String>();
 
+            //Loop through all the vnf instance associated with the vnf type.
             for (Map.Entry<String, FunctionInstance> finst_t : finst_l.getValue().entrySet()) {
                 PerformanceThreshold p_thresh = threshold_m.get(finst_t.getValue().function.getVnfId());
                 if (null == p_thresh) {
@@ -158,13 +181,14 @@ public class ComputeMetrics {
                             + finst_t.getValue().function.getVnfId());
                     continue;
                 }
-
+                //Evaluate vnf instance load condition.
                 evaluate_vnf_instance_load(finst_t.getValue(), overload_l, underload_l);
 
             }
             m_overload.put(finst_l.getKey(), overload_l);
             m_underload.put(finst_l.getKey(), underload_l);
 
+            //Evaluate vnf type load condition.
             evaluate_vnf_load(m_overload, m_underload,
                     overload_vnf_list_t, underload_vnf_list_t);
         }

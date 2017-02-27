@@ -12,6 +12,9 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+/*
+  Helper class for Network Topology information
+ */
 
 public class NetworkTopologyGraph {
     final static Logger logger = Logger.getLogger(NetworkTopologyGraph.class);
@@ -23,6 +26,8 @@ public class NetworkTopologyGraph {
         m_nodes = new HashMap<String, NetworkNode>();
         config = PlacementConfigLoader.loadPlacementConfig();
 
+        //Initialize a root "dummy" node as the starting point of the graph
+        //Every other switch/datacenter is logically reachable from this node.
         NetworkNode root = new NetworkNode();
         root.set_name("dummy");
         root.set_label("dummy");
@@ -55,12 +60,13 @@ public class NetworkTopologyGraph {
                 else
                     node.set_label(nodes_j.name);
 
+                //Set up dummy links from the "dummy" root node to every other node in this real node.
                 m_nodes.get("dummy").set_output_links(new NetworkLink(0,0,0,0,node));
                 node.set_input_links(new NetworkLink(0,0,0,0, m_nodes.get("dummy")));
 
                 m_nodes.put(node.get_name(), node);
 
-            } else {
+            } else { //The node is neither a Datacenter nor a Switch: Ignore it.
                 logger.error("NetworkTopologyGraph::generate_graph: Unknown node type in topology graph: " + nodes_j.name + "/" + nodes_j.label);
                 continue;
             }
@@ -94,6 +100,9 @@ public class NetworkTopologyGraph {
         return m_nodes.get("dummy");
     }
 
+    /*
+      Helper class for JSON object mapper
+     */
     public static class NetworkNode_J
     {
         public ArrayList<HashMap<String, LinkProperty_J>> getLinks() {
@@ -115,6 +124,9 @@ public class NetworkTopologyGraph {
         private String label;
     }
 
+    /*
+      Helper class for JSON object mapper
+     */
     public static class LinkProperty_J
     {
         @JsonProperty("name")
@@ -162,6 +174,9 @@ public class NetworkTopologyGraph {
         }
     }
 
+    /*
+      Helper class for JSON object mapper
+     */
     public static class NetworkTopology_J
     {
         @JsonProperty("nodes")
@@ -178,6 +193,10 @@ public class NetworkTopologyGraph {
 
 }
 
+/*
+ Class to realize the link properties in the network properties
+ link propertiess = loss, delay, jitter and bandwidth.
+ */
 class NetworkLink
 {
     final static Logger logger = Logger.getLogger(NetworkLink.class);
@@ -220,14 +239,27 @@ class NetworkLink
 
 }
 
+/*
+ Class to realize a datacenter or a switch in the network topology
+ */
 class NetworkNode
 {
     final static Logger logger = Logger.getLogger(NetworkNode.class);
 
+    //Son-Emulator internal name of the node.
     private String node_name;
+
+    //Actual name of the node
     private String label;
+
+    //List of egress links from this node.
     private List<NetworkLink> output_links = new ArrayList<NetworkLink>();
+
+    //List of ingress links to this node
     private List<NetworkLink> input_links = new ArrayList<NetworkLink>();
+
+    //is_switch = false => Datacenter
+    //is_switch = true => Switch
     private boolean is_switch = false;
 
     public String get_name()

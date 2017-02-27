@@ -19,6 +19,9 @@ public class DatacenterManager {
 
     }
 
+    /*
+     Method initialze internal structures with configurations.
+     */
     public static void initialize()
     {
         logger.debug("DatacenterManager::initialize ENTRY");
@@ -36,16 +39,24 @@ public class DatacenterManager {
         logger.debug("DatacenterManager::initialize EXIT");
     }
 
+    /*
+     Check if the datacenter has been configured in placementd.yml
+     */
     public static boolean check_datacenter_exists(String datacenter)
     {
         if(m_datacenters.get(datacenter) == null)
             return false;
         return true;
     }
+
+    /*
+     Method to determine the total CPU resource available on a datacenter.
+     */
     public static int get_total_cpu(String datacenter)
     {
         logger.debug("DatacenterManager::get_total_cpu ENTRY");
         if(null == DatacenterManager.m_datacenters.get(datacenter)) {
+            //Datacenter not configured in placementd.yml
             logger.error("DatacenterManager::get_total_cpu: Unknown datacenter: " + datacenter);
             logger.debug("DatacenterManager::get_total_cpu EXIT");
             return 0;
@@ -58,10 +69,14 @@ public class DatacenterManager {
         }
     }
 
+    /*
+     Method to determine the total Memory resource available on a datacenter.
+     */
     public static double get_total_memory(String datacenter)
     {
         logger.debug("DatacenterManager::get_total_memory ENTRY");
         if(null == DatacenterManager.m_datacenters.get(datacenter)) {
+            //Datacenter not configured in placementd.yml
             logger.error("DatacenterManager::get_total_memory: Unknown datacenter: " + datacenter);
             logger.debug("DatacenterManager::get_total_memory EXIT");
             return 0;
@@ -75,10 +90,14 @@ public class DatacenterManager {
 
     }
 
+    /*
+     Method to determine the total Storage resource available on a datacenter.
+     */
     public static double get_total_storage(String datacenter)
     {
         logger.debug("DatacenterManager::get_total_storage ENTRY");
         if(null == DatacenterManager.m_datacenters.get(datacenter)) {
+            //Datacenter not configured in placementd.yml
             logger.error("DatacenterManager::get_total_storage: Unknown datacenter: " + datacenter);
             logger.debug("DatacenterManager::get_total_storage EXIT");
             return 0;
@@ -92,10 +111,14 @@ public class DatacenterManager {
 
     }
 
+    /*
+     Method to determine the free CPU resource available on a datacenter.
+     */
     public static int get_available_cpu(String datacenter)
     {
         logger.debug("DatacenterManager::get_available_cpu ENTRY");
         if(null == DatacenterManager.m_datacenters.get(datacenter)) {
+            //Datacenter not configured in placementd.yml
             logger.error("DatacenterManager::get_available_cpu: Unknown datacenter: " + datacenter);
             logger.debug("DatacenterManager::get_available_cpu EXIT");
             return 0;
@@ -109,10 +132,14 @@ public class DatacenterManager {
 
     }
 
+    /*
+     Method to determine the free memory resource available on a datacenter.
+     */
     public static double get_available_memory(String datacenter)
     {
         logger.debug("DatacenterManager::get_available_memory ENTRY");
         if(null == DatacenterManager.m_datacenters.get(datacenter)) {
+            //Datacenter not configured in placementd.yml
             logger.error("DatacenterManager::get_available_memory: Unknown datacenter: " + datacenter);
             logger.debug("DatacenterManager::get_available_memory ENTRY");
             return 0;
@@ -126,10 +153,14 @@ public class DatacenterManager {
 
     }
 
+    /*
+     Method to determine the free storage resource available on a datacenter.
+     */
     public static double get_available_storage(String datacenter)
     {
         logger.debug("DatacenterManager::get_available_storage ENTRY");
         if(null == DatacenterManager.m_datacenters.get(datacenter)) {
+            //Datacenter not configured in placementd.yml
             logger.error("DatacenterManager::get_available_storage: Unknown datacenter: " + datacenter);
             logger.debug("DatacenterManager::get_available_storage EXIT");
             return 0;
@@ -143,10 +174,14 @@ public class DatacenterManager {
 
     }
 
+    /*
+     Method to decrement storage resource available on a datacenter.
+     */
     public static boolean consume_storage(String datacenter, double amount)
     {
         logger.debug("DatacenterManager::consume_storage ENTRY");
         if(null == DatacenterManager.m_datacenters.get(datacenter)) {
+            //Datacenter not configured in placementd.yml
             logger.error("DatacenterManager::consume_storage: Unknown datacenter: " + datacenter);
             logger.debug("DatacenterManager::consume_storage EXIT");
             return false;
@@ -165,10 +200,14 @@ public class DatacenterManager {
         }
     }
 
+    /*
+     Method to decrement memory resource available on a datacenter.
+     */
     public static boolean consume_memory(String datacenter, double amount)
     {
         logger.debug("DatacenterManager::consume_memory ENTRY");
         if(null == DatacenterManager.m_datacenters.get(datacenter)) {
+            //Datacenter not configured in placementd.yml
             logger.error("DatacenterManager::consume_memory: Unknown datacenter: " + datacenter);
             logger.debug("DatacenterManager::consume_memory EXIT");
             return false;
@@ -187,10 +226,14 @@ public class DatacenterManager {
         }
     }
 
+    /*
+     Method to decrement cpu resource available on a datacenter.
+     */
     public static boolean consume_cpu(String datacenter, int amount)
     {
         logger.debug("DatacenterManager::consume_cpu ENTRY");
         if(null == DatacenterManager.m_datacenters.get(datacenter)) {
+            //Datacenter not configured in placementd.yml
             logger.error("DatacenterManager::consume_cpu: Unknown datacenter: " + datacenter);
             logger.debug("DatacenterManager::consume_cpu EXIT");
             return false;
@@ -209,10 +252,14 @@ public class DatacenterManager {
         }
     }
 
+    /*
+     Method to increment cpu resource available on a datacenter.
+     */
     public static void relinquish_cpu(String datacenter, int cpu)
     {
         logger.debug("DatacenterManager::relinquish_cpu ENTRY");
         if(null == DatacenterManager.m_datacenters.get(datacenter)) {
+            //Datacenter not configured in placementd.yml
             logger.error("DatacenterManager::relinquish_cpu: Unknown datacenter: " + datacenter);
             logger.debug("DatacenterManager::relinquish_cpu EXIT");
             return;
@@ -224,10 +271,14 @@ public class DatacenterManager {
         return;
     }
 
+    /*
+     Method to increment memory resource available on a datacenter.
+     */
     public static void relinquish_memory(String datacenter, double memory)
     {
         logger.debug("DatacenterManager::relinquish_memory ENTRY");
         if(null == DatacenterManager.m_datacenters.get(datacenter)) {
+            //Datacenter not configured in placementd.yml
             logger.error("DatacenterManager::relinquish_memory: Unknown datacenter: " + datacenter);
             logger.debug("DatacenterManager::relinquish_memory EXIT");
             return;
@@ -239,10 +290,14 @@ public class DatacenterManager {
         return;
     }
 
+    /*
+     Method to increment storage resource available on a datacenter.
+     */
     public static void relinquish_storage(String datacenter, double storage)
     {
         logger.debug("DatacenterManager::relinquish_storage ENTRY");
         if(null == DatacenterManager.m_datacenters.get(datacenter)) {
+            //Datacenter not configured in placementd.yml
             logger.error("DatacenterManager::relinquish_storage: Unknown datacenter: " + datacenter);
             logger.debug("DatacenterManager::relinquish_storage EXIT");
             return;
@@ -254,6 +309,9 @@ public class DatacenterManager {
         return;
     }
 
+    /*
+     Method to reset consumed cpu/memory/storage resources on all datacenters to zero.
+     */
     public static void reset_resources()
     {
         logger.debug("DatacenterManager::reset_resources ENTRY");
@@ -264,7 +322,9 @@ public class DatacenterManager {
     }
 }
 
-
+/*
+ Helper class for datacenter resouces details.
+ */
 class DatacenterResource
 {
     String label;

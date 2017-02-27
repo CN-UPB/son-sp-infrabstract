@@ -26,12 +26,16 @@ import org.apache.log4j.Logger;
 //import javax.swing.plaf.basic.BasicInternalFrameTitlePane;
 //import javax.ws.rs.core.Link;
 
+/*
+ Class translates an instance of a service instance (service graph) to datacenter specific HEAT templates.
+ */
 public class ServiceHeatTranslator {
 
     final static Logger logger = Logger.getLogger(ServiceHeatTranslator.class);
     static WrapperConfiguration config;
     static ArrayList<Flavor> vimFlavors;
 
+    //Initialize some default configurations.
     protected static void initialize_defaults() {
         logger.info("initialize_defaults: Translating Placement Mapping to Heat");
 
@@ -43,6 +47,7 @@ public class ServiceHeatTranslator {
         vimFlavors.add(new Flavor("m1.small", 2, 2048, 20));
     }
 
+    //Initialize dummy network parameters for baseaddress/cidr.
     protected static void initialize_network_parameters(PopResource pop, List<NetworkResourceUnit> networkResources) {
 
         NetworkResourceUnit r_unit = new NetworkResourceUnit().setGateway("0.0.0.0").
@@ -52,6 +57,9 @@ public class ServiceHeatTranslator {
 
     }
 
+    /*
+     Method generates the HEAT template sections for vnf instances in the service graph (datacenter specific).
+     */
     protected static int populate_nova_server(ServiceInstance instance,
                                                ArrayList<Flavor> vimFlavors,
                                                HeatModel model,
@@ -59,22 +67,27 @@ public class ServiceHeatTranslator {
                                                List<String> mgmtPortNames) {
 
         int server_count = 0;
+
+        //Populate server properties:
+
         for (Map.Entry<String, Map<String, FunctionInstance>> finst_list : instance.function_list.entrySet()) {
             for (Map.Entry<String, FunctionInstance> finst : finst_list.getValue().entrySet()) {
                 HeatResource server = new HeatResource();
 
+                //Check if the vnf instance is associated with the datacenter.
                 if(!dataCenter.getPopName().equals(finst.getValue().data_center))
                     continue;
 
+                //Populate Flavour properties.
                 server.setType("OS::Nova::Server");
-                //server.setName(finst.getValue().function.getVnfName() /*+":"+unit.name */ + ":" + instance.service.getInstanceUuid());
-                server.setName(finst.getValue().getName() /*+":"+unit.name */);
-                server.putProperty("name", /*dataCenter.getPopName() + ":" + */server.getResourceName());
+                server.setName(finst.getValue().getName());
+                server.putProperty("name", server.getResourceName());
                 server.putProperty("flavor", vimFlavors.get(0));
                 server.putProperty("image", finst.getValue().deploymentUnits.get(0).getVmImage());
 
                 logger.debug("Nova::Server \t\t\t\t" + server.getResourceName());
 
+                //Populate Network properties
                 List<HashMap<String, Object>> net = new ArrayList<HashMap<String, Object>>();
                 for (ConnectionPoint connectionPoint : finst.getValue().deploymentUnits.get(0).getConnectionPoints()) {
                     LinkInstance link1 = findLinkInstance(finst.getValue(), connectionPoint.getId());
@@ -91,11 +104,8 @@ public class ServiceHeatTranslator {
                     port.setType("OS::Neutron::Port");
 
                     String[] conPointParts = connectionPoint.getId().split(":");
-                    //port.setName(finst.getValue().descriptor.getName() + ":" + /*connectionPoint.getId()*/ conPointParts[1]
-                    //       + ":" + link1.getLinkId() + ":" + instance.service.getInstanceUuid());
-                    //port.setName(finst.getValue().function.getVnfName() + ":" + /*connectionPoint.getId()*/ conPointParts[1]
-                    //      + ":" + link1.getLinkId() + ":" + instance.service.getInstanceUuid());
-                    port.setName(finst.getValue().getName() + ":" + /*connectionPoint.getId()*/ conPointParts[1]
+
+                    port.setName(finst.getValue().getName() + ":" + conPointParts[1]
                             + ":" + link1.getLinkId());
                     port.putProperty("name", port.getResourceName());
                     logger.debug("Neutron::Port \t\t\t\t" + port.getResourceName());
@@ -104,8 +114,6 @@ public class ServiceHeatTranslator {
                     if (mgmtPort)
                         netMap.put("get_resource", instance.service.getName() + ":mgmt:net");
                     else
-                        /*netMap.put("get_resource",
-                                finst.getValue().getName() + ":" + link1.getLinkId() + ":net:" + instance.service.getInstanceUuid());*/
                         netMap.put("get_resource",
                                 finst.getValue().function.getVnfName().split("-")[0] + ":" + link1.getLinkId() + ":net");
 
@@ -116,7 +124,7 @@ public class ServiceHeatTranslator {
                     HashMap<String, Object> n1 = new HashMap<String, Object>();
                     HashMap<String, Object> portMap = new HashMap<String, Object>();
                     portMap.put("get_resource",
-                            finst.getValue().getName() + ":" + /*connectionPoint.getId()*/ conPointParts[1] + ":" +
+                            finst.getValue().getName() + ":" +  conPointParts[1] + ":" +
                                     link1.getLinkId());
                     n1.put("port", portMap);
                     net.add(n1);
@@ -126,11 +134,14 @@ public class ServiceHeatTranslator {
                     continue;
                 }
 
+                //Add them to the HEAT model.
                 server.putProperty("networks", net);
                 model.addResource(server);
                 server_count++;
             }
         }
+
+        //Return the number of servers associated with this datacenter.
         return server_count;
     }
 
@@ -143,7 +154,9 @@ public class ServiceHeatTranslator {
         return null;
     }
 
-
+    /*
+     Method populates internal links (network/subnet) HEAT information between the vnf instances specific to the datacenter.
+     */
     protected static int populate_neutron_routers_E_LINE(ServiceInstance instance, HeatModel model,
                                                          List<NetworkResourceUnit> networkResources,
                                                          int subnetIndex, PopResource dataCenter) {
@@ -153,12 +166,9 @@ public class ServiceHeatTranslator {
             Object[] finst_t = finst_list.getValue().entrySet().toArray();
             NetworkResourceUnit nru = networkResources.get(subnetIndex);
 
-            /*for (Map.Entry<String, FunctionInstance> finst : finst_list.getValue().entrySet()) {*/
-
             for(int i=0; i < finst_t.length; i++) {
 
                 for (LinkInstance link : ((HashMap.Entry<String, FunctionInstance>) finst_t[i]).getValue().links.values()) {
-                    //for (LinkInstance link : finst.getValue().links.values()) {
 
                     if (link.isMgmtLink())
                         continue;
@@ -175,7 +185,6 @@ public class ServiceHeatTranslator {
                         HeatResource network = new HeatResource();
                         network.setType("OS::Neutron::Net");
                         network.setName(entryUnit.function.getVnfName().split("-")[0] + ":" + link.getLinkId() + ":net");
-                        //network.setName(entryUnit.getName() + ":" + link.getLinkId() + ":net:" + instance.service.getInstanceUuid());
                         network.putProperty("name", network.getResourceName());
                         model.addResource(network);
 
@@ -183,13 +192,11 @@ public class ServiceHeatTranslator {
                         HeatResource subnet = new HeatResource();
                         subnet.setType("OS::Neutron::Subnet");
                         subnet.setName(entryUnit.function.getVnfName().split("-")[0] + ":" + link.getLinkId() + ":subnet");
-                        //subnet.setName(entryUnit.getName() + ":" + link.getLinkId() + ":subnet:" + instance.service.getInstanceUuid());
                         subnet.putProperty("name", subnet.getResourceName());
-                        //NetworkResourceUnit nru = networkResources.get(subnetIndex);
                         subnet.putProperty("cidr", nru.subnetCidr);
                         if (nru.gateway != null)
                             subnet.putProperty("gateway_ip", nru.gateway);
-                        //subnetIndex++;
+
 
                         HashMap<String, Object> netMap = new HashMap<String, Object>();
                         netMap.put("get_resource", network.getResourceName());
@@ -217,7 +224,7 @@ public class ServiceHeatTranslator {
                                                         List<NetworkResourceUnit> networkResources,
                                                         int subnetIndex, PopResource dataCenter) {
         for (Map.Entry<String, Map<String, LinkInstance>> link_m : instance.outerlink_list.entrySet()) {
-            //for (LinkInstance link : instance.outerLinks.values()) {
+
             for (LinkInstance link : link_m.getValue().values()) {
                 if (link.isMgmtLink())
                     continue;
@@ -236,14 +243,14 @@ public class ServiceHeatTranslator {
 
                     HeatResource network = new HeatResource();
                     network.setType("OS::Neutron::Net");
-                    //network.setName(entryUnit.function.getVnfName() + ":" + link.getLinkId() + ":net:" + instance.service.getInstanceUuid());
+
                     network.setName(entryUnit.getName() + ":" + link.getLinkId() + ":net");
                     network.putProperty("name", network.getResourceName());
                     model.addResource(network);
 
                     HeatResource subnet = new HeatResource();
                     subnet.setType("OS::Neutron::Subnet");
-                    //subnet.setName(entryUnit.function.getVnfName() + ":" + link.getLinkId() + ":subnet:" + instance.service.getInstanceUuid());
+
                     subnet.setName(entryUnit.getName() + ":" + link.getLinkId() + ":subnet");
                     subnet.putProperty("name", subnet.getResourceName());
                     NetworkResourceUnit nru = networkResources.get(subnetIndex);
@@ -251,7 +258,7 @@ public class ServiceHeatTranslator {
                     if (nru.gateway != null)
                         subnet.putProperty("gateway_ip", nru.gateway);
 
-                    //subnetIndex++;
+
                     HashMap<String, Object> netMap = new HashMap<String, Object>();
                     netMap.put("get_resource", network.getResourceName());
                     subnet.putProperty("network", netMap);
@@ -264,18 +271,9 @@ public class ServiceHeatTranslator {
             }
         }
         for (Map.Entry<String, Map<String, LinkInstance>> link_m : instance.innerlink_list.entrySet()) {
-            //for (LinkInstance link : instance.innerLinks.values()) {
+
             for (Map.Entry<String, LinkInstance> link : link_m.getValue().entrySet()) {
-                //for (LinkInstance link : link_m.getValue().values()) {
-/*
-                HeatResource router = new HeatResource();
-                router.setName(instance.service.getName() + ":"
-                        + link.getValue().getLinkId());
-                router.setType("OS::Neutron::Router");
-                router.putProperty("name", instance.service.getName() + ":"
-                        + link.getValue().getLinkId());
-                model.addResource(router);
-*/
+
                 for (Map.Entry<FunctionInstance, String> entry : link.getValue().interfaceList.entrySet()) {
 
                     if(!entry.getKey().data_center.equals(dataCenter.getPopName()))
@@ -298,12 +296,10 @@ public class ServiceHeatTranslator {
                     // Create RouterInterface
                     HeatResource routerInterface = new HeatResource();
                     routerInterface.setType("OS::Neutron::RouterInterface");
-                    //routerInterface.setName(entry.getKey().getName() + ":" + link.getLinkId() + ":" + instance.service.getInstanceUuid());
                     routerInterface.setName(entry.getKey().getName() + ":" + link.getKey());
 
 
                     HashMap<String, Object> subnetMap = new HashMap<String, Object>();
-                    //subnetMap.put("get_resource", entry.getKey().getName() + ":"  +link.getLinkId() + ":subnet:" + instance.service.getInstanceUuid());
                     subnetMap.put("get_resource", entry.getKey().function.getVnfName().split("-")[0] + ":" + entry.getValue().split(":")[1] + ":subnet");
                     routerInterface.putProperty("subnet", subnetMap);
 
@@ -315,9 +311,6 @@ public class ServiceHeatTranslator {
 
                     model.addResource(routerInterface);
                     logger.debug("Neutron::RouterInterface \t" + routerInterface.getResourceName());
-
-                    //break;
-
 
                 }
             }
@@ -361,11 +354,11 @@ public class ServiceHeatTranslator {
         mgmtSubnet.setName(instance.service.getName() + ":mgmt:subnet");
         mgmtSubnet.putProperty("name", mgmtSubnet.getResourceName());
         NetworkResourceUnit nru = networkResources.get(subnetIndex);
-        //subnetIndex++;
+
         mgmtSubnet.putProperty("cidr", nru.subnetCidr);
         if (nru.gateway != null)
             mgmtSubnet.putProperty("gateway_ip", nru.gateway);
-        //mgmtSubnet.putProperty("gateway_ip", myPool.getGateway(cidr));
+
         HashMap<String, Object> mgmtNetMap = new HashMap<String, Object>();
         mgmtNetMap.put("get_resource", mgmtNetwork.getResourceName());
         mgmtSubnet.putProperty("network", mgmtNetMap);
@@ -387,6 +380,9 @@ public class ServiceHeatTranslator {
 
     }
 
+    /*
+     Main method to translate the service instance graph into datacenter specific HEAT templates.
+     */
     public static List<HeatTemplate> translatePlacementMappingToHeat(ServiceInstance instance,
                                                                      List<PopResource> resources) {
 
@@ -395,6 +391,7 @@ public class ServiceHeatTranslator {
         initialize_defaults();
         List<HeatTemplate> templates = new ArrayList<HeatTemplate>();
 
+        //Loop through all the datacenters configured in placementd.yml.
         for (PopResource datacenter : resources) {
 
             List<NetworkResourceUnit> networkResources = new ArrayList<NetworkResourceUnit>();
@@ -406,17 +403,23 @@ public class ServiceHeatTranslator {
             List<String> mgmtPortNames = new ArrayList<String>();
 
             int server_count = populate_nova_server(instance, vimFlavors, model, datacenter, mgmtPortNames);
+            //In case there are no vnf instances to be deployed on a particular datacenter, do not send an HEAT template
+            //to the datacenter.
             if(server_count == 0) {
                 templates.add(null);
                 continue;
             }
 
+            //Populate all the internal links in the service instance graph.
             int newIndex = populate_neutron_routers_E_LINE(instance, model, networkResources, subnetIndex, datacenter);
 
+            //Populate all the external links in the service instance graph.
             populate_neutron_routers_E_LAN(instance, model, networkResources, newIndex, datacenter);
 
+            //Populate the floating resources
             populate_neutron_floatingip(mgmtPortNames, model);
 
+            //Populate management links.
             populate_neutron_nsd_mgmt(instance, model, networkResources, newIndex, datacenter);
 
             model.prepare();

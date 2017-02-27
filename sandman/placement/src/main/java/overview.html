@@ -1,0 +1,22 @@
+<html>
+<body>
+<h1>PG-SanDMAN Translator.</h1>
+
+There is also a <a href="../sphinx/html/index.html">Sphinx documentation</a>.
+<p>
+The Translator constitutes the link between the SONATA descriptor editor and the son-emu datacenter emulator.
+</p>
+<p>
+The editor backend can push SONATA packages, containing SONATA service and function descriptors, to the Translator using the SONATA Gatekeeper REST API.
+The Translator processes and stores the service descriptions in a Catalogue.
+Using the Webfrontend the service deployment can be triggered.
+Control of function placement and connection is managed in the PlacementPlugin component.
+The DeploymentManager passes the descriptors to the PlacementPlugin and receives deployment information.
+Now the functions can be deployed as HEAT templates on the emulator using the HEAT REST API.
+The other OpenStack REST APIs are used to configure the networking.
+The Translator requests monitoring information about the deployed functions in regular intervals.
+The monitoring information can be used to let the PlacementPlugin check for over- or underload and update the services by adding or removing functions.
+Finally the service can be removed from the datacenter emulator.
+</p>
+</body>
+</html>

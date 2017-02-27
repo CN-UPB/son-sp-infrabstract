@@ -9,6 +9,9 @@ import sonata.kernel.placement.config.PopResource;
 
 import java.util.List;
 
+/**
+ * Utility functions to deploy Stacks on a son-emu emulator using the OpenStack HEAT REST API.
+ */
 public class TranslatorHeat {
 
     /**

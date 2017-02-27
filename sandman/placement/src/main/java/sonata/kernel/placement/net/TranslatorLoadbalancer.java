@@ -11,7 +11,6 @@ import org.apache.commons.io.IOUtils;
 import org.apache.http.client.methods.CloseableHttpResponse;
 import org.apache.http.client.methods.HttpDelete;
 import org.apache.http.client.methods.HttpPost;
-import org.apache.http.client.methods.HttpPut;
 import org.apache.http.entity.ContentType;
 import org.apache.http.entity.StringEntity;
 import org.apache.http.impl.client.CloseableHttpClient;
@@ -22,28 +21,43 @@ import sonata.kernel.VimAdaptor.commons.vnfd.UnitDeserializer;
 import sonata.kernel.placement.config.PopResource;
 
 import java.io.IOException;
-import java.nio.charset.Charset;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
-import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
+/**
+ * Utility functions to add Loadbalancing rules to a son-emu emulator using the loadbalancing REST API.
+ */
 public class TranslatorLoadbalancer {
 
     final static Logger logger = Logger.getLogger(TranslatorLoadbalancer.class);
 
+    /**
+     * Holds objects for json object
+     */
     static HashMap<String,Object> lbObject;
+    /**
+     * Holds a list of LinkPort objects for a json object
+     */
     static List<LinkPort> lbPortList;
 
+    /**
+     * Pattern to dissect the emulator response
+     */
     static Pattern pattern_floatingNode = Pattern.compile("^Loadbalancer set up at ([^:]*):(.*)$");
 
+    // initiate static objects
     static {
         lbObject = new HashMap<String,Object>();
         lbPortList = new ArrayList<LinkPort>();
         lbObject.put("dst_vnf_interfaces",lbPortList);
     }
 
+    /**
+     * Add a loadbalance rule to a son-emu emulator
+     * @param balance describes the loadbalancer rule
+     */
     public static void loadbalance(LinkLoadbalance balance){
 
         String balancePath = balance.srcPort.pop.getChainingEndpoint();
@@ -89,6 +103,11 @@ public class TranslatorLoadbalancer {
         }
     }
 
+    /**
+     * Adds a floating node to a son-emu emulator
+     * @param balance describes the loadbalance rule
+     * @return Cookie from the emulator to remove the floating node later on
+     */
     public static FloatingNode floatingNode(LinkLoadbalance balance){
         String balancePath = balance.srcPort.pop.getChainingEndpoint();
         if(!balancePath.endsWith("/"))
@@ -149,6 +168,10 @@ public class TranslatorLoadbalancer {
         return null;
     }
 
+    /**
+     * Removes a floating node from a son-emu emulator
+     * @param floatingNode Contains the cookie for the emulator to identify the floating node
+     */
     public static void unFloatingNode(FloatingNode floatingNode){
         String balancePath = floatingNode.pop.getChainingEndpoint();
         if(!balancePath.endsWith("/"))
@@ -182,6 +205,10 @@ public class TranslatorLoadbalancer {
         }
     }
 
+    /**
+     * Removes a loadbalance rule from a son-emu emulator
+     * @param srcPort describes the source port of the loadbalancer rule
+     */
     public static void unloadbalance(LinkPort srcPort){
         String balancePath = srcPort.pop.getChainingEndpoint();
         if(!balancePath.endsWith("/"))
@@ -215,14 +242,40 @@ public class TranslatorLoadbalancer {
         }
     }
 
+    /**
+     * Describes the floating node used to connect a service to the outer world
+     */
     public static class FloatingNode{
 
+        /**
+         * Loadbalancing rule to loadbalance incoming traffic between floating node and the service's input nodes
+         */
         public LinkLoadbalance lbRule;
+        /**
+         * Datacenter the floating node is assigned to
+         */
         public final PopResource pop;
+        /**
+         * Floating node's stack name
+         */
         public final String stackName;
+        /**
+         * Cookie provided by the emulator
+         */
         public final String cookie;
+        /**
+         * Emulator host IP assigned to the floating node
+         */
         public final String floatingIp;
 
+        /**
+         * Creates a floating node descriptor
+         * @param pop datacenter
+         * @param stackName floating node's stack
+         * @param cookie cookie identifying the floating node
+         * @param floatingIp IP of the node
+         * @param lbRule loadbalancing rule
+         */
         public FloatingNode(PopResource pop, String stackName, String cookie, String floatingIp, LinkLoadbalance lbRule){
             this.pop = pop;
             this.stackName = stackName;
@@ -232,6 +285,9 @@ public class TranslatorLoadbalancer {
         }
     }
 
+    /**
+     * Used to map objects to json Strings
+     */
     static ObjectMapper jsonMapper;
 
     static {

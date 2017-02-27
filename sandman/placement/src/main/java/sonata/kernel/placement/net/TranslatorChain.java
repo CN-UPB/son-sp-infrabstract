@@ -6,7 +6,6 @@ import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
 import com.fasterxml.jackson.databind.module.SimpleModule;
-import org.apache.http.HttpEntity;
 import org.apache.http.client.methods.CloseableHttpResponse;
 import org.apache.http.client.methods.HttpDelete;
 import org.apache.http.client.methods.HttpPost;
@@ -18,16 +17,22 @@ import org.apache.http.impl.client.HttpClients;
 import org.apache.log4j.Logger;
 import sonata.kernel.VimAdaptor.commons.vnfd.Unit;
 import sonata.kernel.VimAdaptor.commons.vnfd.UnitDeserializer;
-import sonata.kernel.placement.config.PopResource;
 
 import java.io.IOException;
 import java.util.HashMap;
 import java.util.Map;
 
+/**
+ * Utility methods to configure chains at a son-emu emulator using the chaining REST API.
+ */
 public class TranslatorChain {
 
     final static Logger logger = Logger.getLogger(TranslatorChain.class);
 
+    /**
+     * Adds a network chain to a son-emu emulator
+     * @param chain describes the chain to be created
+     */
     public static void chain(LinkChain chain){
 
         // Same chaining port for both datacenters
@@ -61,6 +66,10 @@ public class TranslatorChain {
         }
     }
 
+    /**
+     * Adds a network chain with a custom network path to a son-emu emulator
+     * @param chain describes the chain to be created
+     */
     public static void chainCustom(LinkChain chain){
 
         // Same chaining port for both datacenters
@@ -105,6 +114,10 @@ public class TranslatorChain {
         }
     }
 
+    /**
+     * Removes a network chain from a son-emu emulator
+     * @param chain
+     */
     public static void unchain(LinkChain chain){
 
         // Same chaining port for both datacenters
@@ -138,6 +151,9 @@ public class TranslatorChain {
         }
     }
 
+    /**
+     * Used to map objects to json Strings
+     */
     protected static ObjectMapper mapper;
 
     static {

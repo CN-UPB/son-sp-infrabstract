@@ -14,15 +14,20 @@ import sonata.kernel.VimAdaptor.commons.vnfd.Unit;
 import sonata.kernel.VimAdaptor.commons.vnfd.UnitDeserializer;
 import sonata.kernel.placement.service.NetworkTopologyGraph;
 
-import java.io.File;
-import java.io.FileInputStream;
-import java.io.FileNotFoundException;
 import java.io.IOException;
 
+/**
+ * Utility functions to request topology information from a son-emu emulator
+ */
 public class TranslatorTopo {
 
     final static Logger logger = Logger.getLogger(TranslatorTopo.class);
 
+    /**
+     * Requests topology information from a son-emu emulator
+     * @param topoEndpoint emulator to request
+     * @return Topology information
+     */
     public static NetworkTopologyGraph.NetworkTopology_J get_topology(String topoEndpoint){
         logger.debug("TranslatorTopo::get_topology ENTRY");
 
@@ -66,6 +71,11 @@ public class TranslatorTopo {
         return null;
     }
 
+    /**
+     * Maps a json String to a NetworkTopology_J object
+     * @param text json String
+     * @return Topology information or null in case of failure
+     */
     public static NetworkTopologyGraph.NetworkTopology_J read_json_topology(String text){
         logger.debug("TranslatorTopo::readJsonTopology ENTRY");
 /**

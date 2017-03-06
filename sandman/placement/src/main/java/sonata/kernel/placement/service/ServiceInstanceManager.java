@@ -31,26 +31,29 @@ public class ServiceInstanceManager {
         DELETE_INSTANCE
     }
 
+    //Returns the currently initialized service instance with the service instance manager.
     public ServiceInstance get_instance() {
         return instance;
     }
 
+    //Set a service instance with instance manager.
     public void set_instance(ServiceInstance instance) {
         this.instance = instance;
     }
 
     private ServiceInstance instance;
-    //private Map<String, VnfDescriptor> nw_function_desc_map;
-    //private Map<String, NetworkFunction> network_functions_db;
     private String default_pop;
     private PlacementConfig config;
 
-    public ServiceInstanceManager()
-    {
+    public ServiceInstanceManager() {
         config = PlacementConfigLoader.loadPlacementConfig();
         default_pop = config.getResources().get(0).getPopName();
     }
 
+    /*
+     Method perform the generates an initial service graph out of the SONATA descriptor.
+     returns a servie instance object.
+     */
     public ServiceInstance initialize_service_instance(DeployServiceData service_data) {
         ServiceDescriptor service = service_data.getNsd();
 
@@ -61,15 +64,21 @@ public class ServiceInstanceManager {
         ArrayList<ConnectionPoint> connection_points = Lists.newArrayList(service.getConnectionPoints());
         ArrayList<ForwardingGraph> forwarding_graph = Lists.newArrayList(service.getForwardingGraphs());
 
+        //Initialize the vnf instances in the graph
         initialize_function_instance(service_data);
+
+        //Initialize the links between the vnf instances in the graph.
         initialize_vlinks_list(service_data);
 
-
+        //Return the instance of the service instance.
         return instance;
 
 
     }
 
+    /*
+     Method initializes initial service graph vnf instances.
+     */
     protected void initialize_function_instance(DeployServiceData service_data) {
         instance.nw_function_desc_map = new HashMap<String, VnfDescriptor>();
         instance.network_functions_db = new HashMap<String, NetworkFunction>();
@@ -82,6 +91,7 @@ public class ServiceInstanceManager {
 
         for (NetworkFunction function : network_functions) {
 
+            //Get an available vnf instance name from the pool of names associated with the vnf id.
             String vnf_instance_name = get_next_vnf_name(function.getVnfId(), instance.vnf_uid_s);
 
             instance.network_functions_db.put(function.getVnfId(), function);
@@ -90,8 +100,9 @@ public class ServiceInstanceManager {
 
             FunctionInstance function_instance = new FunctionInstance(function, descriptor, function.getVnfId(), default_pop);
 
+            //Allocate resources for the vnf instances
             boolean resource_status = consume_resources(function_instance, function_instance.data_center);
-            if(!resource_status)
+            if (!resource_status) //Ignore vnf instance addition. Insufficient resources.
                 continue;
 
 
@@ -105,7 +116,6 @@ public class ServiceInstanceManager {
                 instance.vnf_uid.put(function.getVnfId(), vnf_uid);
                 Map<String, FunctionInstance> map = new HashMap<String, FunctionInstance>();
 
-                //map.put(function.getVnfId() + id, function_instance);
                 map.put(vnf_instance_name, function_instance);
                 instance.function_list.put(function.getVnfId(), map);
 
@@ -117,12 +127,8 @@ public class ServiceInstanceManager {
 
                 instance.function_list.get(function.getVnfId()).put(vnf_instance_name, function_instance);
 
-//                instance.function_list.get(function.getVnfId()).put(function.getVnfId() +
-//                        id, function_instance);
             }
 
-
-            //function_instance.setName(function.getVnfId().split("_")[1] + id);
             function_instance.setName(vnf_instance_name.split("_")[1]);
 
             initialize_vnfvlink_list(function_instance, descriptor);
@@ -130,6 +136,9 @@ public class ServiceInstanceManager {
         }
     }
 
+    /*
+     Method initializes initial service graph links.
+     */
     protected void initialize_vnfvlink_list(FunctionInstance f_instance, VnfDescriptor descriptor) {
         for (VnfVirtualLink link : descriptor.getVirtualLinks()) {
 
@@ -142,7 +151,7 @@ public class ServiceInstanceManager {
                     is_outerlink = true;
                     continue;
                 }
-                //linkInstance.interfaceList.put(f_instance, ref);
+
                 linkInstance.interfaceList.put(f_instance, ref);
             }
             if (is_outerlink) {
@@ -152,6 +161,9 @@ public class ServiceInstanceManager {
         }
     }
 
+    /*
+     Method adds a new virtual link between two vnf instances in the service graph.
+     */
     protected void add_link(VirtualLink link, LinkInstance linkInstance, String src, String target, boolean build_in, boolean build_out) {
         boolean is_nslink = false;
 
@@ -173,44 +185,49 @@ public class ServiceInstanceManager {
 
         }
 
+        //Links creation during scale out.
+        //Build input links as indicated by flag build_in
         linkInstance.setBuild_in(build_in);
+
+        //Build output links as indicated by flag build_out
         linkInstance.setBuild_out(build_out);
 
         int id;
 
+        //Get a available link name from the pool of available link names associated with the link id.
         String link_name = get_next_link_name(link.getId(), instance.vnf_vlinkid_s);
-        if (is_nslink) {
+        if (is_nslink) { //Handle external ns links
             if (instance.outerlink_list.get(link.getId()) == null) {
                 AtomicInteger vnf_vlinkid = new AtomicInteger(0);
                 id = vnf_vlinkid.addAndGet(1);
                 vnf_vlinkid.set(id);
                 instance.vnf_vlinkid.put(link.getId(), vnf_vlinkid);
                 Map<String, LinkInstance> map = new HashMap<String, LinkInstance>();
-                //map.put(link.getId() + ":" + id, linkInstance);
+
                 map.put(link_name, linkInstance);
                 instance.outerlink_list.put(link.getId(), map);
             } else {
                 id = instance.vnf_vlinkid.get(link.getId()).addAndGet(1);
                 instance.vnf_vlinkid.get(link.getId()).set(id);
-                //instance.outerlink_list.get(link.getId()).put(link.getId() + ":" + id, linkInstance);
+
                 instance.outerlink_list.get(link.getId()).put(link_name, linkInstance);
             }
             instance.outerLinks.put(link.getId(), linkInstance);
 
-        } else {
+        } else { //Handle internal virtual links between vnf instance.
             if (instance.innerlink_list.get(link.getId()) == null) {
                 AtomicInteger vnf_vlinkid = new AtomicInteger(0);
                 id = vnf_vlinkid.addAndGet(1);
                 vnf_vlinkid.set(id);
                 instance.vnf_vlinkid.put(link.getId(), vnf_vlinkid);
                 Map<String, LinkInstance> map = new HashMap<String, LinkInstance>();
-                //map.put(link.getId() + ":" + id, linkInstance);
+
                 map.put(link_name, linkInstance);
                 instance.innerlink_list.put(link.getId(), map);
             } else {
                 id = instance.vnf_vlinkid.get(link.getId()).addAndGet(1);
                 instance.vnf_vlinkid.get(link.getId()).set(id);
-                //instance.innerlink_list.get(link.getId()).put(link.getId() + ":" + id, linkInstance);
+
                 instance.innerlink_list.get(link.getId()).put(link_name, linkInstance);
             }
 
@@ -218,13 +235,16 @@ public class ServiceInstanceManager {
         return;
     }
 
-    protected void internal_add_mgmt_link(FunctionInstance f_inst){
+    /*
+      Method adds management links for the vnf instance.
+     */
+    protected void internal_add_mgmt_link(FunctionInstance f_inst) {
 
-        logger.debug("Add internal mgmt link "+f_inst.getName());
+        logger.debug("Add internal mgmt link " + f_inst.getName());
         VirtualLink link = new VirtualLink();
         link.setId("mgmt");
         LinkInstance linkInstance = new LinkInstance(link, "nslink:mgmt");
-        linkInstance.interfaceList.put(f_inst, f_inst.function.getVnfId()+":mgmt");
+        linkInstance.interfaceList.put(f_inst, f_inst.function.getVnfId() + ":mgmt");
 
         int id;
         if (instance.outerlink_list.get(link.getId()) == null) {
@@ -242,8 +262,10 @@ public class ServiceInstanceManager {
         }
     }
 
-    protected void update_ns_link(FunctionInstance f_inst)
-    {
+    /*
+     Method handles link addition during scale out.
+     */
+    protected void update_ns_link(FunctionInstance f_inst) {
         ArrayList<VirtualLink> virtual_links = Lists.newArrayList(instance.service.getVirtualLinks());
 
         for (VirtualLink link : virtual_links) {
@@ -251,24 +273,23 @@ public class ServiceInstanceManager {
 
             boolean is_nslink = false;
 
-            for(String cp_ref : link.getConnectionPointsReference())
-            {
+            for (String cp_ref : link.getConnectionPointsReference()) {
                 String[] cp_ref_str = cp_ref.split(":");
                 assert cp_ref_str != null && cp_ref_str.length == 2 : "Virtual Link " + link.getId() + " uses odd vnf reference " + cp_ref;
                 String vnfid = cp_ref_str[0];
 
-                if(vnfid.equals("ns"))
+                if (vnfid.equals("ns"))
                     is_nslink = true;
-             }
+            }
 
-            if(!is_nslink)
+            if (!is_nslink)
                 continue;
 
-            if(linkInstance.isMgmtLink())
+            if (linkInstance.isMgmtLink())
                 continue;
 
             for (String cp_ref : link.getConnectionPointsReference()) {
-                System.out.println("update_ns_link "+link.getId()+"  "+cp_ref);
+                System.out.println("update_ns_link " + link.getId() + "  " + cp_ref);
                 String[] cp_ref_str = cp_ref.split(":");
                 assert cp_ref_str != null && cp_ref_str.length == 2 : "Virtual Link " + link.getId() + " uses odd vnf reference " + cp_ref;
                 String vnfid = cp_ref_str[0];
@@ -289,75 +310,55 @@ public class ServiceInstanceManager {
                         vnf_vlinkid.set(id);
                         instance.vnf_vlinkid.put(link.getId(), vnf_vlinkid);
                         Map<String, LinkInstance> map = new HashMap<String, LinkInstance>();
-                        //map.put(link.getId() + ":" + id, linkInstance);
+
                         map.put(link_name, linkInstance);
                         instance.outerlink_list.put(link.getId(), map);
 
                     } else {
                         id = instance.vnf_vlinkid.get(link.getId()).addAndGet(1);
                         instance.vnf_vlinkid.get(link.getId()).set(id);
-                        //instance.outerlink_list.get(link.getId()).put(link.getId() + ":" + id, linkInstance);
+
                         instance.outerlink_list.get(link.getId()).put(link_name, linkInstance);
                     }
-
-                    if(connectionPointName.equals("input"))
-                    {
+                    //Create rules for loadbalancing at the ns:input.
+                    if (connectionPointName.equals("input")) {
                         add_input_lb_rules(linkInstance, instance.create_input_lb_links);
                     }
 
                 }
 
-
-
             }
 
-            //if(linkInstance.isMgmtLink())
-            //    continue;
-
-            /*int id;
-            if (is_nslink) {
-                System.out.println("Add to outerlink list");
-                if (instance.outerlink_list.get(link.getId()) == null) {
-                    AtomicInteger vnf_vlinkid = new AtomicInteger(0);
-                    id = vnf_vlinkid.addAndGet(1);
-                    vnf_vlinkid.set(id);
-                    instance.vnf_vlinkid.put(link.getId(), vnf_vlinkid);
-                    Map<String, LinkInstance> map = new HashMap<String, LinkInstance>();
-                    map.put(link.getId() + ":" + id, linkInstance);
-                    instance.outerlink_list.put(link.getId(), map);
-
-                } else {
-                    id = instance.vnf_vlinkid.get(link.getId()).addAndGet(1);
-                    instance.vnf_vlinkid.get(link.getId()).set(id);
-                    instance.outerlink_list.get(link.getId()).put(link.getId() + ":" + id, linkInstance);
-                }
-            }*/
         }
         return;
 
     }
 
-    protected void delete_ns_link(String f_inst)
-    {
-        String key="";
-        for(Map.Entry<String, Map<String, LinkInstance>> link_ll : instance.outerlink_list.entrySet())
-        {
-            for(Map.Entry<String, LinkInstance> link_e : link_ll.getValue().entrySet())
-            {
-                for(Map.Entry<FunctionInstance, String> finst : link_e.getValue().interfaceList.entrySet()){
-                    if(finst.getKey().name.equals(f_inst)) {
+    /*
+     Method deletes an external link.
+     */
+    protected void delete_ns_link(String f_inst) {
+        String key = "";
+        for (Map.Entry<String, Map<String, LinkInstance>> link_ll : instance.outerlink_list.entrySet()) {
+            for (Map.Entry<String, LinkInstance> link_e : link_ll.getValue().entrySet()) {
+                for (Map.Entry<FunctionInstance, String> finst : link_e.getValue().interfaceList.entrySet()) {
+                    if (finst.getKey().name.equals(f_inst)) {
                         key = link_e.getKey();
                     }
                 }
             }
         }
 
+        //Release the link name back to the names pool.
         instance.outerlink_list.get((key.split(":"))[0]).remove(key);
         release_link_name(key.split(":")[0], key, instance.vnf_vlinkid_s);
 
         return;
     }
 
+    /*
+     Method initializes the links instance in the service graph
+     */
     protected void initialize_link(VirtualLink link, LinkInstance linkInstance) {
         boolean is_nslink = false;
         boolean is_inputlink = false;
@@ -374,7 +375,7 @@ public class ServiceInstanceManager {
                 continue;
             }
 
-            if(connectionPointName.equals("input"))
+            if (connectionPointName.equals("input"))
                 is_inputlink = true;
 
             Map<String, FunctionInstance> vnf_instances = instance.function_list.get(vnfid);
@@ -387,19 +388,12 @@ public class ServiceInstanceManager {
                         + " that does not contain link for connection point " + connectionPointName;
 
                 linkInstance.interfaceList.put(finst.getValue(), cp_ref);
-
-
-
-                /*
-                port.setName(finst.getValue().getName() + ":" + conPointParts[1]
-                        + ":" + link1.getLinkId() + ":" + instance.service.getInstanceUuid());
-                 */
             }
 
         }
 
         int id;
-        if (is_nslink) {
+        if (is_nslink) { //Handle if its a external ns link
             if (instance.outerlink_list.get(link.getId()) == null) {
                 AtomicInteger vnf_vlinkid = new AtomicInteger(0);
                 id = vnf_vlinkid.addAndGet(1);
@@ -408,10 +402,10 @@ public class ServiceInstanceManager {
 
                 String link_name = get_next_link_name(link.getId(), instance.vnf_vlinkid_s);
                 Map<String, LinkInstance> map = new HashMap<String, LinkInstance>();
-                //map.put(link.getId() + ":" + id, linkInstance);
+
                 map.put(link_name, linkInstance);
                 instance.outerlink_list.put(link.getId(), map);
-                if(is_inputlink)
+                if (is_inputlink)
                     add_input_lb_rules(linkInstance, instance.create_input_lb_links);
 
             } else {
@@ -419,12 +413,12 @@ public class ServiceInstanceManager {
                 instance.vnf_vlinkid.get(link.getId()).set(id);
 
                 String link_name = get_next_link_name(link.getId(), instance.vnf_vlinkid_s);
-                //instance.outerlink_list.get(link.getId()).put(link.getId() + ":" + id, linkInstance);
+
                 instance.outerlink_list.get(link.getId()).put(link_name, linkInstance);
             }
             instance.outerLinks.put(link.getId(), linkInstance);
 
-        } else {
+        } else { //Handle it as internal link between vnf instances
             String link_name = get_next_link_name(link.getId(), instance.vnf_vlinkid_s);
             if (instance.innerlink_list.get(link.getId()) == null) {
                 AtomicInteger vnf_vlinkid = new AtomicInteger(0);
@@ -434,7 +428,7 @@ public class ServiceInstanceManager {
 
                 Map<String, LinkInstance> map = new HashMap<String, LinkInstance>();
 
-                //map.put(link.getId() + ":" + id, linkInstance);
+
                 map.put(link_name, linkInstance);
                 instance.innerlink_list.put(link.getId(), map);
             } else {
@@ -442,19 +436,21 @@ public class ServiceInstanceManager {
                 instance.vnf_vlinkid.get(link.getId()).set(id);
 
                 instance.innerlink_list.get(link.getId()).put(link_name, linkInstance);
-                //instance.innerlink_list.get(link.getId()).put(link.getId() + ":" + id, linkInstance);
+
             }
 
         }
-
+        //Add chaining rules.
         add_chaining_rules(linkInstance, instance.create_chain, null);
 
 
         return;
     }
 
-    public void flush_chaining_rules()
-    {
+    /*
+     Method clears all the rules for chaining and loadbalancing.
+     */
+    public void flush_chaining_rules() {
         instance.create_chain.clear();
         instance.delete_chain.clear();
         instance.customized_chains.clear();
@@ -462,8 +458,10 @@ public class ServiceInstanceManager {
         instance.delete_input_lb_links.clear();
     }
 
-    protected void add_input_lb_rules(LinkInstance linkInstance, List<Pair<String, String>> chain)
-    {
+    /*
+     Method adds a loadbalancing rule.
+     */
+    protected void add_input_lb_rules(LinkInstance linkInstance, List<Pair<String, String>> chain) {
         Object[] finst_t = linkInstance.interfaceList.entrySet().toArray();
 
         String server = "";
@@ -489,8 +487,10 @@ public class ServiceInstanceManager {
 
     }
 
-    protected void delete_input_lb_rules(FunctionInstance f_inst)
-    {
+    /*
+     Method deletes a load balancing rule
+     */
+    protected void delete_input_lb_rules(FunctionInstance f_inst) {
         String link_name = null;
         String link_id = null;
         LinkInstance l_inst = null;
@@ -499,15 +499,14 @@ public class ServiceInstanceManager {
         for (Map.Entry<String, Map<String, LinkInstance>> link_m : instance.outerlink_list.entrySet()) {
             for (Map.Entry<String, LinkInstance> link : link_m.getValue().entrySet()) {
 
-                if(link.getValue().isMgmtLink())
+                if (link.getValue().isMgmtLink())
                     break;
 
                 Object[] listt = link.getValue().interfaceList.entrySet().toArray();
 
-                for(int i=0 ; i< listt.length; i++){
+                for (int i = 0; i < listt.length; i++) {
 
-                    if(((HashMap.Entry<FunctionInstance, String>) listt[i]).getValue().contains(":input") && ((HashMap.Entry<FunctionInstance, String>) listt[i]).getKey().name.equals(f_inst.name))
-                    {
+                    if (((HashMap.Entry<FunctionInstance, String>) listt[i]).getValue().contains(":input") && ((HashMap.Entry<FunctionInstance, String>) listt[i]).getKey().name.equals(f_inst.name)) {
                         link_name = link.getKey();
                         l_inst = link.getValue();
 
@@ -516,7 +515,7 @@ public class ServiceInstanceManager {
                     }
                 }
 
-                if(link_found)
+                if (link_found)
                     break;
 
             }
@@ -529,6 +528,9 @@ public class ServiceInstanceManager {
     }
 
 
+    /*
+     Method deletes a chaining rule.
+     */
     protected void delete_chaining_rules(String link_id, String link_name) {
 
         LinkInstance linkInstance = instance.innerlink_list.get(link_id).get(link_name);
@@ -536,6 +538,9 @@ public class ServiceInstanceManager {
         return;
     }
 
+    /*
+     Method adds a chaining rule.
+     */
     protected void add_chaining_rules(LinkInstance linkInstance,
                                       List<Pair<Pair<String, String>, Pair<String, String>>> chain, List<String> viaPath) {
         Object[] finst_t = linkInstance.interfaceList.entrySet().toArray();
@@ -569,13 +574,12 @@ public class ServiceInstanceManager {
 
 
         if (((HashMap.Entry<FunctionInstance, String>) finst_t[1]).getValue().split(":")[1].equals("input")) {
-            chain.add(new ImmutablePair<Pair<String,String>,Pair<String,String>>(new ImmutablePair<String,String>(server[0],port[0]), new ImmutablePair<String,String>(server[1],port[1])));
+            chain.add(new ImmutablePair<Pair<String, String>, Pair<String, String>>(new ImmutablePair<String, String>(server[0], port[0]), new ImmutablePair<String, String>(server[1], port[1])));
         } else {
-            chain.add(new ImmutablePair<Pair<String,String>,Pair<String,String>>(new ImmutablePair<String,String>(server[1],port[1]), new ImmutablePair<String,String>(server[0],port[0])));
+            chain.add(new ImmutablePair<Pair<String, String>, Pair<String, String>>(new ImmutablePair<String, String>(server[1], port[1]), new ImmutablePair<String, String>(server[0], port[0])));
         }
 
-        if(viaPath != null && viaPath.size()!=0)
-        {
+        if (viaPath != null && viaPath.size() != 0) {
             if (((HashMap.Entry<FunctionInstance, String>) finst_t[1]).getValue().split(":")[1].equals("input")) {
                 instance.customized_chains.add(new ImmutablePair<Pair<String, String>, List<String>>
                         (new ImmutablePair<String, String>(server[0], server[1]), viaPath));
@@ -602,6 +606,9 @@ public class ServiceInstanceManager {
 
     }
 
+    /*
+     Method tries to fetch vnf descriptors from the Catalog.
+     */
     public void update_vnfdescriptor(String vnf_id, boolean new_addition) {
         if (instance.function_list.get(vnf_id) == null && !new_addition) {
             logger.info("ServiceInstanceManager:update_vnfdescriptor ingored for " + vnf_id + ".");
@@ -617,19 +624,20 @@ public class ServiceInstanceManager {
     }
 
     /*
+    Method adds/deletes vnf instances into the service graph.
     Note:
     In case of vnf instance addition, vnf_name = null
     In case of vnf instance deletion, vnf_name must be the name associated with the vnf instance.
      */
     public String update_functions_list(String vnf_id, String vnf_name, String PopName, ACTION_TYPE action) {
 
-        if (action == ACTION_TYPE.ADD_INSTANCE) {
+        if (action == ACTION_TYPE.ADD_INSTANCE) { //Handle vnf instance addition
 
             if (instance.function_list.get(vnf_id) == null) {
             /*
             Special network functions: Load balancers etc.
              */
-                logger.debug("Add instance of unknown function "+vnf_id);
+                logger.debug("Add instance of unknown function " + vnf_id);
                 Catalogue.loadInternalFunctions();
                 VnfDescriptor descriptor = Catalogue.internalFunctions.get(vnf_id);
                 assert descriptor != null : "Virtual Network Function " + vnf_id + " not found";
@@ -646,7 +654,7 @@ public class ServiceInstanceManager {
                 instance.network_functions_db.put(vnf_id, n_function);
 
                 String ss = instance.network_functions_db.get(vnf_id).getVnfName();
-                //nw_function_desc_map.put(descriptor.getName(), descriptor);
+
                 instance.nw_function_desc_map.put(ss, descriptor);
 
                 AtomicInteger vnf_uid = new AtomicInteger(0);
@@ -655,30 +663,28 @@ public class ServiceInstanceManager {
                 instance.vnf_uid.put(n_function.getVnfId(), vnf_uid);
 
                 String vnf_instance_name = get_next_vnf_name(n_function.getVnfId(), instance.vnf_uid_s);
-                //FunctionInstance function_instance = new FunctionInstance(n_function, descriptor,
-                //        n_function.getVnfName().split("-")[0] + id, PopName);
 
                 FunctionInstance function_instance = new FunctionInstance(n_function, descriptor,
                         vnf_instance_name.split("_")[1], PopName);
 
                 boolean resource_status = consume_resources(function_instance, function_instance.data_center);
-                if(!resource_status)
+                if (!resource_status)
                     return null;
 
                 initialize_vnfvlink_list(function_instance, descriptor);
 
                 Map<String, FunctionInstance> map = new HashMap<String, FunctionInstance>();
-                //map.put(n_function.getVnfId() + id, function_instance);
+
                 map.put(vnf_instance_name, function_instance);
                 instance.function_list.put(n_function.getVnfId(), map);
 
                 internal_add_mgmt_link(function_instance);
 
-                //return n_function.getVnfId() + id;
+
                 return function_instance.name;
 
             } else {
-                logger.debug("Add instance of known function "+vnf_id);
+                logger.debug("Add instance of known function " + vnf_id);
                 VnfDescriptor descriptor = instance.nw_function_desc_map.get(instance.network_functions_db.get(vnf_id).getVnfName());
                 assert descriptor != null : "Virtual Network Function " + vnf_id + " not found";
 
@@ -690,43 +696,51 @@ public class ServiceInstanceManager {
 
                 String vnf_instance_name = get_next_vnf_name(n_function.getVnfId(), instance.vnf_uid_s);
 
-//                FunctionInstance function_instance = new FunctionInstance(n_function, descriptor,
-//                        n_function.getVnfName().split("-")[0] + id, PopName);
 
                 FunctionInstance function_instance = new FunctionInstance(n_function, descriptor,
                         vnf_instance_name.split("_")[1], PopName);
 
                 boolean resource_status = consume_resources(function_instance, function_instance.data_center);
-                if(!resource_status)
-                    return null;
+                if (!resource_status)
+                    return null; //Return null if vnf instance could not be instantiated on a datacenter due to insufficient resource.
 
+                //Initialize the connection points associated with the vnf instance
                 initialize_vnfvlink_list(function_instance, descriptor);
 
+                //Add external links
                 update_ns_link(function_instance);
 
+                //Add management link
                 internal_add_mgmt_link(function_instance);
 
-//                instance.function_list.get(n_function.getVnfId()).put(n_function.getVnfId() +
-//                        id, function_instance);
                 instance.function_list.get(n_function.getVnfId()).put(vnf_instance_name, function_instance);
 
-                //return n_function.getVnfId() + id;
+                //Return the vnf instance name just created.
                 return function_instance.name;
 
             }
-        } else if (action == ACTION_TYPE.DELETE_INSTANCE) {
-            logger.debug("Delete instance of function "+vnf_id+" with name "+vnf_name);
+        } else if (action == ACTION_TYPE.DELETE_INSTANCE) { //Handle vnf instance deletion
+            logger.debug("Delete instance of function " + vnf_id + " with name " + vnf_name);
             if (instance.function_list.get(vnf_id) == null) {
                 logger.error("Virtual Network Function " + vnf_id + " not found");
             } else {
 
                 FunctionInstance f_inst = instance.function_list.get(vnf_id).get(vnf_name);
+                //Release all resources
                 relinquish_resource(f_inst);
+
+                //Delete internal links
                 delete_inner_links(f_inst);
+
+                //Delete load balancing rules.
                 delete_input_lb_rules(f_inst);
+
+                //Delete external links
                 delete_ns_link((vnf_name.split("_"))[1]);
                 int id = instance.vnf_uid.get(vnf_id).decrementAndGet();
                 instance.vnf_uid.get(vnf_id).set(id);
+
+                //Release vnf instance name back to the names pool
                 release_vnf_name(vnf_name, instance.vnf_uid_s);
                 instance.function_list.get(vnf_id).remove(vnf_name);
 
@@ -736,32 +750,32 @@ public class ServiceInstanceManager {
 
     }
 
-    protected void delete_inner_links(FunctionInstance f_instance)
-    {
+    /*
+     Method deletes internal vnf links from a service graph
+     */
+    protected void delete_inner_links(FunctionInstance f_instance) {
 
-        for(Map.Entry<String, Map<String, LinkInstance>> link_m : instance.innerlink_list.entrySet())
-        {
+        for (Map.Entry<String, Map<String, LinkInstance>> link_m : instance.innerlink_list.entrySet()) {
             List<String> link_names = new ArrayList<String>();
-            for(Map.Entry<String, LinkInstance> entry : link_m.getValue().entrySet())
-            {
-                for(Map.Entry<FunctionInstance, String> ee : entry.getValue().interfaceList.entrySet())
-                {
-                    if(f_instance.name.equals(ee.getKey().name))
-                    {
+            for (Map.Entry<String, LinkInstance> entry : link_m.getValue().entrySet()) {
+                for (Map.Entry<FunctionInstance, String> ee : entry.getValue().interfaceList.entrySet()) {
+                    if (f_instance.name.equals(ee.getKey().name)) {
                         link_names.add(entry.getKey());
                     }
                 }
             }
 
-            for(String vlinks : link_names)
-            {
+            for (String vlinks : link_names) {
                 delete_chaining_rules(vlinks.split(":")[0], vlinks);
                 link_m.getValue().remove(vlinks);
                 release_link_name(vlinks.split(":")[0], vlinks, instance.vnf_vlinkid_s);
             }
-      }
+        }
     }
 
+    /*
+     Method enable addition/deletion of links from a given instance of the service graph.
+     */
     public ServiceInstance update_vlink_list(String s_vnfid, String d_vnfid, String endpoint_src, String endpoint_target, List<String> viaPath, ACTION_TYPE action) {
 
         assert instance.function_list.get(s_vnfid) != null : "Virtual Network Function " + s_vnfid + " not found";
@@ -771,7 +785,7 @@ public class ServiceInstanceManager {
         assert instance.function_list.get(d_vnfid).get(endpoint_target) != null : "Virtual Network Function instance "
                 + endpoint_target + " not found";
 
-        if (action == ACTION_TYPE.ADD_INSTANCE) {
+        if (action == ACTION_TYPE.ADD_INSTANCE) { //Handle link addition
 
             String link_name = null;
             String link_id = null;
@@ -797,11 +811,11 @@ public class ServiceInstanceManager {
 
             logger.error("ServiceInstanceManager::update_vlink_list: " + action.toString()
                     + " link between " + endpoint_src + " and " + endpoint_target + " failed");
-
+            //Add chaining rules.
             add_chaining_rules(linkInstance, instance.create_chain, viaPath);
 
 
-        } else if (action == ACTION_TYPE.DELETE_INSTANCE) {
+        } else if (action == ACTION_TYPE.DELETE_INSTANCE) { //Handle link deletion
 
             String link_name = null;
             String link_id = null;
@@ -834,7 +848,9 @@ public class ServiceInstanceManager {
                 }
                 if (link_name != null) {
                     link_id = link_m.getKey();
+                    //Delete chaining rules
                     delete_chaining_rules(link_id, link_name);
+                    //Release link names associated with the link being deleted.
                     release_link_name(link_id, link_name, instance.vnf_vlinkid_s);
                     instance.innerlink_list.get(link_id).remove(link_name);
                     break;
@@ -869,65 +885,37 @@ public class ServiceInstanceManager {
                 logger.error("ServiceInstanceManager::update_vlink_list: " + action.toString()
                         + " link between " + endpoint_src + " and " + endpoint_target + " failed");
             }
-
-
-            /*
-            for (Map.Entry<String, LinkInstance> link : instance.innerLinks.entrySet()) {
-
-                Object[] listt = link.getValue().interfaceList.entrySet().toArray();
-
-                if ((((HashMap.Entry<FunctionInstance, String>) listt[0]).getKey().name.equals(endpoint_src.split("_")[1]) &&
-                        ((HashMap.Entry<FunctionInstance, String>) listt[1]).getKey().name.equals(endpoint_target.split("_")[1])) ||
-                        (((HashMap.Entry<FunctionInstance, String>) listt[1]).getKey().name.equals(endpoint_src.split("_")[1]) &&
-                                ((HashMap.Entry<FunctionInstance, String>) listt[0]).getKey().name.equals(endpoint_target.split("_")[1]))) {
-                    FunctionInstance src;
-                    FunctionInstance target;
-
-                    if (((HashMap.Entry<FunctionInstance, String>) listt[0]).getValue().contains("output") &&
-                            ((HashMap.Entry<FunctionInstance, String>) listt[1]).getValue().contains("input")) {
-                        src = ((HashMap.Entry<FunctionInstance, String>) listt[0]).getKey();
-                        target = ((HashMap.Entry<FunctionInstance, String>) listt[1]).getKey();
-                    } else {
-                        src = ((HashMap.Entry<FunctionInstance, String>) listt[1]).getKey();
-                        target = ((HashMap.Entry<FunctionInstance, String>) listt[0]).getKey();
-                    }
-
-                    link_name = link.getValue().name.split(":")[1];
-                    break;
-
-                }
-            }*/
-
-
         }
 
         logger.info("ServiceInstanceManager::update_vlink_list: " + action.toString()
                 + " link between " + endpoint_src + " and " + endpoint_target + " successful");
 
+        //In case of link addition return the link instance.
         return this.instance;
     }
 
-    protected boolean consume_resources(FunctionInstance function_instance, String data_center)
-    {
+    /*
+     Method enabled acquiring of required resources from the particular datacenter resource pool
+     */
+    protected boolean consume_resources(FunctionInstance function_instance, String data_center) {
         double multiplier =
                 function_instance.deploymentUnits.get(0).getResourceRequirements().getMemory().getSizeUnit().getMultiplier();
         boolean memory_status = DatacenterManager.consume_memory(data_center,
                 function_instance.deploymentUnits.get(0).getResourceRequirements().getMemory().getSize() * multiplier);
 
-        if(memory_status == false) {
+        if (memory_status == false) {
             logger.error("ServiceInstanceManager::consume_resources: Insufficient memory resource on "
                     + data_center + ". Required: " + function_instance.deploymentUnits.get(0).getResourceRequirements().getMemory().getSize() * multiplier
                     + " " + function_instance.deploymentUnits.get(0).getResourceRequirements().getMemory().getSizeUnit().name()
                     + ". Available: " + DatacenterManager.get_available_memory(data_center)
-            + " " + function_instance.deploymentUnits.get(0).getResourceRequirements().getMemory().getSizeUnit().name());
+                    + " " + function_instance.deploymentUnits.get(0).getResourceRequirements().getMemory().getSizeUnit().name());
             return false;
         }
 
         boolean cpu_status = DatacenterManager.consume_cpu(data_center,
                 function_instance.deploymentUnits.get(0).getResourceRequirements().getCpu().getVcpus());
 
-        if(cpu_status == false)
-        {
+        if (cpu_status == false) {
             logger.error("ServiceInstanceManager::consume_resources: Insufficient cpu resource on "
                     + data_center + ". Required: " + function_instance.deploymentUnits.get(0).getResourceRequirements().getCpu().getVcpus()
                     + " Available: " + DatacenterManager.get_available_cpu(data_center));
@@ -941,8 +929,7 @@ public class ServiceInstanceManager {
         boolean storage_status = DatacenterManager.consume_storage(data_center,
                 function_instance.deploymentUnits.get(0).getResourceRequirements().getStorage().getSize() * multiplier);
 
-        if(storage_status == false)
-        {
+        if (storage_status == false) {
             logger.error("ServiceInstanceManager::consume_resources: Insufficient storage resource on "
                     + data_center + ". Required: " + function_instance.deploymentUnits.get(0).getResourceRequirements().getStorage().getSize() * multiplier
                     + " " + function_instance.deploymentUnits.get(0).getResourceRequirements().getStorage().getSizeUnit().name()
@@ -959,8 +946,10 @@ public class ServiceInstanceManager {
         return true;
     }
 
-    protected boolean relinquish_resource(FunctionInstance function_instance)
-    {
+    /*
+     Method enables release of consumed resource back to the datacenter resource pool
+     */
+    protected boolean relinquish_resource(FunctionInstance function_instance) {
         double multiplier =
                 function_instance.deploymentUnits.get(0).getResourceRequirements().getMemory().getSizeUnit().getMultiplier();
         DatacenterManager.relinquish_memory(function_instance.data_center,
@@ -978,36 +967,36 @@ public class ServiceInstanceManager {
 
     }
 
+    /*
+     Method enables offline migration of vnf instances from one datacenter to another.
+     */
 
-    public boolean move_function_instance(String vnf_name, String pop_name)
-    {
+    public boolean move_function_instance(String vnf_name, String pop_name) {
         FunctionInstance f_instance = instance.getFunctionInstance(vnf_name);
-        if(f_instance == null)
+        if (f_instance == null)
             return false;
 
+        //Check if the new datacenter has the necessary resources to allocate a new vnf instance.
         boolean status = consume_resources(f_instance, pop_name);
-        if(false == status)
+        if (false == status)
             return false;
 
+        //Relinquish the currently used resources to the current data center.
         relinquish_resource(f_instance);
         f_instance.data_center = pop_name;
 
-        for(Map.Entry<String, Map<String, LinkInstance>> link_m : instance.innerlink_list.entrySet())
-        {
+        //
+        for (Map.Entry<String, Map<String, LinkInstance>> link_m : instance.innerlink_list.entrySet()) {
             HashMap<String, LinkInstance> links = new HashMap<String, LinkInstance>();
-            for(Map.Entry<String, LinkInstance> entry : link_m.getValue().entrySet())
-            {
-                for(Map.Entry<FunctionInstance, String> ee : entry.getValue().interfaceList.entrySet())
-                {
-                    if(f_instance.name.equals(ee.getKey().name))
-                    {
-                        links.put(entry.getKey(),entry.getValue());
+            for (Map.Entry<String, LinkInstance> entry : link_m.getValue().entrySet()) {
+                for (Map.Entry<FunctionInstance, String> ee : entry.getValue().interfaceList.entrySet()) {
+                    if (f_instance.name.equals(ee.getKey().name)) {
+                        links.put(entry.getKey(), entry.getValue());
                     }
                 }
             }
 
-            for(Map.Entry<String,LinkInstance> vlinks : links.entrySet())
-            {
+            for (Map.Entry<String, LinkInstance> vlinks : links.entrySet()) {
                 delete_chaining_rules(vlinks.getValue().getLinkId(), vlinks.getKey());
                 add_chaining_rules(vlinks.getValue(), instance.create_chain, vlinks.getValue().viaPath);
             }
@@ -1016,13 +1005,13 @@ public class ServiceInstanceManager {
         return true;
     }
 
-    private String get_next_link_name(String link_id, Map<String, Stack<String>> id_map)
-    {
-        if(id_map.get(link_id) == null)
-        {
+    /*
+     Method returns the next available link name from the pool
+     */
+    private String get_next_link_name(String link_id, Map<String, Stack<String>> id_map) {
+        if (id_map.get(link_id) == null) {
             Stack<String> instance_name = new Stack<String>();
-            for(int i = 1000; i >= 1; i--)
-            {
+            for (int i = 1000; i >= 1; i--) {
                 instance_name.push(link_id + ":" + i);
             }
 
@@ -1035,24 +1024,27 @@ public class ServiceInstanceManager {
 
     }
 
-    private  void release_link_name(String link_id, String link_instance, Map<String, Stack<String>> id_map)
-    {
-        if(id_map.get(link_id) == null)
+    /*
+     Method returns the link name back to pool.
+     */
+    private void release_link_name(String link_id, String link_instance, Map<String, Stack<String>> id_map) {
+        if (id_map.get(link_id) == null) //No such link id available in the pool
             return;
 
+        //Release link name back to the pool.
         id_map.get(link_id).add(link_instance);
 
         return;
 
     }
 
-    private String get_next_vnf_name(String vnf_id, Map<String, Stack<String>> id_map)
-    {
-        if(id_map.get(vnf_id) == null)
-        {
+    /*
+     Method returns the next available vnf instance name from the pool of vnf names for a vnf type.
+     */
+    private String get_next_vnf_name(String vnf_id, Map<String, Stack<String>> id_map) {
+        if (id_map.get(vnf_id) == null) {
             Stack<String> instance_name = new Stack<String>();
-            for(int i = 100; i >= 1; i--)
-            {
+            for (int i = 100; i >= 1; i--) {
                 instance_name.push(vnf_id + i);
             }
 
@@ -1064,12 +1056,13 @@ public class ServiceInstanceManager {
         }
     }
 
-    protected void release_vnf_name(String vnf_instance, Map<String, Stack<String>> id_map)
-    {
+    /*
+     Method returns the vnf instance name back to the pool
+     */
+    protected void release_vnf_name(String vnf_instance, Map<String, Stack<String>> id_map) {
         String vnf_id = instance.findVnfIdFromVnfInstanceName(vnf_instance.split("_")[1]);
 
-        if(vnf_id == null)
-        {
+        if (vnf_id == null) {
             return;
         }
 

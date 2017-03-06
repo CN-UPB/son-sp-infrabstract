@@ -62,9 +62,9 @@ public class ServiceDescriptor {
   private ArrayList<ForwardingGraph> forwardingGraphs;
   @JsonProperty("lifecycle_events")
   private LifeCycleEvent lifecycleEvents;
-  @JsonProperty("vnf_depencency")
+  @JsonProperty("vnf_depedency")
   private ArrayList<String> vnfDepencency;
-  @JsonProperty("services_dependency")
+  @JsonProperty("services_depedency")
   private ArrayList<String> servicesDependency;
   @JsonProperty("monitoring_parameters")
   private ArrayList<MonitoringParameter> monitoringParameters;

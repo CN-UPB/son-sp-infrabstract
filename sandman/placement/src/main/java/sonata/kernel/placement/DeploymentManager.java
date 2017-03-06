@@ -284,13 +284,27 @@ public class DeploymentManager implements Runnable {
 
             // Add floating node and loadbalance input
             try {
-                //FIXME: what datacenter to use? check vnf and decide for datacenter
                 // vnf-name - port name
                 List<Pair<String, String>> inputPorts = instance.get_create_input_lb_links();
                 ArrayList<LinkPort> fnlist = new ArrayList<LinkPort>();
+                String dcName;
+                PopResource pop;
                 for(Pair<String, String> inputPort: inputPorts) {
-                    currentFloatingPorts.add(inputPort);
-                    fnlist.add(new LinkPort(usedPops.get(0), serviceStackName, inputPort.getLeft(), inputPort.getRight()));
+                    // Search for correct datacenter
+                    dcName = instance.getDataCenterForVnf(inputPort.getLeft());
+                    pop = null;
+                    for(PopResource usedPop: usedPops) {
+                        if(usedPop.getPopName().equals(dcName)) {
+                            pop = usedPop;
+                            break;
+                        }
+                    }
+                    if(pop != null) {
+                        currentFloatingPorts.add(inputPort);
+                        fnlist.add(new LinkPort(usedPops.get(0), serviceStackName, inputPort.getLeft(), inputPort.getRight()));
+                    } else {
+                        logger.warn("Datacenter not found for " + inputPort.getLeft()+" "+ inputPort.getRight());
+                    }
                 }
                 LinkLoadbalance lb = new LinkLoadbalance(usedPops.get(0), "floating", "foo", "bar", fnlist);
                 inputFloatingNode = TranslatorLoadbalancer.floatingNode(lb);
@@ -494,8 +508,6 @@ public class DeploymentManager implements Runnable {
             else if (monitorMessage.type == MonitorMessage.SCALE_TYPE.SCALE_IN)
                 logger.info("Scale in");
 
-            String serviceName = currentDeployData.getNsd().getName();
-
             List<HeatTemplate> templates = ServiceHeatTranslator.translatePlacementMappingToHeat(instance, config.getResources());
 
             Map<String, FunctionInstance> functionMap = new HashMap<String, FunctionInstance>();
@@ -503,9 +515,6 @@ public class DeploymentManager implements Runnable {
                 for (Map.Entry<String, FunctionInstance> entry : map.entrySet())
                     functionMap.put(entry.getValue().name, entry.getValue());
             }
-
-            SimpleDateFormat format = new SimpleDateFormat("mmssSS");
-            String timestamp = format.format(new Date());
 
             List<FunctionMonitor> vnfMonitors = new ArrayList<FunctionMonitor>();
             List<String> usedNodes = new ArrayList<String>();
@@ -631,8 +640,24 @@ public class DeploymentManager implements Runnable {
 
                 // create new floating ports rule
                 ArrayList<LinkPort> fnlist = new ArrayList<LinkPort>();
+
+                String dcName;
+                PopResource pop;
                 for(Pair<String, String> inputPort: newFloatingPorts) {
-                    fnlist.add(new LinkPort(usedPops.get(0), serviceStackName, inputPort.getLeft(), inputPort.getRight()));
+                    // Search correct datacenter
+                    dcName = instance.getDataCenterForVnf(inputPort.getLeft());
+                    pop = null;
+                    for(PopResource usedPop:usedPops){
+                        if(usedPop.getPopName().equals(dcName)) {
+                            pop = usedPop;
+                            break;
+                        }
+                    }
+                    if (pop != null) {
+                        fnlist.add(new LinkPort(pop, serviceStackName, inputPort.getLeft(), inputPort.getRight()));
+                    } else {
+                        logger.warn("Datacenter not found for " + inputPort.getLeft()+" "+ inputPort.getRight());
+                    }
                 }
                 currentFloatingPorts = newFloatingPorts;
                 newFloatingLbRule = new LinkLoadbalance(usedPops.get(0), "floating", "foo", "bar", fnlist);

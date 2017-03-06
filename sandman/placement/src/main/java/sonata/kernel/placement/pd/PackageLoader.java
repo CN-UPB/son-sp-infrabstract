@@ -388,14 +388,14 @@ public class PackageLoader {
                 logger.debug("ContentType: "+pObj.getContentType());
 
                 // It's a service descriptor
-                if ("application/sonata.service_descriptors".equals(pObj.getContentType())) {
+                if (pObj.getContentType()!= null && pObj.getContentType().startsWith("application/sonata.service_descriptor")) {
 
                     services.add(fileData);
                     logger.debug("Service Descriptor found: "+name);
                 }
 
                 // It's a function descriptor
-                if ("application/sonata.function_descriptor".equals(pObj.getContentType())) {
+                if (pObj.getContentType() != null && pObj.getContentType().startsWith("application/sonata.function_descriptor")) {
 
                     functions.add(fileData);
                     logger.debug("Function Descriptor found: "+name);

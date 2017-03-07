@@ -977,7 +977,7 @@ public class Validation {
                 output.setCharAt(current, r);
                 current++;
             }
-            current = input.indexOf(c, current);
+            current = input.indexOf(c, current+1);
         }
         return output.toString();
     }

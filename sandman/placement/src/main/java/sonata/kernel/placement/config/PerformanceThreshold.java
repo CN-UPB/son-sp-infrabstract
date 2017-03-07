@@ -85,19 +85,19 @@ public class PerformanceThreshold {
     }
 
     /**
-     * Upper threshold for CPU load
+     * Upper threshold for CPU load in %
      */
     double cpu_upper_l;
     /**
-     * Lower threshold for CPU load
+     * Lower threshold for CPU load in %
      */
     double cpu_lower_l;
     /**
-     * Upper threshold for memory usage
+     * Upper threshold for memory usage in %
      */
     float mem_upper_l;
     /**
-     * Lower threshold for memory usage
+     * Lower threshold for memory usage in %
      */
     float mem_lower_l;
     /**

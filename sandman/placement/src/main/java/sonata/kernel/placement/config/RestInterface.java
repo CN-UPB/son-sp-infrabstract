@@ -7,11 +7,11 @@ public class RestInterface {
 
     /**
      * Interface ip the REST server should listen to.
-     * Use "0.0.0.0" to listen to all interface ips.
+     * Use "0.0.0.0" to listen on all interface ips.
      */
     String serverIp;
     /**
-     * Port the REST server should listen to.
+     * Port the REST server should listen on.
      */
     int port;
 

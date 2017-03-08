@@ -235,7 +235,7 @@ function deployPkg(index){
         return;
     actionPending = true;
     setStatusMsg("Deploying", "color:orange;");
-    ajax("POST", "/deploy", "asdf="+index, "json", onDeploy);
+    ajax("POST", "/api/v2/requests", "asdf="+index, "json", onDeploy);
 }
 
 function setPkgList(status, response){

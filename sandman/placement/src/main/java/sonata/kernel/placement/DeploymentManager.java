@@ -65,6 +65,10 @@ public class DeploymentManager implements Runnable {
      */
     static List<String> currentNodes;
     /**
+     * Maps node names to the Pop they are deployed at
+     */
+    static Map<String, PopResource> currentPopNodeMap = null;
+    /**
      * Loadbalancer rule to connect the service with an ip that is accessable from the emulator host.
      */
     static FloatingNode inputFloatingNode = null;
@@ -343,6 +347,7 @@ public class DeploymentManager implements Runnable {
             currentDeployData = data;
             currentPops = usedPops;
             currentNodes = usedNodes;
+            currentPopNodeMap = popNodeMap;
 
             message.responseId = 201;
             message.responseMessage = "Created";
@@ -455,6 +460,7 @@ public class DeploymentManager implements Runnable {
         currentNodes = null;
         currentLoadbalanceMap.clear();
         currentFloatingPorts.clear();
+        currentPopNodeMap = null;
         inputFloatingNode = null;
         serviceStackName = null;
     }
@@ -602,7 +608,7 @@ public class DeploymentManager implements Runnable {
             List<Pair<Pair<String, String>, Pair<String, String>>> delete_chains = instance.get_delete_chain();
             List<Pair<Pair<String, String>, List<String>>> custom_chains = instance.getCustomized_chains();
             List<LinkChain> create_link_chains = createLinkChainList(create_chains, popNodeMap);
-            List<LinkChain> delete_link_chains = createLinkChainList(delete_chains, popNodeMap);
+            List<LinkChain> delete_link_chains = createLinkChainList(delete_chains, currentPopNodeMap);
             // Add custom chain paths to chain to be created
             for (LinkChain chain : create_link_chains) {
                 for (Pair<Pair<String, String>, List<String>> custom_chain : custom_chains) {
@@ -830,6 +836,7 @@ public class DeploymentManager implements Runnable {
             currentPops = usedPops;
             currentNodes = usedNodes;
             currentPops = usedPops;
+            currentPopNodeMap = popNodeMap;
             logger.info("Service update finished");
 
         } catch(Exception e) {

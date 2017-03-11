@@ -185,7 +185,7 @@ class RestInterfaceServerApi extends NanoHTTPD implements Runnable {
                 }
                 jsonObj.put("service_uuid_list", jsonArray);
                 ret_index = jsonObj.toString();
-                System.out.println("Json list: "+ret_index);
+                logger.debug("Json list: "+ret_index);
                 if(jsonPackageList == null)
                     return newFixedLengthResponse(Response.Status.INTERNAL_ERROR, null, null);
                 else
@@ -231,7 +231,7 @@ class RestInterfaceServerApi extends NanoHTTPD implements Runnable {
                 return newFixedLengthResponse(new Status(200, "OK"), null, null);
             }
             else
-            if(req_uri.equals(uri) && session.getMethod().equals(Method.POST)) {
+            if(("/api/v2/requests".equals(uri) || "/api/v2/requests?".equals(uri)) && session.getMethod().equals(Method.POST)) {
                 logger.info("Deploy");
             	int newIndex;
             	Integer contentLength = Integer.parseInt(session.getHeaders().get("content-length"));

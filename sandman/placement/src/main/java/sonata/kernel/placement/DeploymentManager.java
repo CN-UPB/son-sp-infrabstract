@@ -499,7 +499,7 @@ public class DeploymentManager implements Runnable {
 
             ServiceInstance instance = plugin.updateScaling(currentDeployData, currentInstance, monitorMessage);
 
-            if (instance == null || monitorMessage.type == MonitorMessage.SCALE_TYPE.MONITOR_STATS || monitorMessage.type == MonitorMessage.SCALE_TYPE.NO_SCALE) {
+            if (instance == null){
                 return;
             }
 

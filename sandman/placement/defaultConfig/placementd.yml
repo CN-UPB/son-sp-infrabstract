@@ -2,6 +2,24 @@
 
 #All performance limits in % usage
 perfThreshold:
+  - vnfId: "vnf_vmir"
+    cpu_upper_l: "40"
+    cpu_lower_l: "10"
+    mem_upper_l: "70"
+    mem_lower_l: "10"
+    scale_out_upper_l: "70"
+    scale_in_lower_l: "70"
+    history_check: "3"
+
+  - vnfId: "vnf_vdir"
+    cpu_upper_l: "70"
+    cpu_lower_l: "10"
+    mem_upper_l: "70"
+    mem_lower_l: "10"
+    scale_out_upper_l: "70"
+    scale_in_lower_l: "70"
+    history_check: "3"
+
   - vnfId: "vnf_webs"
     cpu_upper_l: "70"
     cpu_lower_l: "10"
@@ -65,7 +83,7 @@ restApi:
 
 pluginPath: "./target/classes/sonata/kernel/placement/"
 
-placementPlugin: "sonata.kernel.placement.service.DefaultPlacementPlugin"
+placementPlugin: "sonata.kernel.placement.service.DemoPlacementPlugin"
 
 internalFunctionsPath: "./defaultConfig/internal"
 
@@ -73,11 +91,24 @@ monitorHistoryLimit: 300
 
 monitorIntervalMs: 2000
 
-monitoringDeactivated: false
+monitoringDeactivated: true
 
 resources:
   - popName: "dc1"
     endpoint: "http://131.234.31.45:5001/v2.0"
+    chainingEndpoint: "http://131.234.31.45:4000/"
+    monitoringEndpoint: "http://131.234.31.45:3000/"
+    userName: "bla"
+    password: "bla"
+    tenantName: "fc394f2ab2df4114bde39905f800dc57"
+
+    resource:
+      cpu: 100
+      memory: 100
+      storage: 100
+
+  - popName: "dc2"
+    endpoint: "http://131.234.31.45:5002/v2.0"
     chainingEndpoint: "http://131.234.31.45:4000/"
     monitoringEndpoint: "http://131.234.31.45:3000/"
     userName: "bla"

@@ -1,0 +1,19 @@
+description: mirror brain demo service
+descriptor_version: '1.0'
+entry_service_template: /service_descriptors/nsd.yml
+maintainer: sandman
+name: vmb
+package_content:
+- content-type: application/sonata.service_descriptors
+  md5: afe019e35f9ee9844de1ce40d627f602
+  name: /service_descriptors/vmb.yml
+- content-type: application/sonata.function_descriptor
+  md5: 6b35a96495c46a1b840e97a9d1f82f67
+  name: /function_descriptors/vdir-vnfd.yml
+- content-type: application/sonata.function_descriptor
+  md5: 3ecd015e258df0175cad451c64130506
+  name: /function_descriptors/vmir-vnfd.yml
+schema: https://raw.githubusercontent.com/sonata-nfv/son-schema/master/package-descriptor/pd-schema.yml
+sealed: true
+vendor: sandman
+version: '0.3'

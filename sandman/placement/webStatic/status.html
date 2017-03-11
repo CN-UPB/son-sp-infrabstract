@@ -352,7 +352,9 @@ function addGraph(graph){
         var edge = v;
         edge.source = nodes.filter(function(n){return n.id === v.source;})[0];
         edge.target = nodes.filter(function(n){return n.id === v.target;})[0];
-        newLinks.push(edge);
+        if (edge.source != null && edge.target != null) {
+            newLinks.push(edge);
+        }
     });
     links = newLinks;
 

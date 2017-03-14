@@ -85,6 +85,10 @@ public class DeploymentManager implements Runnable {
      * Type of scale message for the next fake scale operation
      */
     static MonitorMessage.SCALE_TYPE nextScale = null;
+    /**
+     * PlacementPlugin used for the current deployment
+     */
+    static PlacementPlugin currentPlacementPlugin = null;
 
     /**
      * Main loop that receives control messages out of the @MessageQueue.
@@ -152,13 +156,13 @@ public class DeploymentManager implements Runnable {
 
             DatacenterManager.reset_resources();
             PlacementConfig config = PlacementConfigLoader.loadPlacementConfig();
-            PlacementPlugin plugin = PlacementPluginLoader.placementPlugin;
+            currentPlacementPlugin = PlacementPluginLoader.getNewPlacementPluginInstance();
 
             DeployServiceData data = Catalogue.getPackagetoDeploy(message.index);
             String serviceName = data.getNsd().getName();
             logger.info("Deloying service: " + serviceName);
 
-            ServiceInstance instance = plugin.initialScaling(data);
+            ServiceInstance instance = currentPlacementPlugin.initialScaling(data);
             List<HeatTemplate> templates = ServiceHeatTranslator.translatePlacementMappingToHeat(instance, config.getResources());
 
             // Maps function unique id -> function_instance
@@ -463,6 +467,7 @@ public class DeploymentManager implements Runnable {
         currentPopNodeMap = null;
         inputFloatingNode = null;
         serviceStackName = null;
+        currentPlacementPlugin = null;
     }
 
     /**
@@ -483,7 +488,6 @@ public class DeploymentManager implements Runnable {
                 return;
 
             PlacementConfig config = PlacementConfigLoader.loadPlacementConfig();
-            PlacementPlugin plugin = PlacementPluginLoader.placementPlugin;
 
             MonitorMessage monitorMessage;
 
@@ -503,7 +507,7 @@ public class DeploymentManager implements Runnable {
                 nextScale = null;
             }
 
-            ServiceInstance instance = plugin.updateScaling(currentDeployData, currentInstance, monitorMessage);
+            ServiceInstance instance = currentPlacementPlugin.updateScaling(currentDeployData, currentInstance, monitorMessage);
 
             if (instance == null){
                 return;

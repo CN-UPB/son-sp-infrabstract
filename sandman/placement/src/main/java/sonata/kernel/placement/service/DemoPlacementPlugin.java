@@ -88,7 +88,7 @@ public class DemoPlacementPlugin implements PlacementPlugin {
 
             vmirCount++;
 
-            scaleDelayCounter = 45;
+            scaleDelayCounter = 15;
 
             return instance_t;
         } else
@@ -102,7 +102,7 @@ public class DemoPlacementPlugin implements PlacementPlugin {
 
             vmirCount--;
 
-            scaleDelayCounter = 45;
+            scaleDelayCounter = 15;
 
             return instance_t;
 

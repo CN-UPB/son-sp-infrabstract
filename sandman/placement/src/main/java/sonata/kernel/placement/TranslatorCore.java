@@ -39,7 +39,7 @@ public class TranslatorCore {
         // Load placement plugin
         logger.info("Loading placement plugins");
         PlacementPluginLoader.loadPlacementPlugin(config.pluginPath,config.placementPlugin);
-        logger.info("Loaded placement-plugin: "+PlacementPluginLoader.placementPlugin.getClass().getName());
+        logger.info("Loaded placement-plugin: "+PlacementPluginLoader.placementPluginClass.getName());
 
         DatacenterManager.initialize();
         // Start servers
@@ -74,7 +74,7 @@ public class TranslatorCore {
             MessageQueue.get_deploymentQ().add(new MessageQueue.MessageQueueData(MessageQueue.MessageType.TERMINATE_MESSAGE));
 
             try {
-                deploymentThread.join(10000);
+                deploymentThread.join(60000);
             } catch (InterruptedException e) {
                 e.printStackTrace();
             }

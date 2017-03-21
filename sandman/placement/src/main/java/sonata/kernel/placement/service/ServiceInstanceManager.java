@@ -350,8 +350,9 @@ public class ServiceInstanceManager {
         }
 
         //Release the link name back to the names pool.
-        instance.outerlink_list.get((key.split(":"))[0]).remove(key);
-        release_link_name(key.split(":")[0], key, instance.vnf_vlinkid_s);
+        String key_name = key.substring(0, key.lastIndexOf(":"));
+        instance.outerlink_list.get(key_name).remove(key);
+        release_link_name(key_name, key, instance.vnf_vlinkid_s);
 
         return;
     }

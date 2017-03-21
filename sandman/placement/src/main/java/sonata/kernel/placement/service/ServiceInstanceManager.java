@@ -767,9 +767,10 @@ public class ServiceInstanceManager {
             }
 
             for (String vlinks : link_names) {
-                delete_chaining_rules(vlinks.split(":")[0], vlinks);
+                String vlinks_id = vlinks.substring(0, vlinks.lastIndexOf(":"));
+                delete_chaining_rules(vlinks_id, vlinks);
                 link_m.getValue().remove(vlinks);
-                release_link_name(vlinks.split(":")[0], vlinks, instance.vnf_vlinkid_s);
+                release_link_name(vlinks_id, vlinks, instance.vnf_vlinkid_s);
             }
         }
     }
